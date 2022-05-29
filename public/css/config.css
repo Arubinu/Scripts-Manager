@@ -1,0 +1,12 @@
+@import 'all.min.css';
+@import 'bulma.min.css';
+@import 'bulma-prefers-dark.css';
+
+html, body {
+	overflow: hidden visible;
+	color: #eee;
+	background-color: transparent;
+}
+
+body {
+}

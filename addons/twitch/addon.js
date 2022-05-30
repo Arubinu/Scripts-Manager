@@ -1,9 +1,11 @@
 const	ComfyJS = require('comfy.js');
 
-let		_config = {};
+let		_sender = null,
+		_config = {};
 
 module.exports = {
 	init: (origin, config, sender) => {
+		_sender = sender;
 		_config = config;
 
 		const methods = [
@@ -32,7 +34,7 @@ module.exports = {
 		for (const method of methods)
 		{
 			ComfyJS[`on${method}`] = function() {
-				sender(method, arguments);
+				_sender(method, arguments);
 			};
 		}
 
@@ -41,10 +43,21 @@ module.exports = {
 	receiver: async (id, name, data) => {
 		if (id == 'manager')
 		{
+			if (name == 'show')
+				_sender('message', 'config', _config);
+
 			return;
 		}
 		else if (id == 'message')
 		{
+			if (typeof(data) === 'object')
+			{
+				const name = Object.keys(data)[0];
+				if (typeof(data[name]) === typeof(_config.connection[name]))
+					_config.connection[name] = data[name];
+				_sender('manager', 'config', _config);
+			}
+
 			return;
 		}
 

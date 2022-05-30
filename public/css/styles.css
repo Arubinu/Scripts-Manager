@@ -35,6 +35,9 @@ html, body {
 .lateral-menu li {
 	min-width: 100%;
 }
+.lateral-menu li {
+	position: relative;
+}
 .lateral-menu > section {
 	overflow-y: auto;
 	width: 100%;
@@ -52,6 +55,11 @@ html, body {
 .lateral-menu a.is-active {
 	background-color: rgba(255, 255, 255, .3) !important;
 }
+.lateral-menu .switch {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+}
 
 .content {
 	overflow: hidden scroll;
@@ -65,4 +73,55 @@ html, body {
 .content > iframe {
 	width: 100%;
 	min-height: calc(100% - 6px);
+}
+
+/* Checkbox */
+.switch {
+	display: inline-block;
+	position: relative;
+	width: 48px;
+	height: 24px;
+}
+
+.switch input {
+	display: none;
+}
+
+.slider {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: #ccc;
+	cursor: pointer;
+	transition: .4s;
+}
+
+.slider:before {
+	content: '';
+	position: absolute;
+	left: 4px;
+	bottom: 4px;
+	width: 16px;
+	height: 16px;
+	background-color: #fff;
+	transition: .4s;
+}
+
+input:checked + .slider {
+	background-color: #66bb6a;
+}
+
+input:checked + .slider:before {
+	transform: translateX(24px);
+}
+
+.slider.round {
+	border-radius: 24px;
+	outline: 1px solid rgba(255, 255, 255, .4);
+}
+
+.slider.round:before {
+	border-radius: 50%;
 }

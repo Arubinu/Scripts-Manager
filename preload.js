@@ -1,7 +1,7 @@
 // All of the Node.js APIs are available in the preload process.
 // It has the same sandbox as a Chrome extension.
 
-const	{ ipcRenderer } = require('electron');
+const	{ shell, ipcRenderer } = require('electron');
 
 let		_target = '';
 
@@ -18,11 +18,9 @@ function get_target(target = _target)
 }
 
 ipcRenderer.on('init', (event, data) => {
-	console.log('init:', data);
-
 	const add_ul = (type, name, parent) => {
-		let li = document.createElement('li');
-		let ul = document.createElement('ul');
+		const li = document.createElement('li');
+		const ul = document.createElement('ul');
 
 		li.appendChild(ul);
 		parent.appendChild(li);
@@ -31,13 +29,32 @@ ipcRenderer.on('init', (event, data) => {
 	};
 
 	const add_li = (type, id, name, parent) => {
-		let a = document.createElement('a');
-		let li = document.createElement('li');
+		const a = document.createElement('a');
+		const li = document.createElement('li');
 
 		a.innerText = name;
 		a.setAttribute('data-target', `${type}:${id}`);
-
 		li.appendChild(a);
+
+		if (id.indexOf(':') < 0)
+		{
+			const label = document.createElement('label');
+			label.setAttribute('for', 'checkbox');
+			label.classList.add('switch');
+
+			const checkbox = document.createElement('input');
+			checkbox.setAttribute('type', 'checkbox');
+			checkbox.setAttribute('id', 'checkbox');
+			checkbox.checked = !!data.configs[type][id].default.enabled;
+
+			const slider = document.createElement('div');
+			slider.classList.add('slider', 'round');
+
+			label.appendChild(checkbox);
+			label.appendChild(slider);
+			li.appendChild(label);
+		}
+
 		parent.appendChild(li);
 
 		return li;
@@ -71,35 +88,60 @@ window.addEventListener('DOMContentLoaded', () => {
 
 	// from main
 	ipcRenderer.on('message', (event, data) => {
-		console.log('from main:', data);
 		let target = get_target();
 		if (data.type == target.type && data.id == target.id)
 		{
 			// to renderer
-			console.log('to renderer:', data);
 			iframe.contentWindow.postMessage(data, '*');
 		}
 	});
 
 	// from renderer
 	window.addEventListener('message', event => {
-		console.log('from renderer:', event.data);
 		if (event.origin !== 'null')
 		{
 			let target = get_target();
 			target.data = event.data;
 
 			// to main
-			console.log('to main:', target);
 			ipcRenderer.invoke('message', target);
 		}
 	});
 
 	// target changed
 	iframe.addEventListener('load', event => {
+		iframe.style.height = `${iframe.contentWindow.document.body.scrollHeight - 20}px`;
+
+		const iframe_doc = iframe.contentWindow.document;
 		let target = get_target();
 		target.name = 'show';
 		target.data = null;
+
+		if (target.target == 'general:about')
+		{
+			iframe_doc.querySelector('.node-version').innerText = process.versions.node;
+			iframe_doc.querySelector('.chrome-version').innerText = process.versions.chrome;
+			iframe_doc.querySelector('.electron-version').innerText = process.versions.electron;
+		}
+
+		// open links in default browser
+		iframe_doc.addEventListener('click', event => {
+			let elem = event.target.closest('[external-link]');
+			if (!elem)
+				elem = event.target;
+
+			if (elem.matches('[external-link]'))
+			{
+				event.preventDefault();
+				shell.openExternal(elem.getAttribute('external-link'));
+			}
+		});
+
+		// removes focus from buttons and links so as not to have the blue outline
+		iframe_doc.addEventListener('mouseup', event => {
+			if (!event.target.matches('input, textarea') && !event.target.closest('input, textarea'))
+				iframe.blur();
+		});
 
 		// to main
 		ipcRenderer.invoke('manager', target);
@@ -133,6 +175,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
 				iframe.setAttribute('src', uri);
 			}
+		}
+
+		if (event.target.matches('.menu .switch .slider'))
+		{
+			setTimeout(() => {
+				let target = get_target(event.target.parentElement.parentElement.querySelector('a').getAttribute('data-target'));
+				target.name = 'enabled';
+				target.data = event.target.parentElement.querySelector('input').checked;
+
+				// to main
+				ipcRenderer.invoke('manager', target);
+			}, 10);
 		}
 	});
 

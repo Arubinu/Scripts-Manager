@@ -110,7 +110,7 @@ function flash_screen(name, force)
 module.exports = {
 	init: (origin, config, sender) => {
 		_sender = sender;
-		_config = Object.assign({}, config);
+		_config = config;
 
 		for (const section in _default)
 		{
@@ -168,50 +168,67 @@ module.exports = {
 		{
 			if (name == 'show')
 				update_interface();
+			else if (name == 'enabled')
+				_config.default.enabled = data;
 		}
 
 		if (id == 'message')
 		{
-			const name = Object.keys(data)[0];
-			console.log('message:', name, data, _config.settings, typeof(data[name]) === typeof(_config.settings[name]), typeof(data[name]), typeof(_config.settings[name]));
-			if (typeof(data[name]) === typeof(_config.settings[name]))
-				_config.settings[name] = data[name];
-			save_config();
-
-			if (name == 'screen')
+			if (typeof(data) === 'object')
 			{
-				next_screen(data.screen);
-				flash_screen(false, true);
+				const name = Object.keys(data)[0];
+				if (typeof(data[name]) === typeof(_config.settings[name]))
+					_config.settings[name] = data[name];
+				save_config();
+
+				if (name == 'screen')
+				{
+					next_screen(data.screen);
+					flash_screen(false, true);
+				}
+				else if (name == 'duration')
+					set_duration(data.duration);
 			}
-			else if (name == 'duration')
-				set_duration(data.duration);
+			else if (data == 'reset')
+			{
+				_config.statistics.flash = 0;
+				_config.statistics.viewer = 0;
+				_config.statistics.moderator = 0;
+				_config.statistics.subscriber = 0;
+
+				update_interface();
+				save_config();
+			}
 		}
 
-		if (id == 'twitch' && name == 'Connected')
-			flash_screen('connected');
-		//	_sender('twitch', 'GetChannelRewards', ['my-client-id', true]).then(data => console.log('GetChannelRewards:', data));
-
-		if (id == 'twitch' && name == 'Chat')
+		if (_config.default.enabled)
 		{
-			const [user, message, flags, self, extra] = data;
-			if (_pause || !flash_screen())
-				return;
+			if (id == 'twitch' && name == 'Connected')
+				flash_screen('connected');
+			//	_sender('twitch', 'GetChannelRewards', ['my-client-id', true]).then(data => console.log('GetChannelRewards:', data));
 
-			++_config.statistics.flash;
-			if (!flags.broadcaster)
+			if (id == 'twitch' && name == 'Chat')
 			{
-				let viewer = true;
-				if (flags.mod && !(viewer = false))
-					++_config.statistics.moderator;
-				if (flags.subscriber && !(viewer = false))
-					++_config.statistics.subscriber;
+				const [user, message, flags, self, extra] = data;
+				if (_pause || !flash_screen())
+					return;
 
-				if (viewer)
-					++_config.statistics.viewer;
+				++_config.statistics.flash;
+				if (!flags.broadcaster)
+				{
+					let viewer = true;
+					if (flags.mod && !(viewer = false))
+						++_config.statistics.moderator;
+					if (flags.subscriber && !(viewer = false))
+						++_config.statistics.subscriber;
+
+					if (viewer)
+						++_config.statistics.viewer;
+				}
+
+				update_interface();
+				save_config();
 			}
-
-			update_interface();
-			save_config();
 		}
 	}
 }

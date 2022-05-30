@@ -19,6 +19,8 @@ function create_window()
 		icon: icon,
 		width: 1140,
 		height: 630,
+		minWidth: 700,
+		minHeight: 300,
 		autoHideMenuBar: true,
 		webPreferences: {
 			//devTools: true,
@@ -30,42 +32,43 @@ function create_window()
 	win.setTitle('Scripts Manager');
 	win.loadFile(path.join(__dirname, 'public', 'index.html')).then(() => {
 		ipcMain.handle('manager', (event, data) => {
-			console.log('manager:', data);
-			if (data.type == 'general')
+			let obj = false;
+			if (data.type == 'addons' && typeof(addons[data.id]) === 'object')
+				obj = addons[data.id];
+			else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object')
+				obj = scripts[data.id];
+
+			if (data.name == 'enabled')
 			{
-				console.log('main manager receive:', data);
+				obj.config.default.enabled = data.data;
+				save_config(data.type, data.id);
 			}
-			else if (data.type == 'addons' && typeof(addons[data.id]) === 'object' && typeof(addons[data.id].include.receiver) === 'function')
-				addons[data.id].include.receiver('manager', data.name, data.data);
-			else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object' && typeof(scripts[data.id].include.receiver) === 'function')
-				scripts[data.id].include.receiver('manager', data.name, data.data);
+
+			if (data.type == 'general')
+				console.log('main manager receive:', data);
+			else if (obj && typeof(obj.include.receiver) === 'function')
+				obj.include.receiver('manager', data.name, data.data);
 		});
 		ipcMain.handle('message', (event, data) => {
+			let obj = false;
+			if (data.type == 'addons' && typeof(addons[data.id]) === 'object')
+				obj = addons[data.id];
+			else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object')
+				obj = scripts[data.id];
+
 			if (data.type == 'general')
-			{
 				console.log('main message receive:', data);
-			}
-			else if (data.type == 'addons' && typeof(addons[data.id]) === 'object' && typeof(addons[data.id].include.receiver) === 'function')
-				addons[data.id].include.receiver('message', data.name, data.data);
-			else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object' && typeof(scripts[data.id].include.receiver) === 'function')
-				scripts[data.id].include.receiver('message', data.name, data.data);
+			else if (obj && typeof(obj.include.receiver) === 'function')
+				obj.include.receiver('message', data.name, data.data);
 		});
 
-		let addons_config = {};
+		let configs = { addons: {}, scripts: {} };
 		for (const id in addons)
-			addons_config[id] = addons[id].config;
-
-		let scripts_config = {};
+			configs.addons[id] = addons[id].config;
 		for (const id in scripts)
-			scripts_config[id] = scripts[id].config;
+			configs.scripts[id] = scripts[id].config;
 
-		win.webContents.send('init', {
-			menus: menus,
-			configs: {
-				addons: addons_config,
-				scripts: scripts_config
-			}
-		});
+		win.webContents.send('init', { menus, configs });
 	});
 
 	win.on('close', event => {
@@ -84,12 +87,18 @@ async function save_config(type, id, data)
 	else
 		return false;
 
-	for (const section in data)
+	if (typeof(data) === 'object')
 	{
-		if (['default', 'menu'].indexOf(section) < 0 && typeof(data[section]) === 'object')
+		for (const section in data)
 		{
-			if (typeof(obj[section]) !== 'object')
-				obj[section] = {};
+			if (['default', 'menu'].indexOf(section) < 0 && typeof(data[section]) === 'object')
+			{
+				if (typeof(obj[section]) !== 'object')
+					obj[section] = {};
+
+				for (const name in data[section])
+					obj[section][name] = data[section][name];
+			}
 		}
 	}
 
@@ -121,7 +130,7 @@ function load_addons()
 							}
 
 							if (typeof(addons[file].include.init) === 'function')
-								addons[file].include.init(addon_path, addons[file].config, async function() { return await script_sender('addons', file, null, ...arguments); });
+								addons[file].include.init(addon_path, JSON.parse(JSON.stringify(addons[file].config)), async function() { return await script_sender('addons', file, ...arguments); });
 
 							console.log('Addon loaded:', file);
 						}
@@ -175,7 +184,7 @@ function load_scripts()
 							}
 
 							if (typeof(scripts[file].include.init) === 'function')
-								scripts[file].include.init(script_path, scripts[file].config, async function() { return await script_sender('scripts', file, ...arguments); });
+								scripts[file].include.init(script_path, JSON.parse(JSON.stringify(scripts[file].config)), async function() { return await script_sender('scripts', file, ...arguments); });
 
 							console.log('Script loaded:', file);
 						}

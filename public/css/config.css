@@ -2,11 +2,24 @@
 @import 'bulma.min.css';
 @import 'bulma-prefers-dark.css';
 
+*,
+*:focus {
+	-webkit-tap-highlight-color: transparent;
+	-moz-tap-highlight-color: transparent;
+	-o-tap-highlight-color: transparent;
+	tap-highlight-color: transparent;
+}
+
 html, body {
 	overflow: hidden visible;
 	color: #eee;
 	background-color: transparent;
 }
 
-body {
+a:focus,
+input:focus,
+button:focus,
+textarea:focus {
+	border: initial !important;
+	box-shadow: none !important;
 }

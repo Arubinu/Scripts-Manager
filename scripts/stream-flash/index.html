@@ -33,35 +33,35 @@
 					<div class="level-item has-text-centered">
 						<div class="info-flash">
 							<p class="heading">Flashs</p>
-							<p class="title">456K</p>
+							<p class="title"></p>
 						</div>
 					</div>
 					<div class="level-item has-text-centered">
 						<div class="info-viewer">
 							<p class="heading">Viewers</p>
-							<p class="title">1,123</p>
+							<p class="title"></p>
 						</div>
 					</div>
 					<div class="level-item has-text-centered">
 						<div class="info-subscriber">
 							<p class="heading">Subscribers</p>
-							<p class="title">264</p>
+							<p class="title"></p>
 						</div>
 					</div>
 					<div class="level-item has-text-centered">
 						<div class="info-moderator">
 							<p class="heading">Moderators</p>
-							<p class="title">42</p>
+							<p class="title"></p>
 						</div>
 					</div>
 				</nav>
 
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2 screen">
+				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
 					<div class="field-label is-normal">
 						<label class="label">Screen to flash:</label>
 					</div>
 					<div class="field-body">
-						<div class="field">
+						<div class="field screen">
 							<div class="control">
 								<div class="buttons has-addons">
 									<button class="button">1</button>
@@ -69,6 +69,9 @@
 									<button class="button">3</button>
 								</div>
 							</div>
+						</div>
+						<div class="field has-text-right reset">
+							<button class="button">Reset statistics</button>
 						</div>
 					</div>
 				</div>
@@ -140,10 +143,14 @@
 				elem.addEventListener('input', callback);
 			}
 
+			document.querySelector('.reset .button').addEventListener('click', event => {
+				event.target.blur();
+				window.parent.postMessage('reset', '*');
+			});
+
 			window.addEventListener('message', event => {
 				if (event.origin !== 'null')
 				{
-					console.log('from preload:', event.data);
 					if (event.data.name == 'config')
 					{
 						_config = event.data.data;
@@ -173,6 +180,7 @@
 								_config.settings.screen = Array.prototype.indexOf.call(buttons.children, button);
 								update_buttons();
 
+								event.target.blur();
 								window.parent.postMessage({screen: _config.settings.screen}, '*');
 							});
 

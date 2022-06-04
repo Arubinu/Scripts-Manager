@@ -1,14 +1,15 @@
 {
-  "name": "twitch",
+  "name": "stream-widgets",
   "version": "1.0.0",
   "description": "",
-  "main": "addon.js",
+  "main": "script.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Arubinu",
   "license": "ISC",
   "dependencies": {
-    "comfy.js": "^1.1.15"
+    "global-mouse-events": "^1.0.7",
+    "node-global-key-listener": "^0.1.1"
   }
 }

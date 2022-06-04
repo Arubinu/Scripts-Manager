@@ -21,7 +21,6 @@ function create_window()
 		height: 630,
 		minWidth: 700,
 		minHeight: 300,
-		autoHideMenuBar: true,
 		webPreferences: {
 			//devTools: true,
 			//nodeIntegration: true,
@@ -29,6 +28,8 @@ function create_window()
 			preload: path.join(__dirname, 'preload.js')
 		}
 	});
+
+	win.setMenu(null);
 	win.setTitle('Scripts Manager');
 	win.loadFile(path.join(__dirname, 'public', 'index.html')).then(() => {
 		ipcMain.handle('manager', (event, data) => {
@@ -45,7 +46,7 @@ function create_window()
 			}
 
 			if (data.type == 'general')
-				console.log('main manager receive:', data);
+				; //console.log('main manager receive:', data);
 			else if (obj && typeof(obj.include.receiver) === 'function')
 				obj.include.receiver('manager', data.name, data.data);
 		});
@@ -57,7 +58,7 @@ function create_window()
 				obj = scripts[data.id];
 
 			if (data.type == 'general')
-				console.log('main message receive:', data);
+				; //console.log('main message receive:', data);
 			else if (obj && typeof(obj.include.receiver) === 'function')
 				obj.include.receiver('message', data.name, data.data);
 		});
@@ -213,7 +214,7 @@ async function script_sender(type, id, target, name, data)
 		}
 		else if (target == 'message')
 			win.webContents.send('message', { type, id, name, data });
-		else if (typeof(addons[id].include.receiver) === 'function')
+		else if (target == 'broadcast')
 		{
 			for (const sid in scripts)
 			{
@@ -243,8 +244,11 @@ async function script_sender(type, id, target, name, data)
 			win.webContents.send('message', { type, id, name, data });
 			return true;
 		}
-		else if (typeof(addons[target]) !== 'object')
+
+		if (typeof(addons[target]) !== 'object')
 			return 'addon not found'; // retourner une exception
+		else if (typeof(scripts[id].config.default.addons) !== 'string' || scripts[id].config.default.addons.split(',').indexOf(target) < 0)
+			return 'unregistered addon'; // retourner une exception
 		else if (typeof(scripts[id].include.receiver) !== 'function')
 			return 'addon receiver not found'; // retourner une exception
 

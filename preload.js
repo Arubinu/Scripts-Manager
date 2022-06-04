@@ -1,7 +1,9 @@
 // All of the Node.js APIs are available in the preload process.
 // It has the same sandbox as a Chrome extension.
 
-const	{ shell, ipcRenderer } = require('electron');
+const	fs = require('fs'),
+		path = require('path'),
+		{ shell, ipcRenderer } = require('electron');
 
 let		_target = '';
 
@@ -18,6 +20,16 @@ function get_target(target = _target)
 }
 
 ipcRenderer.on('init', (event, data) => {
+	let index = 0;
+	const list = document.querySelector('.menu');
+	const iframe = document.querySelector('.content > iframe');
+
+	// define iframe height
+	setInterval(() => {
+		iframe.style.height = `${iframe.contentWindow.document.body.scrollHeight - 20}px`;
+	}, 1000);
+
+	// menu generation
 	const add_ul = (type, name, parent) => {
 		const li = document.createElement('li');
 		const ul = document.createElement('ul');
@@ -39,12 +51,12 @@ ipcRenderer.on('init', (event, data) => {
 		if (id.indexOf(':') < 0)
 		{
 			const label = document.createElement('label');
-			label.setAttribute('for', 'checkbox');
+			label.setAttribute('for', `checkbox_${index}`);
 			label.classList.add('switch');
 
 			const checkbox = document.createElement('input');
 			checkbox.setAttribute('type', 'checkbox');
-			checkbox.setAttribute('id', 'checkbox');
+			checkbox.setAttribute('id', `checkbox_${index}`);
 			checkbox.checked = !!data.configs[type][id].default.enabled;
 
 			const slider = document.createElement('div');
@@ -53,6 +65,8 @@ ipcRenderer.on('init', (event, data) => {
 			label.appendChild(checkbox);
 			label.appendChild(slider);
 			li.appendChild(label);
+
+			++index;
 		}
 
 		parent.appendChild(li);
@@ -80,11 +94,6 @@ ipcRenderer.on('init', (event, data) => {
 			}
 		}
 	}
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-	const list = document.querySelector('.menu');
-	const iframe = document.querySelector('.content > iframe');
 
 	// from main
 	ipcRenderer.on('message', (event, data) => {
@@ -110,15 +119,27 @@ window.addEventListener('DOMContentLoaded', () => {
 
 	// target changed
 	iframe.addEventListener('load', event => {
-		iframe.style.height = `${iframe.contentWindow.document.body.scrollHeight - 20}px`;
-
 		const iframe_doc = iframe.contentWindow.document;
+
+		// get new target
 		let target = get_target();
 		target.name = 'show';
-		target.data = null;
+		target.data = true;
 
+		// display versions
 		if (target.target == 'general:about')
 		{
+			const this_ = iframe_doc.querySelector('.this-version');
+			const this_file = path.join(__dirname, 'package.json');
+			if (fs.existsSync(this_file))
+			{
+				const package = require(this_file);
+				this_.innerText = package.version;
+				this_.parentElement.children[0].innerText = package.name;
+			}
+			else
+				this_.parentElement.remove();
+
 			iframe_doc.querySelector('.node-version').innerText = process.versions.node;
 			iframe_doc.querySelector('.chrome-version').innerText = process.versions.chrome;
 			iframe_doc.querySelector('.electron-version').innerText = process.versions.electron;
@@ -166,6 +187,17 @@ window.addEventListener('DOMContentLoaded', () => {
 			let target = event.target.getAttribute('data-target');
 			if (target)
 			{
+				if (_target)
+				{
+					// get old target
+					let target = get_target();
+					target.name = 'show';
+					target.data = false;
+
+					ipcRenderer.invoke('manager', target);
+				}
+
+				// get/set new target
 				_target = target;
 				target = get_target();
 
@@ -177,6 +209,7 @@ window.addEventListener('DOMContentLoaded', () => {
 			}
 		}
 
+		// send a message to the switch
 		if (event.target.matches('.menu .switch .slider'))
 		{
 			setTimeout(() => {

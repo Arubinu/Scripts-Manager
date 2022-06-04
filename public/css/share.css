@@ -1,0 +1,50 @@
+/* Checkbox */
+.switch {
+	display: inline-block;
+	position: relative;
+	width: 48px;
+	height: 24px;
+}
+
+.switch input {
+	display: none;
+}
+
+.slider {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: #ccc;
+	cursor: pointer;
+	transition: .4s;
+}
+
+.slider:before {
+	content: '';
+	position: absolute;
+	left: 4px;
+	bottom: 4px;
+	width: 16px;
+	height: 16px;
+	background-color: #fff;
+	transition: .4s;
+}
+
+input:checked + .slider {
+	background-color: #66bb6a;
+}
+
+input:checked + .slider:before {
+	transform: translateX(24px);
+}
+
+.slider.round {
+	border-radius: 24px;
+	outline: 1px solid rgba(255, 255, 255, .4);
+}
+
+.slider.round:before {
+	border-radius: 50%;
+}

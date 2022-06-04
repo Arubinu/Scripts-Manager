@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+
+		<title>Stream Flash</title>
+
+		<link rel="stylesheet" href="../../public/css/config.css" />
+		<style type="text/css">
+			.is-selected {
+				background-color: rgba(0, 0, 0, .5);
+			}
+			.is-narrow,
+			.is-narrow-top {
+				border-top: 1px solid #555;
+			}
+			.is-narrow,
+			.is-narrow-bottom {
+				border-bottom: 1px solid #555;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="container">
+			<section class="hero is-small has-background-grey-dark">
+				<div class="hero-body">
+					<p class="subtitle is-size-6 has-text-white-ter">Displays your OBS Studio widgets on one of your screens, as an overlay.</p>
+					<p class="subtitle is-size-7 has-text-white-ter">Prefer windowed mode for games</p>
+				</div>
+			</section>
+
+			<div class="m-5">
+				<div class="columns is-horizontal is-narrow mt-2 mb-5">
+					<div class="column mt-2">
+						<label class="label">Screen to flash:</label>
+					</div>
+					<div class="column has-text-right">
+						<div class="is-inline-block screen">
+							<div class="buttons has-addons">
+								<button class="button">1</button>
+								<button class="button is-selected">2</button>
+								<button class="button">3</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script type="text/javascript">
+			let _config = {};
+
+			function update_buttons()
+			{
+				const buttons = document.querySelectorAll('.screen .buttons .button');
+				for (let i = 0; i < buttons.length; ++i)
+					buttons[i].classList.toggle('is-selected', (i == _config.settings.screen));
+			}
+
+			window.addEventListener('message', event => {
+				if (event.origin !== 'null')
+				{
+					if (event.data.name == 'config')
+					{
+						_config = event.data.data;
+						update_buttons();
+					}
+					else if (event.data.name == 'screens')
+					{
+						const buttons = document.querySelector('.screen .buttons');
+						buttons.innerHTML = '';
+
+						for (let i = 0; i < event.data.data; ++i)
+						{
+							const button = document.createElement('button');
+							button.innerText = (i + 1).toString();
+
+							button.classList.add('button');
+							if (i == _config.settings.screen)
+								button.classList.add('is-selected');
+
+							button.addEventListener('click', event => {
+								_config.settings.screen = Array.prototype.indexOf.call(buttons.children, button);
+								update_buttons();
+
+								event.target.blur();
+								window.parent.postMessage({screen: _config.settings.screen}, '*');
+							});
+
+							buttons.appendChild(button);
+						}
+					}
+				}
+			}, false);
+		</script>
+	</body>
+
+</html>

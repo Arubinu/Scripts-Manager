@@ -10,6 +10,11 @@
 
 		<link rel="stylesheet" href="../../public/css/config.css" />
 		<style type="text/css">
+			.has-cursor-pointer {
+				pointer-events: initial;
+				cursor: pointer !important;
+				z-index: 10;
+			}
 			.has-addons .button {
 				border-color: #444;
 			}
@@ -26,17 +31,6 @@
 			.table > thead > tr > th:first-child {
 				width: 175px;
 			}
-			.table > thead > tr > th:nth-child(4),
-			.table > thead > tr > th:nth-child(5),
-			.table > thead > tr > th:nth-child(6),
-			.table > thead > tr > th:nth-child(7),
-			.table > tbody > tr > td:nth-child(4),
-			.table > tbody > tr > td:nth-child(5),
-			.table > tbody > tr > td:nth-child(6),
-			.table > tbody > tr > td:nth-child(7) {
-				width: 50px;
-				text-align: center;
-			}
 		</style>
 	</head>
 
@@ -44,17 +38,17 @@
 		<div class="container">
 			<section class="hero is-small has-background-grey-dark">
 				<div class="hero-body">
-					<p class="subtitle is-size-6 has-text-white-ter">Links to Twitch chat for scripts that need this feature.</p>
+					<p class="subtitle is-size-6 has-text-white-ter">Links to OBS Studio for scripts that require this feature.</p>
 				</div>
 			</section>
 
 			<div class="m-5">
 				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
 					<div class="field-label is-normal">
-						<label class="label">Channel:</label>
+						<label class="label">Address:</label>
 					</div>
 					<div class="field-body">
-						<div class="field channel">
+						<div class="field address">
 							<div class="control ml-6 pl-6">
 								<input class="input has-text-centered" type="text" />
 							</div>
@@ -64,17 +58,15 @@
 
 				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
 					<div class="field-label is-normal">
-						<label class="label">Token:</label>
+						<label class="label">Password:</label>
 					</div>
 					<div class="field-body">
-						<div class="field has-addons token">
-							<div class="control ml-6 pl-6 is-expanded">
-								<input class="input has-text-centered is-two-thirds" type="text" />
-							</div>
-							<div class="control">
-								<a class="button is-dark" external-link="http://twitchapps.com/tmi/">
-									Generate
-								</a>
+						<div class="field password">
+							<div class="control ml-6 pl-6 has-icons-right">
+								<input class="input has-text-centered is-two-thirds" type="password" />
+								<span class="icon is-small is-right">
+									<i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+								</span>
 							</div>
 						</div>
 					</div>
@@ -86,11 +78,6 @@
 					<tr>
 						<th>Date</th>
 						<th>Type</th>
-						<th>From</th>
-						<th title="Subscriber"><i class="fas fa-coins"></i></th>
-						<th title="VIP"><i class="fas fa-star"></i></th>
-						<th title="Moderator"><i class="fas fa-shield-halved"></i></th>
-						<th title="Broadcaster"><i class="fas fa-award"></i></th>
 					</tr>
 				</thead>
 				<tbody></tbody>
@@ -100,7 +87,7 @@
 		<script type="text/javascript">
 			let timeout = 0;
 
-			for (const name of ['channel', 'token'])
+			for (const name of ['address', 'password'])
 			{
 				const elem = document.querySelector(`.${name} input`);
 				const callback = event => {
@@ -119,6 +106,15 @@
 				});
 			}
 
+			document.querySelector('.fa-eye, .fa-eye-slash').addEventListener('click', event => {
+				let slash = event.target.matches('.fa-eye-slash');
+
+				event.target.classList.remove(slash ? 'fa-eye-slash' : 'fa-eye');
+				event.target.classList.add(slash ? 'fa-eye' : 'fa-eye-slash');
+
+				document.querySelector('.password input').setAttribute('type', (slash ? 'text' : 'password'));
+			});
+
 			window.addEventListener('message', event => {
 				if (event.origin !== 'null')
 				{
@@ -126,7 +122,7 @@
 					{
 						const _config = event.data.data;
 
-						for (const name of ['channel', 'token'])
+						for (const name of ['address', 'password'])
 							document.querySelector(`.${name} input`).value = _config.connection[name];
 					}
 					else if (event.data.name == 'logs')
@@ -144,43 +140,21 @@
 								const tr = document.createElement('tr');
 								const date = document.createElement('td');
 								const type = document.createElement('td');
-								const from = document.createElement('td');
-								const sub = document.createElement('td');
-								const vip = document.createElement('td');
-								const mod = document.createElement('td');
-								const brd = document.createElement('td');
 
 								const cross = document.createElement('i');
 								cross.classList.add('fas', 'fa-xmark');
 
-								const columns = [date, type, from, sub, vip, mod, brd];
-								if (row.type.toLowerCase() == 'connected')
+								const columns = [date, type];
+								if (row.type.toLowerCase() == 'connectionopened')
 									columns.forEach(column => column.classList.add('is-info'));
-								else if (row.type.toLowerCase() == 'reconnect')
-									columns.forEach(column => column.classList.add('is-warning'));
-								else if (row.type.toLowerCase() == 'disconnected')
+								else if (row.type.toLowerCase() == 'connectionclosed')
 									columns.forEach(column => column.classList.add('is-danger'));
 
 								date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
 								type.innerText = row.type;
-								from.innerText = row.from;
-
-								if (row.sub)
-									sub.appendChild(cross.cloneNode());
-								if (row.vip)
-									vip.appendChild(cross.cloneNode());
-								if (row.mod)
-									mod.appendChild(cross.cloneNode());
-								if (row.brd)
-									brd.appendChild(cross.cloneNode());
 
 								tr.appendChild(date);
 								tr.appendChild(type);
-								tr.appendChild(from);
-								tr.appendChild(sub);
-								tr.appendChild(vip);
-								tr.appendChild(mod);
-								tr.appendChild(brd);
 
 								table[update ? 'prepend' : 'appendChild'](tr);
 							}

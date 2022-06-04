@@ -1,27 +1,19 @@
 const	path = require('path'),
-		{ app, screen, BrowserWindow } = require('electron');
+		keyevents = require('node-global-key-listener').GlobalKeyboardListener,
+		mouseevents = require('global-mouse-events'),
+		{ app, screen, BrowserWindow, ipcMain } = require('electron');
 
 let		win = null,
-		_last = 0,
-		_pause = 0;
+		_edit = false,
 		_screen = 0,
 		_config = {},
 		_sender = null,
 		_default = {
 			settings: {
-				screen:		0,
-				delay:		15,
-				pause:		1,
-				duration:	400,
-				join:		false,
-				command:	true
+				screen:		0
 			},
-			statistics: {
-				flash:		0,
-				viewer:		0,
-				subscriber:	0,
-				moderator:	0
-			}
+			presets: {},
+			widgets: {}
 		};
 
 function is_numeric(n)
@@ -46,7 +38,7 @@ function create_window()
 		transparent: true,
 		titleBarStyle: 'hidden',
 		webPreferences: {
-			preload: path.join(__dirname, 'flash', 'preload.js')
+			preload: path.join(__dirname, 'widgets', 'preload.js')
 		}
 	});
 
@@ -55,8 +47,20 @@ function create_window()
 
 	win.setMenu(null);
 	win.setIgnoreMouseEvents(true);
-	win.loadFile(path.join(__dirname, 'flash', 'index.html')).then(() => {
-		set_duration(_config.settings.duration);
+	win.loadFile(path.join(__dirname, 'widgets', 'index.html')).then(() => {
+		ipcMain.handle('move', (event, data) => {
+			if (typeof(_config.widgets[data.id]) !== 'undefined')
+			{
+				let widget = JSON.parse(_config.widgets[data.id]);
+				widget.x = data.x;
+				widget.y = data.y;
+
+				_config.widgets[data.id] = JSON.stringify(widget);
+				save_config();
+			}
+		});
+
+		win.webContents.send('add', { id: '42', widget: JSON.parse(_config.widgets['42']) });
 		win.show();
 	});
 }
@@ -74,12 +78,6 @@ function save_config()
 	_sender('manager', 'config', _config);
 }
 
-function set_duration(duration)
-{
-	duration = Math.max(100, duration);
-	win.webContents.send('duration', duration);
-}
-
 function next_screen(index)
 {
 	const screens = screen.getAllDisplays();
@@ -94,19 +92,8 @@ function next_screen(index)
 	const bounds = screens[_screen].bounds;
 	win.setPosition(bounds.x, bounds.y);
 	win.setSize(bounds.width, bounds.height);
-}
 
-function flash_screen(name, force)
-{
-	let now = Date.now();
-	if (force || !_last || (_last + (_config.settings.delay * 1000)) < now)
-	{
-		_last = now;
-		win.webContents.send('flash', name);
-		return true;
-	}
-
-	return false;
+	win.webContents.send('flash');
 }
 
 module.exports = {
@@ -135,34 +122,50 @@ module.exports = {
 			}
 		}
 
-		_config.settings.delay = Math.max(1, _config.settings.delay);
-		_config.settings.duration = Math.max(100, _config.settings.duration);
-
 		_sender('manager', 'menu', [
-			{ label: 'Pause', type: 'checkbox', click : item => {
-				clearTimeout(_pause);
-				_pause = 0;
-
-				if (item.checked)
+			{ label: 'Edit Mode', click : () => {
+				if (_config.default.enabled)
 				{
-					_pause = setTimeout(() => {
-						_pause = 0;
-						item.checked = false;
-					}, (_config.settings.pause * 1000 * 60));
+					_edit = true;
+					win.setIgnoreMouseEvents(!_edit);
+					win.webContents.send('edit', _edit);
 				}
 			} },
 			{ label: 'Next Screen', click : () => {
 				next_screen();
 				update_interface();
 				save_config();
-
-				flash_screen(false, true);
 			} }
 		]);
+
+		(new keyevents()).addListener((event, down) => {
+			if (event.name == 'ESCAPE' && event.state == 'DOWN')
+			{
+				_edit = false;
+				win.setIgnoreMouseEvents(!_edit);
+				win.webContents.send('edit', _edit);
+			}
+		});
+
+		/*mouseevents.on('mousedown', event => {
+			if (_edit)
+				win.webContents.send('mousedown', event);
+		});
+
+		mouseevents.on('mousemove', event => {
+			if (_edit)
+				win.webContents.send('mousemove', event);
+		});
+
+		mouseevents.on('mouseup', event => {
+			if (_edit)
+				win.webContents.send('mouseup', event);
+		});*/
 
 		create_window();
 	},
 	receiver: (id, name, data) => {
+		console.log('widget:', id, name, data);
 		if (id == 'manager')
 		{
 			if (name == 'show')
@@ -181,60 +184,7 @@ module.exports = {
 				save_config();
 
 				if (name == 'screen')
-				{
 					next_screen(data.screen);
-					flash_screen(false, true);
-				}
-				else if (name == 'duration')
-					set_duration(data.duration);
-			}
-			else if (data == 'reset')
-			{
-				_config.statistics.flash = 0;
-				_config.statistics.viewer = 0;
-				_config.statistics.moderator = 0;
-				_config.statistics.subscriber = 0;
-
-				update_interface();
-				save_config();
-			}
-		}
-
-		if (_config.default.enabled)
-		{
-			if (id == 'twitch' && name == 'Connected')
-				flash_screen('connected', true);
-			else if (id == 'twitch' && (name == 'Error' || name == 'Disconnected'))
-				flash_screen('disconnected', true);
-			//	_sender('twitch', 'GetChannelRewards', ['my-client-id', true]).then(data => console.log('GetChannelRewards:', data));
-
-			if (id == 'twitch' && (name == 'Chat' || (_config.settings.join && name == 'Join') || (_config.settings.command && name == 'Command')))
-			{
-				if (_pause || !flash_screen())
-					return;
-
-				++_config.statistics.flash;
-
-				const relation = { Chat: 2, Command: 3, Cheer: 3, Whisper: 2 };
-				if (typeof(relation[name]) !== 'undefined')
-				{
-					const flags = data[relation[name]];
-
-					if (!flags.broadcaster)
-					{
-						let viewer = true;
-						if (flags.mod && !(viewer = false))
-							++_config.statistics.moderator;
-						if (flags.subscriber && !(viewer = false))
-							++_config.statistics.subscriber;
-
-						if (viewer)
-							++_config.statistics.viewer;
-					}
-				}
-
-				update_interface();
-				save_config();
 			}
 		}
 	}

@@ -13,8 +13,12 @@
 			.is-selected {
 				background-color: rgba(0, 0, 0, .5);
 			}
-			.is-narrow {
+			.is-narrow,
+			.is-narrow-top {
 				border-top: 1px solid #555;
+			}
+			.is-narrow,
+			.is-narrow-bottom {
 				border-bottom: 1px solid #555;
 			}
 		</style>
@@ -56,23 +60,19 @@
 					</div>
 				</nav>
 
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
+				<div class="columns is-horizontal is-narrow mt-2 mb-5">
+					<div class="column mt-2">
 						<label class="label">Screen to flash:</label>
 					</div>
-					<div class="field-body">
-						<div class="field screen">
-							<div class="control">
-								<div class="buttons has-addons">
-									<button class="button">1</button>
-									<button class="button is-selected">2</button>
-									<button class="button">3</button>
-								</div>
+					<div class="column has-text-right">
+						<div class="is-inline-block screen">
+							<div class="buttons has-addons">
+								<button class="button">1</button>
+								<button class="button is-selected">2</button>
+								<button class="button">3</button>
 							</div>
 						</div>
-						<div class="field has-text-right reset">
-							<button class="button">Reset statistics</button>
-						</div>
+						<button class="button reset">Reset statistics</button>
 					</div>
 				</div>
 
@@ -117,6 +117,30 @@
 						</div>
 					</div>
 				</div>
+
+				<div class="columns is-narrow-top mt-2 pt-2">
+					<div class="column">
+						<label class="label">Respond to join:</label>
+					</div>
+					<div class="column has-text-right join">
+						<label for="checkbox" class="switch">
+							<input type="checkbox" id="checkbox" />
+							<div class="slider round"></div>
+						</label>
+					</div>
+				</div>
+
+				<div class="columns">
+					<div class="column">
+						<label class="label">Respond to command:</label>
+					</div>
+					<div class="column has-text-right command">
+						<label for="checkbox" class="switch">
+							<input type="checkbox" id="checkbox" />
+							<div class="slider round"></div>
+						</label>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -143,10 +167,20 @@
 				elem.addEventListener('input', callback);
 			}
 
-			document.querySelector('.reset .button').addEventListener('click', event => {
+			document.querySelector('.reset.button').addEventListener('click', event => {
 				event.target.blur();
 				window.parent.postMessage('reset', '*');
 			});
+
+			for (const name of ['join', 'command'])
+			{
+				document.querySelector(`.${name} input`).addEventListener('change', event => {
+					let data = {};
+					data[name] = event.target.checked;
+
+					window.parent.postMessage(data, '*');
+				});
+			}
 
 			window.addEventListener('message', event => {
 				if (event.origin !== 'null')
@@ -161,6 +195,9 @@
 
 						for (const name of ['duration', 'delay', 'pause'])
 							document.querySelector(`.${name} input`).value = _config.settings[name];
+
+						for (const name of ['join', 'command'])
+							document.querySelector(`.${name} input`).checked = _config.settings[name];
 					}
 					else if (event.data.name == 'screens')
 					{

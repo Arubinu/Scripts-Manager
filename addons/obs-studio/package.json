@@ -1,5 +1,5 @@
 {
-  "name": "twitch",
+  "name": "obs-studio",
   "version": "1.0.0",
   "description": "",
   "main": "addon.js",
@@ -9,6 +9,6 @@
   "author": "Arubinu",
   "license": "ISC",
   "dependencies": {
-    "comfy.js": "^1.1.15"
+    "obs-websocket-js": "^4.0.3"
   }
 }

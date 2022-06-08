@@ -9,7 +9,6 @@
   "author": "Arubinu",
   "license": "ISC",
   "dependencies": {
-    "global-mouse-events": "^1.0.7",
     "node-global-key-listener": "^0.1.1"
   }
 }

@@ -2,68 +2,66 @@ const	{ ipcRenderer } = require('electron');
 
 let		_edit = false,
 		_move = false,
+		_resize = false,
+		_target = false,
 		_widgets = {};
 
 function get_widget(id)
 {
-	return document.querySelector(`#widget_${id}`);
+	return document.querySelector(`[wid="${id}"]`);
 }
 
 function get_widget_id(widget)
 {
-	const attr = widget.getAttribute('id');
-	if (attr)
-	{
-		const split = attr.split('widget_');
-		if (split.length == 2 && !split[0].length && split[1].length)
-			return split[1];
-	}
-
-	return false;
+	return widget.getAttribute('wid');
 }
 
-function update_widget(id, x, y)
+function update_widget(id, x, y, width, height)
 {
 	if (typeof(_widgets[id]) === 'undefined')
 		return ;
 
 	const data = _widgets[id];
+	const iframe = data.iframe;
 	const widget = data.element;
-	const position = {
+	const rect = {
 		x: ((typeof(x) !== 'undefined') ? x : data.x),
-		y: ((typeof(y) !== 'undefined') ? y : data.y)
+		y: ((typeof(y) !== 'undefined') ? y : data.y),
+		width: ((typeof(width) !== 'undefined') ? width : data.width),
+		height: ((typeof(height) !== 'undefined') ? height : data.height)
 	};
 
 	const positions = {
 		x: {
-			center: `(100% - ${data.width}px) / 2 + ${position.x}`,
-			right: `100% - ${data.width}px + ${position.x}`
+			center: `(100% - ${rect.width}px) / 2 + ${rect.x}`,
+			right: `100% - ${rect.width}px + ${rect.x}`
 		},
 		y: {
-			middle: `(100% - ${data.height}px) / 2 + ${position.y}`,
-			bottom: `100% - ${data.height}px + ${position.y}`
+			middle: `(100% - ${rect.height}px) / 2 + ${rect.y}`,
+			bottom: `100% - ${rect.height}px + ${rect.y}`
 		}
 	};
 
-	widget.setAttribute('scrolling', 'no');
-	widget.setAttribute('src', data.url);
+	if (data.url != iframe.getAttribute('src'))
+		iframe.setAttribute('src', data.url);
 
-	widget.style.top = `calc(${positions.y[data.anchor[0]] || position.y}px)`;
-	widget.style.left = `calc(${positions.x[data.anchor[1]] || position.x}px)`;
-	widget.style.width = `${data.width}px`;
-	widget.style.height = `${data.height}px`;
+	widget.style.top = `calc(${(typeof(positions.y[data.anchor[0]]) === 'undefined') ? rect.y : positions.y[data.anchor[0]]}px)`;
+	widget.style.left = `calc(${(typeof(positions.x[data.anchor[1]]) === 'undefined') ? rect.x : positions.x[data.anchor[1]]}px)`;
+	widget.style.width = `${rect.width}px`;
+	widget.style.height = `${rect.height}px`;
 }
 
-function mousedown(event)
+function move_mousedown(event)
 {
-	if (_edit)
+	if (_edit && event.button == 0)
 	{
-		const widget = document.elementFromPoint(event.x, event.y);
+		const widget = event.target.closest('[wid]');
 		if (widget)
 		{
 			const id = get_widget_id(widget);
 			if (typeof(_widgets[id]) !== 'undefined')
 			{
+				_move = true;
 				_move = {
 					id: id,
 					widget: _widgets[id],
@@ -75,25 +73,111 @@ function mousedown(event)
 	}
 }
 
+function resize_mousedown(event)
+{
+	//if (_edit && event.button == 0)
+	if (event.button == 0)
+	{
+		const widget = event.target.closest('[wid]');
+		console.log('resize_mousedown 1:', widget);
+		if (widget)
+		{
+			const id = get_widget_id(widget);
+			const mode = event.target.getAttribute('mode');
+			console.log('resize_mousedown 2:', id, mode);
+			if (mode && typeof(_widgets[id]) !== 'undefined')
+			{
+				_resize = true;
+				_target = {
+					id: id,
+					widget: _widgets[id],
+					mode: mode,
+					move: { x: 0, y: 0 },
+					start: { x: event.x, y: event.y },
+				};
+			}
+		}
+	}
+}
+
 function mousemove(event)
 {
-	if (_edit && _move)
+	if (_edit)
 	{
-		_move.move = { x: event.x, y: event.y };
-		update_widget(_move.id, (_move.widget.x + (_move.move.x - _move.start.x)), (_move.widget.y + (_move.move.y - _move.start.y)));
+		if (_move)
+		{
+			_target.move = { x: event.x, y: event.y };
+			_target.widget.temp = { x: (_target.widget.x + (_target.move.x - _target.start.x)), y: (_target.widget.y + (_target.move.y - _target.start.y)) }
+			update_widget(_target.id, _target.widget.temp.x, _target.widget.temp.y);
+		}
+	}
+	else if (_resize)
+	{
+		_target.move = { x: event.x, y: event.y };
+		if (_target.mode == 'w')
+		{
+			const diff = (_target.move.x - _target.start.x);
+			const width = Math.max(0, (_target.widget.width - (diff / 2)));
+			_target.widget.temp = { width: width };
+			if (_target.widget.anchor[1] == 'center')
+				_target.widget.temp.x = (_target.widget.x + (diff / 2));
+			else if (_target.widget.anchor[1] == 'right')
+				_target.widget.temp.x = (_target.widget.x + (diff / 2));
+			else
+				_target.widget.temp.x = (_target.widget.x + diff);
+		}
+		if (_target.mode == 'e')
+		{
+			const diff = (_target.move.x - _target.start.x);
+			const width = Math.max(0, (_target.widget.width + diff));
+			_target.widget.temp = { width: width };
+			if (_target.widget.anchor[1] == 'center')
+				_target.widget.temp.x = (_target.widget.x + (diff / 2));
+			else if (_target.widget.anchor[1] == 'right')
+				_target.widget.temp.x = (_target.widget.x + diff);
+		}
+		else if (_target.mode == 's')
+		{
+			const diff = (_target.move.y - _target.start.y);
+			const height = Math.max(0, (_target.widget.height + diff));
+			_target.widget.temp = { height: height };
+			if (_target.widget.anchor[0] == 'middle')
+				_target.widget.temp.y = (_target.widget.y + (diff / 2));
+			else if (_target.widget.anchor[0] == 'bottom')
+				_target.widget.temp.y = (_target.widget.y + diff);
+		}
+
+		if (_target.widget.temp)
+			update_widget(_target.id, _target.widget.temp.x, _target.widget.temp.y, _target.widget.temp.width, _target.widget.temp.height );
 	}
 }
 
 function mouseup(event)
 {
-	if (_edit && _move)
+	if (_edit)
 	{
-		_move.widget.x += (_move.move.x - _move.start.x);
-		_move.widget.y += (_move.move.y - _move.start.y);
+		if (_move && _target.widget.temp)
+			ipcRenderer.invoke('move', { id: _target.id, x: _target.widget.temp.x, y: _target.widget.temp.y });
+	}
+	//else if (_resize && _target.widget.temp)
+	//	ipcRenderer.invoke('resize', { id: _target.id, x: _target.widget.temp.x, y: _target.widget.temp.y, width: _target.widget.temp.width, height: _target.widget.temp.height });
 
-		ipcRenderer.invoke('move', { id: _move.id, x: _move.widget.x, y: _move.widget.y });
-		update_widget(_move.id);
-		_move = false;
+	_move = false;
+	_resize = false;
+	if (_target)
+	{
+		if (typeof(_target.widget.temp.x) !== 'undefined')
+			_target.widget.x = _target.widget.temp.x;
+		if (typeof(_target.widget.temp.y) !== 'undefined')
+			_target.widget.y = _target.widget.temp.y;
+		if (typeof(_target.widget.temp.width) !== 'undefined')
+			_target.widget.width = _target.widget.temp.width;
+		if (typeof(_target.widget.temp.height) !== 'undefined')
+			_target.widget.height = _target.widget.temp.height;
+
+		delete _target.widget.temp;
+		update_widget(_target.id);
+		_target = false;
 	}
 }
 
@@ -103,33 +187,58 @@ ipcRenderer.on('flash', (event, data) => {
 });
 
 ipcRenderer.on('add', (event, data) => {
-	const widget = (get_widget(data.id) || document.createElement('iframe'));
-	data.widget.element = widget;
-	_widgets[data.id] = data.widget;
-
-	/*if (!widget.getAttribute('id'))
+	let widget = get_widget(data.id);
+	if (!widget)
 	{
-		widget.addEventListener('load', () => {
-			widget.contentWindow.document.addEventListener('mousedown', mousedown);
-			widget.contentWindow.document.addEventListener('mousemove', mousemove);
-			widget.contentWindow.document.addEventListener('mouseup', mouseup);
+		widget = document.querySelector('#template > [wid]').cloneNode(true);
+		widget.querySelector('.move').addEventListener('mousedown', move_mousedown);
+		widget.querySelector('.resize').addEventListener('mousedown', resize_mousedown);
+		widget.querySelector('.resize').addEventListener('mousemove', function(event) {
+			if (!_resize)
+			{
+				const margin = 5;
+				const rect = this.getBoundingClientRect();
 
-			widget.contentWindow.document.addEventListener('dragstart', event => {
-				event.preventDefault();
-				return false;
-			});
+				const top = Math.abs(event.y - rect.top);
+				const right = Math.abs(event.x - rect.right);
+				const bottom = Math.abs(event.y - rect.bottom);
+				const left = Math.abs(event.x - rect.left);
 
-			widget.contentWindow.document.addEventListener('drop', event => {
-				event.preventDefault();
-				return false;
-			});
+				const n = (top < margin);
+				const e = (right < margin);
+				const s = (bottom < margin);
+				const w = (left < margin);
+
+				let mode = '';
+				mode = ((!mode && (n && w)) ? 'nw' : mode );
+				mode = ((!mode && (s && e)) ? 'se' : mode );
+				mode = ((!mode && (n && e)) ? 'ne' : mode );
+				mode = ((!mode && (s && w)) ? 'sw' : mode );
+				mode = ((!mode && n) ? 'n' : mode );
+				mode = ((!mode && e) ? 'e' : mode );
+				mode = ((!mode && s) ? 's' : mode );
+				mode = ((!mode && w) ? 'w' : mode );
+
+				let cursor = '';
+				cursor = ((!cursor && ((n && w) || (s && e))) ? 'nwse-resize' : cursor );
+				cursor = ((!cursor && ((n && e) || (s && w))) ? 'nesw-resize' : cursor );
+				cursor = ((!cursor && (n || s)) ? 'ns-resize' : cursor );
+				cursor = ((!cursor && (e || w)) ? 'ew-resize' : cursor );
+
+				this.setAttribute('mode', mode);
+				this.style.cursor = cursor;
+			}
 		});
-	}*/
 
-	widget.setAttribute('id', `widget_${data.id}`);
+		data.widget.iframe = widget.querySelector('iframe');
+		data.widget.element = widget;
+
+		document.body.appendChild(widget);
+	}
+
+	_widgets[data.id] = data.widget;
+	widget.setAttribute('wid', data.id);
 	update_widget(data.id);
-
-	document.body.appendChild(widget);
 });
 
 ipcRenderer.on('remove', (event, data) => {
@@ -159,7 +268,6 @@ document.addEventListener('drop', event => {
 	return false;
 });
 
-document.addEventListener('mousedown', mousedown);
 document.addEventListener('mousemove', mousemove);
 document.addEventListener('mouseup', mouseup);
 

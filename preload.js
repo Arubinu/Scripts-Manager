@@ -6,6 +6,7 @@ const	fs = require('fs'),
 		{ shell, ipcRenderer } = require('electron');
 
 let		_target = '';
+		_manager = {};
 
 function get_target(target = _target)
 {
@@ -96,6 +97,32 @@ ipcRenderer.on('init', (event, data) => {
 	}
 
 	// from main
+	ipcRenderer.on('manager', (event, data) => {
+		if (data.target == get_target().target)
+		{
+			const iframe_doc = iframe.contentWindow.document;
+
+			if (data.name == 'load')
+			{
+				if (data.target == 'general:about')
+				{
+					_manager = data.data;
+					if (typeof(_manager) === 'object' && typeof(_manager.default) === 'object')
+					{
+						let browse = iframe_doc.querySelector('.browse input');
+						if (typeof(_manager.default.all) === 'string')
+							browse.value = _manager.default.all;
+					}
+				}
+			}
+			else if (data.name == 'browse')
+			{
+				let elem = iframe_doc.querySelector(data.data)
+				elem.value = data.result.filePaths[0];
+				elem.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+			}
+		}
+	});
 	ipcRenderer.on('message', (event, data) => {
 		let target = get_target();
 		if (data.type == target.type && data.id == target.id)
@@ -121,6 +148,10 @@ ipcRenderer.on('init', (event, data) => {
 	iframe.addEventListener('load', event => {
 		const iframe_doc = iframe.contentWindow.document;
 
+		const config_stylesheet = iframe_doc.querySelector(`#config_stylesheet`);
+		if (config_stylesheet)
+			config_stylesheet.setAttribute('href', path.join(__dirname, 'public/css/config.css'));
+
 		// get new target
 		let target = get_target();
 		target.name = 'show';
@@ -140,18 +171,40 @@ ipcRenderer.on('init', (event, data) => {
 			else
 				this_.parentElement.remove();
 
+			let browse = iframe_doc.querySelector('.browse input');
+			browse.addEventListener('change', () => {
+				let target = get_target();
+				target.name = 'save';
+				target.data = { default: { all: browse.value } };
+
+				ipcRenderer.invoke('manager', target);
+			}, false);
+
 			iframe_doc.querySelector('.node-version').innerText = process.versions.node;
 			iframe_doc.querySelector('.chrome-version').innerText = process.versions.chrome;
 			iframe_doc.querySelector('.electron-version').innerText = process.versions.electron;
+
+			let target = get_target();
+			target.name = 'load';
+
+			ipcRenderer.invoke('manager', target);
 		}
 
-		// open links in default browser
+		// open links in default browser and open dialog
 		iframe_doc.addEventListener('click', event => {
-			let elem = event.target.closest('[external-link]');
+			let elem = event.target.closest('[browse-file], [external-link]');
 			if (!elem)
 				elem = event.target;
 
-			if (elem.matches('[external-link]'))
+			if (elem.matches('[browse-file]'))
+			{
+				let target = get_target();
+				target.name = 'browse';
+				target.data = elem.getAttribute('browse-file');
+
+				ipcRenderer.invoke('manager', target);
+			}
+			else if (elem.matches('[external-link]'))
 			{
 				event.preventDefault();
 				shell.openExternal(elem.getAttribute('external-link'));
@@ -204,6 +257,15 @@ ipcRenderer.on('init', (event, data) => {
 				let uri = `../${target.type}/${target.id}/${target.name}.html`;
 				if (target.type == 'general')
 					uri = `../public/${target.id}.html`;
+
+				if (!fs.existsSync(path.join(__dirname, 'erase', uri)))
+				{
+					if (typeof(_manager) === 'object' && typeof(_manager.default) === 'object')
+					{
+						if (typeof(_manager.default.all) === 'string')
+							uri = path.join(_manager.default.all, 'erase', uri);
+					}
+				}
 
 				iframe.setAttribute('src', uri);
 			}

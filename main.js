@@ -1,7 +1,7 @@
 const	fs = require('fs'),
 		path = require('path'),
 		inifile = { read: require('read-ini-file'), write: require('write-ini-file') },
-		{ app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } = require('electron');
+		{ app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } = require('electron');
 
 const	icon = nativeImage.createFromPath(path.join(__dirname, 'public', 'images', 'logo.png'));
 
@@ -9,6 +9,7 @@ let		win,
 		tray,
 		menus = {},
 		addons = {},
+		manager = {},
 		scripts = {},
 		app_exit = false;
 
@@ -44,9 +45,33 @@ function create_window()
 				obj.config.default.enabled = data.data;
 				save_config(data.type, data.id);
 			}
+			else if (data.name == 'browse')
+			{
+				dialog.showOpenDialog({
+					properties: ['openDirectory']
+				}).then(result => {
+					if (!result.canceled)
+					{
+						data.result = result;
+						win.webContents.send('manager', data);
+					}
+				});
+			}
 
 			if (data.type == 'general')
-				; //console.log('main manager receive:', data);
+			{
+				//console.log('main manager receive:', data);
+				if (data.name == 'save')
+				{
+					manager = Object.assign(manager, data.data);
+					save_manager_config();
+				}
+				else if (data.name == 'load')
+				{
+					data.data = JSON.parse(JSON.stringify(manager));
+					win.webContents.send('manager', data);
+				}
+			}
 			else if (obj && typeof(obj.include.receiver) === 'function')
 				obj.include.receiver('manager', data.name, data.data);
 		});
@@ -69,6 +94,7 @@ function create_window()
 		for (const id in scripts)
 			configs.scripts[id] = scripts[id].config;
 
+		//win.webContents.openDevTools();
 		win.webContents.send('init', { menus, configs });
 	});
 
@@ -76,6 +102,18 @@ function create_window()
 		event.preventDefault();
 		win.hide();
 	});
+}
+
+function load_manager_config()
+{
+	const config_path = path.join(__dirname, 'config.ini');
+	if (fs.existsSync(config_path))
+		manager = inifile.read.sync(config_path);
+}
+
+function save_manager_config()
+{
+	inifile.write(path.join(__dirname, 'config.ini'), manager);
 }
 
 async function save_config(type, id, data)
@@ -103,18 +141,30 @@ async function save_config(type, id, data)
 		}
 	}
 
-	return await inifile.write(path.join(__dirname, type, id, 'config.ini'), obj);
+	let config_path = path.join(__dirname, type, id);
+	if (!fs.existsSync(config_path))
+	{
+		if (typeof(manager) === 'object' && typeof(manager.default) === 'object')
+		{
+			if (typeof(manager.default.all) === 'string')
+				config_path = path.join(manager.default.all, type, id);
+		}
+	}
+
+	return await inifile.write(path.join(config_path, 'config.ini'), obj);
 }
 
-function load_addons()
+function load_addons(dir)
 {
 	return new Promise((resolve, reject) => {
-		let dir = path.join(__dirname, 'addons');
 		fs.readdir(dir, (err, files) => {
 			if (err)
 				return reject(err);
 
 			files.forEach(file => {
+				if (typeof(addons[file]) !== 'undefined')
+					return ;
+
 				let addon_path = path.join(dir, file);
 				let addon_file = path.join(addon_path, 'addon.js');
 				let config_file = path.join(addon_path, 'config.ini');
@@ -149,15 +199,17 @@ function load_addons()
 	});
 }
 
-function load_scripts()
+function load_scripts(dir)
 {
 	return new Promise((resolve, reject) => {
-		let dir = path.join(__dirname, 'scripts');
 		fs.readdir(dir, (err, files) => {
 			if (err)
 				return reject(err);
 
 			files.forEach(file => {
+				if (typeof(scripts[file]) !== 'undefined')
+					return ;
+
 				let script_path = path.join(dir, file);
 				let script_file = path.join(script_path, 'script.js');
 				let config_file = path.join(script_path, 'config.ini');
@@ -292,25 +344,54 @@ app.whenReady().then(() => {
 	tray.setToolTip('ScriptManager');
 
 	tray.on('double-click', () => {
-		win.show();
+		if (win)
+			win.show();
 	});
 
 	const next = () => {
 		const next = () => {
-			generate_menu();
-			create_window();
-
-			app.on('activate', () => {
-				//if (BrowserWindow.getAllWindows().length === 0)
-				if (!win)
+			const next = () => {
+				const next = () => {
+					generate_menu();
 					create_window();
-				else if (!win.isVisible())
-					win.show();
-			});
+
+					app.on('activate', () => {
+						if (!win)
+							create_window();
+						else if (!win.isVisible())
+							win.show();
+					});
+				};
+
+				if (typeof(manager.default) === 'object' && typeof(manager.default.all) === 'string')
+				{
+					const addons_path = path.join(manager.default.all, 'addons');
+					if (fs.existsSync(addons_path))
+					{
+						load_addons(addons_path).then(next).catch(next);
+						return ;
+					}
+				}
+
+				next();
+			};
+
+			load_manager_config();
+			if (typeof(manager.default) === 'object' && typeof(manager.default.all) === 'string')
+			{
+				const scripts_path = path.join(manager.default.all, 'scripts');
+				if (fs.existsSync(scripts_path))
+				{
+					load_scripts(scripts_path).then(next).catch(next);
+					return ;
+				}
+			}
+
+			next();
 		};
 
-		load_scripts().then(next).catch(next);
+		load_scripts(path.join(__dirname, 'scripts')).then(next).catch(next);
 	};
 
-	load_addons().then(next).catch(next);
+	load_addons(path.join(__dirname, 'addons')).then(next).catch(next);
 });

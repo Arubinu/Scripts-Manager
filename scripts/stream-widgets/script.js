@@ -1,6 +1,5 @@
 const	path = require('path'),
 		keyevents = require('node-global-key-listener').GlobalKeyboardListener,
-		mouseevents = require('global-mouse-events'),
 		{ app, screen, BrowserWindow, ipcMain } = require('electron');
 
 let		win = null,
@@ -60,6 +59,7 @@ function create_window()
 			}
 		});
 
+		//win.webContents.openDevTools();
 		win.webContents.send('add', { id: '42', widget: JSON.parse(_config.widgets['42']) });
 		win.show();
 	});
@@ -146,21 +146,6 @@ module.exports = {
 				win.webContents.send('edit', _edit);
 			}
 		});
-
-		/*mouseevents.on('mousedown', event => {
-			if (_edit)
-				win.webContents.send('mousedown', event);
-		});
-
-		mouseevents.on('mousemove', event => {
-			if (_edit)
-				win.webContents.send('mousemove', event);
-		});
-
-		mouseevents.on('mouseup', event => {
-			if (_edit)
-				win.webContents.send('mouseup', event);
-		});*/
 
 		create_window();
 	},

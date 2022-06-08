@@ -4,15 +4,17 @@
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder build --win portable"
   },
   "repository": "https://github.com/electron/electron-quick-start",
   "keywords": [
-    "Electron",
-    "quick",
-    "start",
-    "tutorial",
-    "demo"
+    "Scripts",
+    "Manager",
+    "Addons",
+    "Stream",
+    "Twitch",
+    "OBS"
   ],
   "author": "GitHub",
   "license": "CC0-1.0",
@@ -20,8 +22,41 @@
     "electron": "^18.2.4"
   },
   "dependencies": {
+    "comfy.js": "^1.1.15",
+    "node-global-key-listener": "^0.1.1",
+    "obs-websocket-js": "^4.0.3",
     "read-ini-file": "^3.0.1",
     "uniqid": "^5.4.0",
     "write-ini-file": "^3.0.2"
+  },
+  "build": {
+    "appId": "fr.arubinu.scripts-manager",
+    "productName": "Scripts Manager",
+    "copyright": "",
+    "mac": {
+      "target": [
+        "zip"
+      ]
+    },
+    "win": {
+      "publisherName": "Arubinu",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ]
+    },
+    "dmg": {
+      "icon": "build/logo.icns"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    }
   }
 }

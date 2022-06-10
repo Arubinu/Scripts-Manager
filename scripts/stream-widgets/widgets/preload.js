@@ -186,6 +186,10 @@ ipcRenderer.on('flash', (event, data) => {
 	setTimeout(() => { document.body.classList.add(data || 'flash'); }, 20);
 });
 
+ipcRenderer.on('enabled', (event, data) => {
+	document.body.classList.toggle('show', data);
+});
+
 ipcRenderer.on('add', (event, data) => {
 	let widget = get_widget(data.id);
 	if (!widget)

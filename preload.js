@@ -177,6 +177,17 @@ ipcRenderer.on('init', (event, data) => {
 				target.name = 'save';
 				target.data = { default: { all: browse.value } };
 
+				if (target.data.default.all.trim().length)
+				{
+					const addons_path = path.join(target.data.default.all, 'addons');
+					if (!fs.existsSync(addons_path))
+						fs.mkdir(addons_path, () => {});
+
+					const scripts_path = path.join(target.data.default.all, 'scripts');
+					if (!fs.existsSync(scripts_path))
+						fs.mkdir(scripts_path, () => {});
+				}
+
 				ipcRenderer.invoke('manager', target);
 			}, false);
 

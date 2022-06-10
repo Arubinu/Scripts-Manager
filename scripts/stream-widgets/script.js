@@ -60,6 +60,7 @@ function create_window()
 		});
 
 		//win.webContents.openDevTools();
+		win.webContents.send('enabled', _config.default.enabled);
 		win.webContents.send('add', { id: '42', widget: JSON.parse(_config.widgets['42']) });
 		win.show();
 	});
@@ -156,7 +157,10 @@ module.exports = {
 			if (name == 'show')
 				update_interface();
 			else if (name == 'enabled')
+			{
 				_config.default.enabled = data;
+				win.webContents.send('enabled', _config.default.enabled);
+			}
 		}
 
 		if (id == 'message')

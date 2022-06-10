@@ -1,9 +1,11 @@
 const	fs = require('fs'),
 		path = require('path'),
+		estore = require('electron-store'),
 		inifile = { read: require('read-ini-file'), write: require('write-ini-file') },
 		{ app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } = require('electron');
 
-const	icon = nativeImage.createFromPath(path.join(__dirname, 'public', 'images', 'logo.png'));
+const	icon = nativeImage.createFromPath(path.join(__dirname, 'public', 'images', 'logo.png')),
+		store = new estore();
 
 let		win,
 		tray,
@@ -106,23 +108,34 @@ function create_window()
 
 function load_manager_config()
 {
-	const config_path = path.join(__dirname, 'config.ini');
-	if (fs.existsSync(config_path))
-		manager = inifile.read.sync(config_path);
+	try
+	{
+		const tmp = store.get('manager');
+		if (typeof(tmp) === 'object')
+			manager = tmp;
+	}
+	catch (e) {}
 }
 
 function save_manager_config()
 {
-	inifile.write(path.join(__dirname, 'config.ini'), manager);
+	store.set('manager', manager);
 }
 
 async function save_config(type, id, data)
 {
 	let obj = null;
+	let is_global = false;
 	if (type == 'addons')
+	{
 		obj = addons[id].config;
+		is_global = addons[id].is_global;
+	}
 	else if (type == 'scripts')
+	{
 		obj = scripts[id].config;
+		is_global = scripts[id].is_global;
+	}
 	else
 		return false;
 
@@ -151,10 +164,16 @@ async function save_config(type, id, data)
 		}
 	}
 
+	if (is_global)
+	{
+		store.set(`${type}-${id}`, obj);
+		return true;
+	}
+
 	return await inifile.write(path.join(config_path, 'config.ini'), obj);
 }
 
-function load_addons(dir)
+function load_addons(dir, is_global)
 {
 	return new Promise((resolve, reject) => {
 		fs.readdir(dir, (err, files) => {
@@ -175,9 +194,26 @@ function load_addons(dir)
 						let config = JSON.parse(JSON.stringify(inifile.read.sync(config_file)));
 						if (typeof(config.default.name) === 'string')
 						{
+							if (is_global)
+							{
+								try
+								{
+									const tmp = store.get(`addons-${file}`);
+									for (const key in tmp)
+									{
+										if (key == 'general')
+											config[key].enabled = ((typeof(tmp[key].enabled) === 'boolean') ? tmp[key].enabled : false);
+										else
+											config[key] = Object.assign(((typeof(config[key]) === 'object') ? config[key] : {}), tmp[key]);
+									}
+								}
+								catch (e) {}
+							}
+
 							addons[file] = {
 								config: config,
-								include: require(addon_file)
+								include: require(addon_file),
+								is_global: is_global
 							}
 
 							if (typeof(addons[file].include.init) === 'function')
@@ -199,7 +235,7 @@ function load_addons(dir)
 	});
 }
 
-function load_scripts(dir)
+function load_scripts(dir, is_global)
 {
 	return new Promise((resolve, reject) => {
 		fs.readdir(dir, (err, files) => {
@@ -230,10 +266,27 @@ function load_scripts(dir)
 								}
 							}
 
+							if (is_global)
+							{
+								try
+								{
+									const tmp = store.get(`scripts-${file}`);
+									for (const key in tmp)
+									{
+										if (key == 'general')
+											config[key].enabled = ((typeof(tmp[key].enabled) === 'boolean') ? tmp[key].enabled : false);
+										else
+											config[key] = Object.assign(((typeof(config[key]) === 'object') ? config[key] : {}), tmp[key]);
+									}
+								}
+								catch (e) {}
+							}
+
 							scripts[file] = {
 								menu: [],
 								config: config,
-								include: require(script_file)
+								include: require(script_file),
+								is_global: is_global
 							}
 
 							if (typeof(scripts[file].include.init) === 'function')
@@ -340,6 +393,7 @@ function generate_menu()
 }
 
 app.whenReady().then(() => {
+	// init tray
 	tray = new Tray(icon);
 	tray.setToolTip('ScriptManager');
 
@@ -348,9 +402,13 @@ app.whenReady().then(() => {
 			win.show();
 	});
 
+	// built-in scripts
 	const next = () => {
+		// user addons
 		const next = () => {
+			// user scripts
 			const next = () => {
+				// init app
 				const next = () => {
 					generate_menu();
 					create_window();
@@ -365,10 +423,10 @@ app.whenReady().then(() => {
 
 				if (typeof(manager.default) === 'object' && typeof(manager.default.all) === 'string')
 				{
-					const addons_path = path.join(manager.default.all, 'addons');
-					if (fs.existsSync(addons_path))
+					const scripts_path = path.join(manager.default.all, 'scripts');
+					if (fs.existsSync(scripts_path))
 					{
-						load_addons(addons_path).then(next).catch(next);
+						load_scripts(scripts_path).then(next).catch(next);
 						return ;
 					}
 				}
@@ -379,10 +437,10 @@ app.whenReady().then(() => {
 			load_manager_config();
 			if (typeof(manager.default) === 'object' && typeof(manager.default.all) === 'string')
 			{
-				const scripts_path = path.join(manager.default.all, 'scripts');
-				if (fs.existsSync(scripts_path))
+				const addons_path = path.join(manager.default.all, 'addons');
+				if (fs.existsSync(addons_path))
 				{
-					load_scripts(scripts_path).then(next).catch(next);
+					load_addons(addons_path).then(next).catch(next);
 					return ;
 				}
 			}
@@ -390,8 +448,9 @@ app.whenReady().then(() => {
 			next();
 		};
 
-		load_scripts(path.join(__dirname, 'scripts')).then(next).catch(next);
+		load_scripts(path.join(__dirname, 'scripts'), true).then(next).catch(next);
 	};
 
-	load_addons(path.join(__dirname, 'addons')).then(next).catch(next);
+	// built-in addons
+	load_addons(path.join(__dirname, 'addons'), true).then(next).catch(next);
 });

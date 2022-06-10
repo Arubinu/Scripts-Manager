@@ -93,6 +93,7 @@ function next_screen(index)
 
 	const bounds = screens[_screen].bounds;
 	win.setPosition(bounds.x, bounds.y);
+	win.setMinimumSize(bounds.width, bounds.height); // fix
 	win.setSize(bounds.width, bounds.height);
 }
 

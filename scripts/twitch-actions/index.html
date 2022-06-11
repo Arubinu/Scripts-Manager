@@ -10,31 +10,372 @@
 
 		<link id="config_stylesheet" rel="stylesheet" />
 		<style type="text/css">
-			.is-selected {
-				background-color: rgba(0, 0, 0, .5);
+			body {
+				overflow: hidden;
 			}
-			.is-narrow,
-			.is-narrow-top {
-				border-top: 1px solid #555;
+
+			.hero {
+				z-index: 1 !important;
 			}
-			.is-narrow,
-			.is-narrow-bottom {
-				border-bottom: 1px solid #555;
+			button.show-blocks {
+				margin-top: -5px;
+				margin-bottom: -5px;
+			}
+
+			.drag-drawflow .fas {
+				margin-right: 7px;
+			}
+
+			.blocks-drawflow {
+				position: fixed;
+				top: -100%;
+				right: 0px;
+				bottom: 100%;
+				left: 0px;
+				width: 100%;
+				height: 100%;
+				background-color: #555;
+				transition: all 500ms ease-in-out;
+				z-index: -1 !important;
+			}
+			body.show-blocks .blocks-drawflow {
+				top: 68px;
+				bottom: -6px;
+			}
+
+			.box-drawflow {
+				position: fixed;
+				top: 68px;
+				right: 0px;
+				bottom: 0px;
+				left: 0px;
+				height: calc(100% - (68px - 6px)) !important;
+				z-index: -2 !important;
+			}
+
+			.twitch-command {
+				position: relative;
+			}
+			.twitch-command input {
+				padding-left: calc(6px + 24px) !important;
+			}
+			.twitch-command::before {
+				content: '!';
+				position: absolute;
+				top: 1px;
+				left: -20px;
+				width: 24px;
+				height: 28px;
+				font-size: 1.3em;
+				text-align: center;
+				background-color: rgba(255, 255, 255, .06);
 			}
 		</style>
+
+		<link rel="stylesheet" href="./libs/drawflow.min.css" />
+		<link rel="stylesheet" href="./libs/drawflow.style.css" />
+		<script src="./libs/drawflow.min.js"></script>
+		<script src="./libs/drawflow.blocks.js"></script>
 	</head>
 
 	<body>
+		<div class="modal add-module">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Add Module</p>
+					<button class="delete" aria-label="close"></button>
+				</header>
+				<section class="modal-card-body">
+					<div class="content">
+						<h4>Module name :</h4>
+					</div>
+					<input type="text" class="input has-text-centered" />
+				</section>
+				<footer class="modal-card-foot is-justify-content-right">
+					<button class="button is-success">Confirm</button>
+					<button class="button" aria-label="close">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<div class="modal rename-module">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Rename Module</p>
+					<button class="delete" aria-label="close"></button>
+				</header>
+				<section class="modal-card-body">
+					<div class="content">
+						<h4>Module name :</h4>
+					</div>
+					<input type="text" class="input has-text-centered" />
+				</section>
+				<footer class="modal-card-foot is-justify-content-right">
+					<button class="button is-success">Confirm</button>
+					<button class="button" aria-label="close">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
+		<div class="modal delete-module">
+			<div class="modal-background"></div>
+			<div class="modal-card">
+				<header class="modal-card-head">
+					<p class="modal-card-title">Rename Module</p>
+					<button class="delete" aria-label="close"></button>
+				</header>
+				<section class="modal-card-body">
+					<div class="content">
+						<h4>Really want to remove this module ?</h4>
+					</div>
+				</section>
+				<footer class="modal-card-foot is-justify-content-right">
+					<button class="button is-success">Confirm</button>
+					<button class="button" aria-label="close">Cancel</button>
+				</footer>
+			</div>
+		</div>
+
 		<div class="container">
 			<section class="hero is-small has-background-grey-dark">
 				<div class="hero-body">
-					<p class="subtitle is-size-6 has-text-white-ter">Program all kinds of actions related to Twitch or OBS Studio.</p>
+					<div class="subtitle is-size-6 has-text-white-ter">
+						Program all kinds of actions related to addons.
+						<i class="fas fa-trash is-pulled-right ml-2 delete-module" title="Delete"></i>
+						<i class="fas fa-pen-to-square is-pulled-right ml-2 rename-module" title="Rename"></i>
+						<i class="fas fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
+						<div class="select is-small is-pulled-right ml-2">
+							<select class="modules"></select>
+						</div>
+						<button class="button is-small is-pulled-right show-blocks">Toggle Blocks</button>
+					</div>
 				</div>
 			</section>
 
-			<div class="m-5">
+			<div class="blocks-drawflow">
+				<div class="columns my-2">
+					<div class="column mx-5 has-text-centered content blocks-event">
+						<h5>Event</h5>
+						<div blocks-type="obs-studio">
+							<h6 class="has-text-left">OBS Studio</h6>
+						</div>
+						<div blocks-type="twitch">
+							<h6 class="has-text-left mt-4">Twitch</h6>
+						</div>
+					</div>
+					<div class="column mx-5 has-text-centered content blocks-trigger">
+						<h5>Trigger</h5>
+						<div blocks-type="obs-studio">
+							<h6 class="has-text-left">OBS Studio</h6>
+						</div>
+						<div blocks-type="twitch">
+							<h6 class="has-text-left mt-4">Twitch</h6>
+						</div>
+					</div>
+					<div class="column mx-5 has-text-centered content blocks-fonctionnality">
+						<h5>Fonctionnality</h5>
+						<div blocks-type=""></div>
+					</div>
+				</div>
+			</div>
+
+			<div class="box-drawflow">
 			</div>
 		</div>
+
+		<script type="text/javascript">
+			const drawflow = document.querySelector('.box-drawflow');
+			const selector = document.querySelector('.modules');
+			const editor = new Drawflow(drawflow);
+
+			window.editor = editor;
+
+			window.drawflow_save = () => {
+				window.parent.postMessage({save: editor.export().drawflow}, '*');
+			};
+
+			window.drawflow_select = () => {
+				selector.innerHTML = '';
+				for (const name in editor.drawflow.drawflow)
+				{
+					const option = document.createElement('option');
+					option.value = name;
+					option.innerText = name;
+					selector.appendChild(option);
+				}
+
+				selector.value = editor.module;
+			};
+
+			if (typeof(editor.renameModule) !== 'function')
+			{
+				editor.renameModule = new_name => {
+					const current = editor.module;
+					editor.drawflow.drawflow[new_name] = editor.drawflow.drawflow[current];
+					delete editor.drawflow.drawflow[current];
+
+					editor.changeModule(new_name);
+					window.drawflow_save();
+					window.drawflow_select();
+				};
+			}
+
+			// Events!
+			editor.on('nodeCreated', function(id) {
+				console.log("Node created " + id);
+				window.drawflow_save();
+			});
+
+			editor.on('nodeRemoved', function(id) {
+				console.log("Node removed " + id);
+				window.drawflow_save();
+			});
+
+			editor.on('nodeSelected', function(id) {
+				console.log("Node selected " + id);
+			});
+
+			editor.on('moduleCreated', function(name) {
+				console.log("Module Created " + name);
+				window.drawflow_save();
+				window.drawflow_select();
+			});
+
+			editor.on('moduleChanged', function(name) {
+				console.log("Module Changed " + name);
+				setTimeout(() => {
+					window.drawflow_initializer(editor.drawflow.drawflow);
+				}, 10);
+			});
+
+			editor.on('connectionCreated', function(connection) {
+				console.log('Connection created');
+				console.log(connection);
+				window.drawflow_save();
+			});
+
+			editor.on('connectionRemoved', function(connection) {
+				console.log('Connection removed');
+				console.log(connection);
+				window.drawflow_save();
+			});
+
+			editor.on('mouseMove', function(position) {
+				//console.log('Position mouse x:' + position.x + ' y:'+ position.y);
+			});
+
+			editor.on('nodeMoved', function(id) {
+				console.log("Node moved " + id);
+				window.drawflow_save();
+			});
+
+			editor.on('zoom', function(zoom) {
+				console.log('Zoom level ' + zoom);
+			});
+
+			editor.on('translate', function(position) {
+				//console.log('Translate x:' + position.x + ' y:'+ position.y);
+			});
+
+			editor.on('addReroute', function(id) {
+				console.log("Reroute added " + id);
+			});
+
+			editor.on('removeReroute', function(id) {
+				console.log("Reroute removed " + id);
+			});
+
+			editor.start();
+
+			selector.addEventListener('change', event => {
+				editor.changeModule(selector.value);
+			});
+
+			document.querySelectorAll('[aria-label="close"]').forEach(elem => {
+				elem.addEventListener('click', () => {
+					const modal = elem.closest('.modal');
+					if (modal)
+						modal.classList.remove('is-active');
+				}, false);
+			});
+
+			document.querySelector('i.add-module').addEventListener('click', event => {
+				const elem = document.querySelector('div.add-module');
+				elem.querySelector('input').value = '';
+				elem.classList.add('is-active');
+			});
+
+			document.querySelector('div.add-module .is-success').addEventListener('click', event => {
+				const modal = event.target.closest('.modal');
+				modal.classList.remove('is-active');
+
+				editor.addModule(modal.querySelector('input').value.trim());
+				window.drawflow_save();
+				window.drawflow_select();
+			});
+
+			document.querySelector('i.rename-module').addEventListener('click', event => {
+				const elem = document.querySelector('div.rename-module');
+				elem.querySelector('input').value = '';
+				elem.classList.add('is-active');
+			});
+
+			document.querySelector('div.rename-module .is-success').addEventListener('click', event => {
+				const modal = event.target.closest('.modal');
+				modal.classList.remove('is-active');
+
+				editor.renameModule(modal.querySelector('input').value.trim());
+			});
+
+			document.querySelector('i.delete-module').addEventListener('click', event => {
+				const elem = document.querySelector('div.delete-module');
+				elem.classList.add('is-active');
+			});
+
+			document.querySelector('div.delete-module .is-success').addEventListener('click', event => {
+				const modal = event.target.closest('.modal');
+				modal.classList.remove('is-active');
+
+				if (selector.querySelectorAll('option').length > 1)
+				{
+					const to_delete = editor.module;
+
+					editor.removeModule(to_delete);
+					selector.value = editor.module;
+
+					for (const option of selector.querySelectorAll('option'))
+					{
+						if (option.value == to_delete)
+							option.remove();
+					}
+
+					window.drawflow_save();
+					window.drawflow_select(selector);
+				}
+			});
+
+			window.addEventListener('message', event => {
+				if (event.origin !== 'null')
+				{
+					if (event.data.name == 'config')
+					{
+						const _config = event.data.data;
+						if (Object.keys(_config.actions).length)
+						{
+							editor.import({ drawflow: _config.actions });
+							window.drawflow_select();
+
+							if (typeof(window.drawflow_initializer) === 'function')
+								window.drawflow_initializer(_config.actions);
+						}
+					}
+					else if (event.data.name == 'receive' && typeof(window.drawflow_receiver) === 'function')
+						window.drawflow_receiver(event.data.data.id, event.data.data.name, event.data.data.data);
+				}
+			}, false);
+		</script>
 	</body>
 
 </html>

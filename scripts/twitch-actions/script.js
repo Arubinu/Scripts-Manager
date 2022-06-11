@@ -4,38 +4,41 @@ let		_config = {},
 		_sender = null;
 
 const	actions = {
-	'obs-studio': {
-		get: {
-			SwitchScenes: (name, data, action) => {
-				return (data['scene-name'].toLowerCase() == action[1].toLowerCase());
-			},
-		},
-		set: {
-			ToggleSource: (name, data, action) => {
-				_sender('obs-studio', 'ToggleSource', [action[2], action[1], action[3]]);
-			},
-			SetCurrentScene: (name, data, action) => {
-				_sender('obs-studio', 'SetCurrentScene', [action[1]]);
-			},
+	'self-timer': (receive, data, next) => {
+		if (data.millis > 0)
+			setTimeout(next, data.millis);
+	},
+	'event-twitch-chat': (receive, data, next) => {
+		if (data.message && receive.id == 'twitch' && receive.name == 'Chat' && receive.data[1].toLowerCase() == data.message.toLowerCase())
+			next();
+	},
+	'event-twitch-command': (receive, data, next) => {
+		if (data.command && receive.id == 'twitch' && receive.name == 'Command')
+		{
+			const split = data.command.split(' ', 2);
+			if (receive.data[1].toLowerCase() == split[0].toLowerCase() && (split.length == 1 || receive.data[2].toLowerCase() == split.slice(1).join(' ').toLowerCase()))
+				next();
 		}
 	},
-	'twitch': {
-		get: {
-			Command: (name, data, action) => {
-				return (data[1] == action[1]);
-			},
-			Chat: (name, data, action) => {
-				return (data[1] == action[1]);
-			},
-			Whisper: (name, data, action) => {
-				return (data[1] == action[1]);
-			}
-		},
-		set: {
-			Say: (name, data, action) => {
-				_sender('twitch', 'Say', [action[1]]);
-			},
-		}
+	'event-twitch-whisper': (receive, data, next) => {
+		if (data.whisper && receive.id == 'twitch' && receive.name == 'Whisper' && receive.data[1].toLowerCase() == data.whisper.toLowerCase())
+			next();
+	},
+	'event-obs-studio-switch-scene': (receive, data, next) => {
+		if (data.scene && receive.id == 'obs-studio' && receive.name == 'SwitchScenes' && receive.data['scene-name'].toLowerCase() == data.scene.toLowerCase())
+			next();
+	},
+	'trigger-twitch-chat': (receive, data, next) => {
+		if (data.message)
+			_sender('twitch', 'Say', [data.message]);
+	},
+	'trigger-obs-studio-toggle-source': (receive, data, next) => {
+		if (data.scene && data.source)
+			_sender('obs-studio', 'ToggleSource', [data.source, data.scene, data.state]);
+	},
+	'trigger-obs-studio-switch-scene': (receive, data, next) => {
+		if (data.scene)
+			_sender('obs-studio', 'SetCurrentScene', [data.scene]);
 	}
 };
 
@@ -51,18 +54,58 @@ module.exports = {
 				_sender('message', 'config', _config);
 			else if (name == 'enabled')
 				_config.default.enabled = data;
+
+			return ;
+		}
+		else if (id == 'message' && name == 'index')
+		{
+			if (typeof(data) === 'object')
+			{
+				if (data.save)
+				{
+					_config.actions = data.save;
+					_sender('manager', 'config', _config);
+				}
+				else if (data.request)
+				{
+					_sender(...data.request).then(_data => {
+						_sender('message', 'receive', { id: data.request[0], name: data.request[1], data: _data });
+					});
+				}
+			}
+
+			return ;
 		}
 
 		if (_config.default.enabled)
 		{
-			for (const index in _config.actions)
+			const receive = { id, name, data };
+			_sender('message', 'receive', receive);
+
+			for (const action_index in _config.actions)
 			{
-				try
+				const action = _config.actions[action_index];
+				for (const node_index in action.data)
 				{
-					const action = JSON.parse(_config.actions[index]);
-					if (id == action[0] && name == action[1][0] && actions[id].get[name](name, data, action[1]))
-						actions[action[2]].set[action[3][0]](name, data, action[3]);
-				} catch (e) {}
+					const node = action.data[node_index];
+					if (!Object.keys(node.inputs).length && typeof(actions[node.data.type]) !== 'undefined')
+					{
+						const next = node => {
+							for (const output_index in node.outputs)
+							{
+								const output = node.outputs[output_index].connections;
+								for (const connection of node.outputs[output_index].connections)
+								{
+									const node = action.data[connection.node];
+									if (typeof(actions[node.data.type]) !== 'undefined')
+										actions[node.data.type](receive, node.data.data, () => next(node));
+								}
+							}
+						};
+
+						actions[node.data.type](receive, node.data.data, () => next(node));
+					}
+				}
 			}
 		}
 	}

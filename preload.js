@@ -27,7 +27,8 @@ ipcRenderer.on('init', (event, data) => {
 
 	// define iframe height
 	setInterval(() => {
-		iframe.style.height = `${iframe.contentWindow.document.body.scrollHeight - 20}px`;
+		if (iframe.contentWindow.document.body)
+			iframe.style.height = `${iframe.contentWindow.document.body.scrollHeight - 20}px`;
 	}, 1000);
 
 	// menu generation
@@ -224,7 +225,7 @@ ipcRenderer.on('init', (event, data) => {
 
 		// removes focus from buttons and links so as not to have the blue outline
 		iframe_doc.addEventListener('mouseup', event => {
-			if (!event.target.matches('input, textarea') && !event.target.closest('input, textarea'))
+			if (!event.target.matches('input, select, textarea') && !event.target.closest('input, select, textarea'))
 				iframe.blur();
 		});
 

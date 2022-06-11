@@ -318,7 +318,13 @@ async function script_sender(type, id, target, name, data)
 				save_config(type, id, data);
 		}
 		else if (target == 'message')
+		{
+			if (!win)
+				return false;
+
 			win.webContents.send('message', { type, id, name, data });
+			return true;
+		}
 		else if (target == 'broadcast')
 		{
 			for (const sid in scripts)
@@ -346,6 +352,9 @@ async function script_sender(type, id, target, name, data)
 		}
 		else if (target == 'message')
 		{
+			if (!win)
+				return false;
+
 			win.webContents.send('message', { type, id, name, data });
 			return true;
 		}

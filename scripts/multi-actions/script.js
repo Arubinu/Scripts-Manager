@@ -46,7 +46,13 @@ const	actions = {
 	},
 	'trigger-obs-studio-toggle-source': (receive, data, next) => {
 		if (data.scene && data.source)
-			_sender('obs-studio', 'ToggleSource', [data.source, data.scene, data.state]);
+		{
+			let state = undefined;
+			state = ((data.state == 'on') ? true : state);
+			state = ((data.state == 'off') ? false : state);
+
+			_sender('obs-studio', 'ToggleSource', [data.source, data.scene, state]);
+		}
 	},
 	'trigger-obs-studio-recording': (receive, data, next) => {
 		_sender('obs-studio', (data.state ? 'StartRecording' : 'StopRecording'));

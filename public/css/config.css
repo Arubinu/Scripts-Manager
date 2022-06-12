@@ -25,6 +25,10 @@ textarea:focus {
 	box-shadow: none !important;
 }
 
+select option {
+	background-color: #333;
+}
+
 .modal-card-foot, .modal-card-head {
 	background-color: rgb(30, 32, 33);
 }

@@ -110,6 +110,17 @@ document.addEventListener('DOMContentLoaded', () => {
 				else
 					node.data.data[elem_name] = elem.checked;
 			}
+			else if (is_input && input_type == 'radio')
+			{
+				const radio_elems = node_elem.querySelectorAll(`input[name="${elem_name}"]`);
+				for (const radio_elem of radio_elems)
+				{
+					if (data_exists)
+						radio_elem.checked = (radio_elem.value == node.data.data[elem_name]);
+					else if (radio_elem.checked)
+						node.data.data[elem_name] = radio_elem.value;
+				}
+			}
 			else
 			{
 				if (data_exists)
@@ -118,12 +129,13 @@ document.addEventListener('DOMContentLoaded', () => {
 					node.data.data[elem_name] = elem.value;
 			}
 
+			set_data(id, node.data.data);
 			if (block.update)
 				block.update(node.data.id, node_elem, node.data.data, _data => set_data(id, _data));
-			set_data(id, node.data.data);
 
 			const update = event => {
 				node.data.data[elem_name] = elem.value;
+
 				set_data(id, node.data.data);
 				if (block.update)
 					block.update(node.data.id, node_elem, node.data.data, _data => set_data(id, _data));
@@ -304,6 +316,127 @@ document.addEventListener('DOMContentLoaded', () => {
 			register: [['twitch', 'Chat']],
 			update: functions.trim
 		},
+		'trigger-obs-studio-toggle-source': {
+			type: 'obs-studio',
+			title: 'Toggle Source',
+			tooltip: 'OBS Studio - Toggle Source',
+			icon: ['circle-arrow-up', 'eye'],
+			inputs: 1,
+			outputs: 0,
+			body: '<p>Scene name</p><select name="scene" class="has-text-centered"></select><p>Source name</p><select name="source" class="has-text-centered"></select><p>State</p><div class="field has-addons is-justify-content-center"><p class="control"><input name="state" type="radio" value="on" class="is-hidden" checked /><button class="button button-on"><span>Start</span></button></p><p class="control"><input name="state" type="radio" value="toggle" class="is-hidden" /><button class="button button-toggle"><span>Toggle</span></button></p><p class="control"><input name="state" type="radio" value="off" class="is-hidden" /><button class="button button-off"><span>Stop</span></button></p></div>',
+			data: {},
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
+			update: (id, elem, data, set_data, receive) => {
+				//switch_state
+				const input = elem.querySelector('input');
+				const on = elem.querySelector('.button-on');
+				const toggle = elem.querySelector('.button-toggle');
+				const off = elem.querySelector('.button-off');
+
+				const change_state = (state, save) => {
+					on.classList.toggle('is-active', (toggle ? (state == 'on') : state));
+					off.classList.toggle('is-active', (toggle ? (state == 'off') : !state));
+					if (toggle)
+						toggle.classList.toggle('is-active', (state == 'toggle'));
+
+					if (save)
+					{
+						data.state = state;
+						set_data(data);
+					}
+				};
+
+				if (!elem.querySelector('.is-active'))
+				{
+					on.addEventListener('click', () => change_state((toggle ? 'on' : true), true), false);
+					off.addEventListener('click', () => change_state((toggle ? 'off' : false), true), false);
+					if (toggle)
+						toggle.addEventListener('click', () => change_state('toggle', true), false);
+				}
+
+				if (toggle)
+				{
+					let value = 'on';
+					const radio_elems = elem.querySelectorAll(`input[name="${input.getAttribute('name')}"]`);
+					for (const radio_elem of radio_elems)
+					{
+						if (radio_elem.checked)
+							value = radio_elem.value;
+					}
+
+					change_state(value);
+				}
+				else
+					change_state(input.checked);
+
+				// switch_scenes
+				const selects = elem.querySelectorAll('select');
+				if (!selects[0].children.length)
+				{
+					if (receive || global_datas.scenes)
+					{
+						if (receive)
+							global_datas.scenes = receive.scenes;
+
+						// source
+						const scene_schanged = () => {
+							const value = selects[0].value;
+							if (value)
+							{
+								const selected = (selects[1].value || data.source);
+
+								selects[1].innerHTML = '';
+								selects[1].appendChild(document.createElement('option'));
+
+								for (const scene of global_datas.scenes)
+								{
+									if (scene.name == value)
+									{
+										for (const source of scene.sources)
+										{
+											const option = document.createElement('option');
+											option.value = source.name;
+											option.innerText = source.name;
+											selects[1].appendChild(option);
+										}
+									}
+								}
+
+								selects[1].value = selected;
+							}
+						};
+
+						if (selects.length > 1)
+						{
+							if (!elem.classList.contains('block-init'))
+							{
+								elem.classList.add('block-init');
+								selects[0].addEventListener('change', scene_schanged, false);
+							}
+						}
+
+						// scene
+						const selected = (selects[0].value || data.scene);
+
+						selects[0].innerHTML = '';
+						selects[0].appendChild(document.createElement('option'));
+
+						for (const scene of global_datas.scenes)
+						{
+							const option = document.createElement('option');
+							option.value = scene.name;
+							option.innerText = scene.name;
+							selects[0].appendChild(option);
+						}
+
+						selects[0].value = selected;
+						scene_schanged();
+					}
+					else
+						request('obs-studio', 'GetScenes');
+				}
+			}
+		},
 		'trigger-obs-studio-recording': {
 			type: 'obs-studio',
 			title: 'Recording',
@@ -354,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		},
 	};
 
-	window.drawflow_initializer = (actions) => {
+	window.drawflow_initializer = actions => {
 		if (typeof(actions[editor.module]) === 'object')
 		{
 			const nodes = actions[editor.module].data;

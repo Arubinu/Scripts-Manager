@@ -147,90 +147,92 @@ ipcRenderer.on('init', (event, data) => {
 
 	// target changed
 	iframe.addEventListener('load', event => {
-		const iframe_doc = iframe.contentWindow.document;
+		setTimeout(() => {
+			const iframe_doc = iframe.contentWindow.document;
 
-		const config_stylesheet = iframe_doc.querySelector(`#config_stylesheet`);
-		if (config_stylesheet)
-			config_stylesheet.setAttribute('href', path.join(__dirname, 'public/css/config.css'));
+			const config_stylesheet = iframe_doc.querySelector(`#config_stylesheet`);
+			if (config_stylesheet)
+				config_stylesheet.setAttribute('href', path.join(__dirname, 'public/css/config.css'));
 
-		// get new target
-		let target = get_target();
-		target.name = 'show';
-		target.data = true;
-
-		// display versions
-		if (target.target == 'general:about')
-		{
-			const this_ = iframe_doc.querySelector('.this-version');
-			const this_file = path.join(__dirname, 'package.json');
-			if (fs.existsSync(this_file))
-			{
-				const package = require(this_file);
-				this_.innerText = package.version;
-				this_.parentElement.children[0].innerText = package.name;
-			}
-			else
-				this_.parentElement.remove();
-
-			let browse = iframe_doc.querySelector('.browse input');
-			browse.addEventListener('change', () => {
-				let target = get_target();
-				target.name = 'save';
-				target.data = { default: { all: browse.value } };
-
-				if (target.data.default.all.trim().length)
-				{
-					const addons_path = path.join(target.data.default.all, 'addons');
-					if (!fs.existsSync(addons_path))
-						fs.mkdir(addons_path, () => {});
-
-					const scripts_path = path.join(target.data.default.all, 'scripts');
-					if (!fs.existsSync(scripts_path))
-						fs.mkdir(scripts_path, () => {});
-				}
-
-				ipcRenderer.invoke('manager', target);
-			}, false);
-
-			iframe_doc.querySelector('.node-version').innerText = process.versions.node;
-			iframe_doc.querySelector('.chrome-version').innerText = process.versions.chrome;
-			iframe_doc.querySelector('.electron-version').innerText = process.versions.electron;
-
+			// get new target
 			let target = get_target();
-			target.name = 'load';
+			target.name = 'show';
+			target.data = true;
 
-			ipcRenderer.invoke('manager', target);
-		}
-
-		// open links in default browser and open dialog
-		iframe_doc.addEventListener('click', event => {
-			let elem = event.target.closest('[browse-file], [external-link]');
-			if (!elem)
-				elem = event.target;
-
-			if (elem.matches('[browse-file]'))
+			// display versions
+			if (target.target == 'general:about')
 			{
+				const this_ = iframe_doc.querySelector('.this-version');
+				const this_file = path.join(__dirname, 'package.json');
+				if (fs.existsSync(this_file))
+				{
+					const package = require(this_file);
+					this_.innerText = package.version;
+					this_.parentElement.children[0].innerText = package.name;
+				}
+				else
+					this_.parentElement.remove();
+
+				let browse = iframe_doc.querySelector('.browse input');
+				browse.addEventListener('change', () => {
+					let target = get_target();
+					target.name = 'save';
+					target.data = { default: { all: browse.value } };
+
+					if (target.data.default.all.trim().length)
+					{
+						const addons_path = path.join(target.data.default.all, 'addons');
+						if (!fs.existsSync(addons_path))
+							fs.mkdir(addons_path, () => {});
+
+						const scripts_path = path.join(target.data.default.all, 'scripts');
+						if (!fs.existsSync(scripts_path))
+							fs.mkdir(scripts_path, () => {});
+					}
+
+					ipcRenderer.invoke('manager', target);
+				}, false);
+
+				iframe_doc.querySelector('.node-version').innerText = process.versions.node;
+				iframe_doc.querySelector('.chrome-version').innerText = process.versions.chrome;
+				iframe_doc.querySelector('.electron-version').innerText = process.versions.electron;
+
 				let target = get_target();
-				target.name = 'browse';
-				target.data = elem.getAttribute('browse-file');
+				target.name = 'load';
 
 				ipcRenderer.invoke('manager', target);
 			}
-			else if (elem.matches('[external-link]'))
-			{
-				event.preventDefault();
-				shell.openExternal(elem.getAttribute('external-link'));
-			}
-		});
 
-		// removes focus from buttons and links so as not to have the blue outline
-		iframe_doc.addEventListener('mouseup', event => {
-			if (!event.target.matches('input, select, textarea') && !event.target.closest('input, select, textarea'))
-				iframe.blur();
-		});
+			// open links in default browser and open dialog
+			iframe_doc.addEventListener('click', event => {
+				let elem = event.target.closest('[browse-file], [external-link]');
+				if (!elem)
+					elem = event.target;
 
-		// to main
-		ipcRenderer.invoke('manager', target);
+				if (elem.matches('[browse-file]'))
+				{
+					let target = get_target();
+					target.name = 'browse';
+					target.data = elem.getAttribute('browse-file');
+
+					ipcRenderer.invoke('manager', target);
+				}
+				else if (elem.matches('[external-link]'))
+				{
+					event.preventDefault();
+					shell.openExternal(elem.getAttribute('external-link'));
+				}
+			});
+
+			// removes focus from buttons and links so as not to have the blue outline
+			iframe_doc.addEventListener('mouseup', event => {
+				if (!event.target.matches('input, select, textarea') && !event.target.closest('input, select, textarea'))
+					iframe.blur();
+			});
+
+			// to main
+			ipcRenderer.invoke('manager', target);
+		}, 10);
 	});
 
 	// click on menu link

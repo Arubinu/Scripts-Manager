@@ -10,7 +10,21 @@ const	actions = {
 	},
 	'event-twitch-chat': (receive, data, next) => {
 		if (data.message && receive.id == 'twitch' && receive.name == 'Chat' && receive.data[1].toLowerCase() == data.message.toLowerCase())
-			next();
+		{
+			const flags = receive.data[2];
+			const viewer = (!flags.broadcaster && !flags.mod && !flags.vip && !flags.founder && !flags.subscriber);
+
+			let check = false;
+			check = (check || (data.broadcaster && flags.broadcaster));
+			check = (check || (data.moderator && flags.mod));
+			check = (check || (data.vip && flags.vip));
+			check = (check || (data.founder && flags.founder));
+			check = (check || (data.subscriber && flags.subscriber));
+			check = (check || (data.viewer && viewer));
+
+			if (check)
+				next();
+		}
 	},
 	'event-twitch-command': (receive, data, next) => {
 		if (data.command && receive.id == 'twitch' && receive.name == 'Command')
@@ -55,13 +69,25 @@ const	actions = {
 		}
 	},
 	'trigger-obs-studio-recording': (receive, data, next) => {
-		_sender('obs-studio', (data.state ? 'StartRecording' : 'StopRecording'));
+		let state = 'StartStopRecording';
+		state = ((data.state == 'on') ? 'StartRecording' : state);
+		state = ((data.state == 'off') ? 'StopRecording' : state);
+
+		_sender('obs-studio', state);
 	},
 	'trigger-obs-studio-replay': (receive, data, next) => {
-		_sender('obs-studio', (data.state ? 'StartReplayBuffer' : 'StopReplayBuffer'));
+		let state = 'StartStopReplayBuffer';
+		state = ((data.state == 'on') ? 'StartReplayBuffer' : state);
+		state = ((data.state == 'off') ? 'StopReplayBuffer' : state);
+
+		_sender('obs-studio', state);
 	},
 	'trigger-obs-studio-streaming': (receive, data, next) => {
-		_sender('obs-studio', (data.state ? 'StartStreaming' : 'StopStreaming'));
+		let state = 'StartStopStreaming';
+		state = ((data.state == 'on') ? 'StartStreaming' : state);
+		state = ((data.state == 'off') ? 'StopStreaming' : state);
+
+		_sender('obs-studio', state);
 	},
 	'trigger-obs-studio-switch-scene': (receive, data, next) => {
 		if (data.scene)

@@ -122,7 +122,7 @@ function save_manager_config()
 	store.set('manager', manager);
 }
 
-async function save_config(type, id, data)
+async function save_config(type, id, data, override)
 {
 	let obj = null;
 	let is_global = false;
@@ -148,8 +148,13 @@ async function save_config(type, id, data)
 				if (typeof(obj[section]) !== 'object')
 					obj[section] = {};
 
-				for (const name in data[section])
-					obj[section][name] = data[section][name];
+				if (!override)
+				{
+					for (const name in data[section])
+						obj[section][name] = data[section][name];
+				}
+				else
+					obj[section] = JSON.parse(JSON.stringify(data[section]));
 			}
 		}
 	}
@@ -314,8 +319,9 @@ async function script_sender(type, id, target, name, data)
 	{
 		if (target == 'manager')
 		{
-			if (name == 'config')
-				save_config(type, id, data);
+			const split = name.split(':');
+			if (split[0] == 'config')
+				save_config(type, id, data, (split.length == 2 && split[1] == 'override'));
 		}
 		else if (target == 'message')
 		{
@@ -338,13 +344,14 @@ async function script_sender(type, id, target, name, data)
 	{
 		if (target == 'manager')
 		{
+			const split = name.split(':');
 			if (name == 'menu')
 			{
 				scripts[id].menu = data;
 				generate_menu();
 			}
-			else if (name == 'config')
-				save_config(type, id, data);
+			else if (split[0] == 'config')
+				save_config(type, id, data, (split.length == 2 && split[1] == 'override'));
 			else
 				return 'feature not found'; // retourner une exception
 

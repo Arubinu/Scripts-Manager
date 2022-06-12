@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		let data = { id: id, type: type, data: block.data };
 		editor.updateNodeDataFromId(id, data);
+		set_data(id, block.data);
 
 		init_node(editor.getNodeFromId(id));
 	}
@@ -98,13 +99,28 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!elem_name)
 				return ;
 
-			if (typeof(node.data.data[elem_name]) !== 'undefined')
-				elem.value = node.data.data[elem_name];
+			const is_input = (elem.nodeName.toLowerCase() == 'input');
+			const input_type = (is_input && elem.getAttribute('type').toLowerCase());
+			const data_exists = (typeof(node.data.data[elem_name]) !== 'undefined');
+
+			if (is_input && input_type == 'checkbox')
+			{
+				if (data_exists)
+					elem.checked = node.data.data[elem_name];
+				else
+					node.data.data[elem_name] = elem.checked;
+			}
 			else
-				node.data.data[elem_name] = elem.value;
+			{
+				if (data_exists)
+					elem.value = node.data.data[elem_name];
+				else
+					node.data.data[elem_name] = elem.value;
+			}
 
 			if (block.update)
 				block.update(node.data.id, node_elem, node.data.data, _data => set_data(id, _data));
+			set_data(id, node.data.data);
 
 			const update = event => {
 				node.data.data[elem_name] = elem.value;
@@ -117,6 +133,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			elem.addEventListener('change', update, false);
 		});
 	}
+
+	const bodys = {
+		trim: '<p>Message</p><input name="message" type="text" class="has-text-centered" />',
+		switch_state: '<p>State</p><input name="state" type="checkbox" class="is-hidden" checked /><div class="field has-addons is-justify-content-center"><p class="control"><button class="button button-on"><span>Start</span></button></p><p class="control"><button class="button button-off"><span>Stop</span></button></p></div>',
+		switch_scenes: '<p>Scene name</p><select name="scene" class="has-text-centered"></select>',
+	};
 
 	const functions = {
 		trim: (id, elem, data, set_data, receive) => {
@@ -155,6 +177,30 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 			else if (!select.children.length)
 				request('obs-studio', 'GetScenes');
+		},
+		switch_state: (id, elem, data, set_data, receive) => {
+			const input = elem.querySelector('input');
+			const on = elem.querySelector('.button-on');
+			const off = elem.querySelector('.button-off');
+
+			const change_state = (state, save) => {
+				on.classList.toggle('is-active', state);
+				off.classList.toggle('is-active', !state);
+
+				if (save)
+				{
+					data.state = state;
+					set_data(data);
+				}
+			};
+
+			if (!elem.querySelector('.is-active'))
+			{
+				on.addEventListener('click', () => change_state(true, true), false);
+				off.addEventListener('click', () => change_state(false, true), false);
+			}
+
+			change_state(input.checked);
 		}
 	};
 
@@ -181,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: ['circle-arrow-down', 'message'],
 			inputs: 0,
 			outputs: 1,
-			body: '<p>Message</p><input name="message" type="text" class="has-text-centered" />',
+			body: bodys.trim,
 			data: {},
 			register: [['twitch', 'Chat']],
 			update: functions.trim
@@ -198,6 +244,42 @@ document.addEventListener('DOMContentLoaded', () => {
 			register: [['twitch', 'Command']],
 			update: functions.trim
 		},
+		'event-obs-studio-recording': {
+			type: 'obs-studio',
+			title: 'Recording',
+			tooltip: 'OBS Studio - Recording',
+			icon: ['circle-arrow-down', 'floppy-disk'],
+			inputs: 0,
+			outputs: 1,
+			body: bodys.switch_state,
+			data: {},
+			register: [],
+			update: functions.switch_state
+		},
+		'event-obs-studio-replay': {
+			type: 'obs-studio',
+			title: 'Replay',
+			tooltip: 'OBS Studio - Replay',
+			icon: ['circle-arrow-down', 'video'],
+			inputs: 0,
+			outputs: 1,
+			body: bodys.switch_state,
+			data: {},
+			register: [],
+			update: functions.switch_state
+		},
+		'event-obs-studio-streaming': {
+			type: 'obs-studio',
+			title: 'Streaming',
+			tooltip: 'OBS Studio - Streaming',
+			icon: ['circle-arrow-down', 'video'],
+			inputs: 0,
+			outputs: 1,
+			body: bodys.switch_state,
+			data: {},
+			register: [],
+			update: functions.switch_state
+		},
 		'event-obs-studio-switch-scene': {
 			type: 'obs-studio',
 			title: 'Switch Scene',
@@ -205,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: ['circle-arrow-down', 'repeat'],
 			inputs: 0,
 			outputs: 1,
-			body: '<p>Scene name</p><select name="scene" class="has-text-centered"></select>',
+			body: bodys.switch_scenes,
 			data: {},
 			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
 			update: functions.switch_scenes
@@ -217,10 +299,46 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: ['circle-arrow-up', 'message'],
 			inputs: 1,
 			outputs: 0,
-			body: '<p>Message</p><input name="message" type="text" class="has-text-centered" />',
+			body: bodys.trim,
 			data: {},
 			register: [['twitch', 'Chat']],
 			update: functions.trim
+		},
+		'trigger-obs-studio-recording': {
+			type: 'obs-studio',
+			title: 'Recording',
+			tooltip: 'OBS Studio - Recording',
+			icon: ['circle-arrow-up', 'floppy-disk'],
+			inputs: 1,
+			outputs: 0,
+			body: bodys.switch_state,
+			data: {},
+			register: [],
+			update: functions.switch_state
+		},
+		'trigger-obs-studio-replay': {
+			type: 'obs-studio',
+			title: 'Replay',
+			tooltip: 'OBS Studio - Replay',
+			icon: ['circle-arrow-up', 'video'],
+			inputs: 1,
+			outputs: 0,
+			body: bodys.switch_state,
+			data: {},
+			register: [],
+			update: functions.switch_state
+		},
+		'trigger-obs-studio-streaming': {
+			type: 'obs-studio',
+			title: 'Streaming',
+			tooltip: 'OBS Studio - Streaming',
+			icon: ['circle-arrow-up', 'video'],
+			inputs: 1,
+			outputs: 0,
+			body: bodys.switch_state,
+			data: {},
+			register: [],
+			update: functions.switch_state
 		},
 		'trigger-obs-studio-switch-scene': {
 			type: 'obs-studio',
@@ -229,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: ['circle-arrow-up', 'repeat'],
 			inputs: 1,
 			outputs: 0,
-			body: '<p>Scene name</p><select name="scene" class="has-text-centered"></select>',
+			body: bodys.switch_scenes,
 			data: {},
 			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
 			update: functions.switch_scenes

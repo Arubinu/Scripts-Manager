@@ -8,8 +8,11 @@ let		_logs = [],
 
 function connect()
 {
-	_sender('broadcast', 'Connextion', []);
-	ComfyJS.Init(_config.connection.channel, (_config.connection.token || null));
+	if (_config.connection.channel)
+	{
+		_sender('broadcast', 'Connextion', []);
+		ComfyJS.Init(_config.connection.channel, (_config.connection.token || null));
+	}
 }
 
 function reconnect()
@@ -20,24 +23,27 @@ function reconnect()
 
 function disconnect(broadcast)
 {
-	_changes = false;
-	_connected = false;
-	ComfyJS.Disconnect();
+	if (_connected)
+	{
+		_changes = false;
+		_connected = false;
+		ComfyJS.Disconnect();
 
-	const obj = {
-		type: 'Disconnected',
-		date: Date.now(),
-		from: '',
-		sub: false,
-		vip: false,
-		mod: false,
-		brd: false
-	};
-	_logs.unshift(obj);
-	_sender('message', 'logs', obj);
+		const obj = {
+			type: 'Disconnected',
+			date: Date.now(),
+			from: '',
+			sub: false,
+			vip: false,
+			mod: false,
+			brd: false
+		};
+		_logs.unshift(obj);
+		_sender('message', 'logs', obj);
 
-	if (typeof(broadcast) === 'undefined' || broadcast)
-		_sender('broadcast', 'Disconnected', []);
+		if (typeof(broadcast) === 'undefined' || broadcast)
+			_sender('broadcast', 'Disconnected', []);
+	}
 }
 
 module.exports = {

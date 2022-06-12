@@ -24,6 +24,18 @@ const	actions = {
 		if (data.whisper && receive.id == 'twitch' && receive.name == 'Whisper' && receive.data[1].toLowerCase() == data.whisper.toLowerCase())
 			next();
 	},
+	'event-obs-studio-recording': (receive, data, next) => {
+		if (receive.id == 'obs-studio' && ((data.state && receive.name == 'RecordingStarted') || (!data.state && receive.name == 'RecordingStopped')))
+			next();
+	},
+	'event-obs-studio-replay': (receive, data, next) => {
+		if (receive.id == 'obs-studio' && ((data.state && receive.name == 'ReplayStarted') || (!data.state && receive.name == 'ReplayStopped')))
+			next();
+	},
+	'event-obs-studio-streaming': (receive, data, next) => {
+		if (receive.id == 'obs-studio' && ((data.state && receive.name == 'StreamStarted') || (!data.state && receive.name == 'StreamStopped')))
+			next();
+	},
 	'event-obs-studio-switch-scene': (receive, data, next) => {
 		if (data.scene && receive.id == 'obs-studio' && receive.name == 'SwitchScenes' && receive.data['scene-name'].toLowerCase() == data.scene.toLowerCase())
 			next();
@@ -35,6 +47,15 @@ const	actions = {
 	'trigger-obs-studio-toggle-source': (receive, data, next) => {
 		if (data.scene && data.source)
 			_sender('obs-studio', 'ToggleSource', [data.source, data.scene, data.state]);
+	},
+	'trigger-obs-studio-recording': (receive, data, next) => {
+		_sender('obs-studio', (data.state ? 'StartRecording' : 'StopRecording'));
+	},
+	'trigger-obs-studio-replay': (receive, data, next) => {
+		_sender('obs-studio', (data.state ? 'StartReplayBuffer' : 'StopReplayBuffer'));
+	},
+	'trigger-obs-studio-streaming': (receive, data, next) => {
+		_sender('obs-studio', (data.state ? 'StartStreaming' : 'StopStreaming'));
 	},
 	'trigger-obs-studio-switch-scene': (receive, data, next) => {
 		if (data.scene)
@@ -64,7 +85,7 @@ module.exports = {
 				if (data.save)
 				{
 					_config.actions = data.save;
-					_sender('manager', 'config', _config);
+					_sender('manager', 'config:override', _config);
 				}
 				else if (data.request)
 				{

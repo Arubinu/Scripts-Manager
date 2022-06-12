@@ -203,6 +203,8 @@ module.exports = {
 				else
 					return await functions[name]();
 			}
+			else
+				return await obs.send(name, data);
 		}
 	}
 }

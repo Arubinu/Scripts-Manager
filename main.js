@@ -47,7 +47,19 @@ function create_window()
 				obj.config.default.enabled = data.data;
 				save_config(data.type, data.id);
 			}
-			else if (data.name == 'browse')
+			else if (data.name == 'browse:file' || data.name == 'browse:files')
+			{
+				dialog.showOpenDialog({
+					properties: [(data.name == 'browse:files') ? 'openFiles' : 'openFile']
+				}).then(result => {
+					if (!result.canceled)
+					{
+						data.result = result;
+						win.webContents.send('manager', data);
+					}
+				});
+			}
+			else if (data.name == 'browse:folder')
 			{
 				dialog.showOpenDialog({
 					properties: ['openDirectory']

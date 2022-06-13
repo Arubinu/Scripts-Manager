@@ -299,6 +299,17 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			}
 		},
+		'launch-app': {
+			title: 'Launch App',
+			icon: ['rocket'],
+			inputs: 1,
+			outputs: 1,
+			body: '<p>Application</p><div class="launch-app"><input name="app" type="text" class="has-text-centered" readonly /><button><i class="fa-solid fa-ellipsis"></i></button></div>',
+			data: {},
+			update: (id, elem, data, set_data, receive) => {
+				elem.querySelector('button').setAttribute('browse-file', `#node-${id} .launch-app input`);
+			}
+		},
 		'event-twitch-chat': {
 			type: 'twitch',
 			title: 'Chat',

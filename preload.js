@@ -116,7 +116,7 @@ ipcRenderer.on('init', (event, data) => {
 					}
 				}
 			}
-			else if (data.name == 'browse')
+			else if (!data.name.indexOf('browse:'))
 			{
 				let elem = iframe_doc.querySelector(data.data)
 				elem.value = data.result.filePaths[0];
@@ -205,14 +205,22 @@ ipcRenderer.on('init', (event, data) => {
 
 			// open links in default browser and open dialog
 			iframe_doc.addEventListener('click', event => {
-				let elem = event.target.closest('[browse-file], [external-link]');
+				let elem = event.target.closest('[browse-file], [browse-folder], [external-link]');
 				if (!elem)
 					elem = event.target;
 
 				if (elem.matches('[browse-file]'))
 				{
 					let target = get_target();
-					target.name = 'browse';
+					target.name = 'browse:file';
+					target.data = elem.getAttribute('browse-file');
+
+					ipcRenderer.invoke('manager', target);
+				}
+				else if (elem.matches('[browse-folder]'))
+				{
+					let target = get_target();
+					target.name = 'browse:folder';
 					target.data = elem.getAttribute('browse-file');
 
 					ipcRenderer.invoke('manager', target);

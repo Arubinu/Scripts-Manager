@@ -1,4 +1,5 @@
-const	path = require('path');
+const	path = require('path'),
+		child_process = require('child_process');
 
 let		_config = {},
 		_sender = null;
@@ -7,6 +8,15 @@ const	actions = {
 	'self-timer': (receive, data, next) => {
 		if (data.millis > 0)
 			setTimeout(next, data.millis);
+	},
+	'launch-app': (receive, data, next) => {
+		console.log('launch-app:', data);
+		child_process.spawn(data.app).on('close', exit_code => {
+			if (exit_code)
+			next();
+		}).on('error', error => {
+			console.error('launch-app:', data, error);
+		});
 	},
 	'event-twitch-chat': (receive, data, next) => {
 		if (data.message && receive.id == 'twitch' && receive.name == 'Chat')

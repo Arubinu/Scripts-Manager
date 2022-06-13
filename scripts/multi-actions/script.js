@@ -40,8 +40,13 @@ const	actions = {
 		}
 	},
 	'event-twitch-whisper': (receive, data, next) => {
-		if (data.whisper && receive.id == 'twitch' && receive.name == 'Whisper' && receive.data[1].toLowerCase() == data.whisper.toLowerCase())
-			next();
+		if (data.message && receive.id == 'twitch' && receive.name == 'Whisper')
+		{
+			const msg_compare = (data.case ? data.message : data.message.toLowerCase());
+			const msg_receive = (data.case ? receive.data[1] : receive.data[1].toLowerCase());
+			if ((data.contains && msg_receive.indexOf(msg_compare) >= 0) || (!data.contains && msg_compare == msg_receive))
+				next();
+		}
 	},
 	'event-obs-studio-recording': (receive, data, next) => {
 		if (receive.id == 'obs-studio' && ((data.state && receive.name == 'RecordingStarted') || (!data.state && receive.name == 'RecordingStopped')))

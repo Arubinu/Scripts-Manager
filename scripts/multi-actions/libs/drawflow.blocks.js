@@ -323,6 +323,18 @@ document.addEventListener('DOMContentLoaded', () => {
 			register: [['twitch', 'Command']],
 			update: functions.trim
 		},
+		'event-twitch-whisper': {
+			type: 'twitch',
+			title: 'Whisper',
+			tooltip: 'Twitch - Whisper',
+			icon: ['circle-arrow-down', 'comments'],
+			inputs: 0,
+			outputs: 1,
+			body: bodys.message + bodys.text,
+			data: {},
+			register: [['twitch', 'Whisper']],
+			update: functions.trim
+		},
 		'event-obs-studio-recording': {
 			type: 'obs-studio',
 			title: 'Recording',

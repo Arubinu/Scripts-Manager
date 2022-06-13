@@ -42,6 +42,7 @@ function update_widget(id, x, y, width, height)
 		}
 	};
 
+	widget.querySelector('.name').innerText = data.name;
 	if (data.url != iframe.getAttribute('src'))
 		iframe.setAttribute('src', data.url);
 
@@ -62,7 +63,7 @@ function move_mousedown(event)
 			if (typeof(_widgets[id]) !== 'undefined')
 			{
 				_move = true;
-				_move = {
+				_target = {
 					id: id,
 					widget: _widgets[id],
 					move: { x: 0, y: 0 },
@@ -75,16 +76,13 @@ function move_mousedown(event)
 
 function resize_mousedown(event)
 {
-	//if (_edit && event.button == 0)
-	if (event.button == 0)
+	if (_edit && event.button == 0)
 	{
 		const widget = event.target.closest('[wid]');
-		console.log('resize_mousedown 1:', widget);
 		if (widget)
 		{
 			const id = get_widget_id(widget);
 			const mode = event.target.getAttribute('mode');
-			console.log('resize_mousedown 2:', id, mode);
 			if (mode && typeof(_widgets[id]) !== 'undefined')
 			{
 				_resize = true;
@@ -102,6 +100,8 @@ function resize_mousedown(event)
 
 function mousemove(event)
 {
+	event.preventDefault();
+
 	if (_edit)
 	{
 		if (_move)
@@ -110,45 +110,59 @@ function mousemove(event)
 			_target.widget.temp = { x: (_target.widget.x + (_target.move.x - _target.start.x)), y: (_target.widget.y + (_target.move.y - _target.start.y)) }
 			update_widget(_target.id, _target.widget.temp.x, _target.widget.temp.y);
 		}
-	}
-	else if (_resize)
-	{
-		_target.move = { x: event.x, y: event.y };
-		if (_target.mode == 'w')
+		else if (_resize)
 		{
-			const diff = (_target.move.x - _target.start.x);
-			const width = Math.max(0, (_target.widget.width - (diff / 2)));
-			_target.widget.temp = { width: width };
-			if (_target.widget.anchor[1] == 'center')
-				_target.widget.temp.x = (_target.widget.x + (diff / 2));
-			else if (_target.widget.anchor[1] == 'right')
-				_target.widget.temp.x = (_target.widget.x + (diff / 2));
-			else
-				_target.widget.temp.x = (_target.widget.x + diff);
-		}
-		if (_target.mode == 'e')
-		{
-			const diff = (_target.move.x - _target.start.x);
-			const width = Math.max(0, (_target.widget.width + diff));
-			_target.widget.temp = { width: width };
-			if (_target.widget.anchor[1] == 'center')
-				_target.widget.temp.x = (_target.widget.x + (diff / 2));
-			else if (_target.widget.anchor[1] == 'right')
-				_target.widget.temp.x = (_target.widget.x + diff);
-		}
-		else if (_target.mode == 's')
-		{
-			const diff = (_target.move.y - _target.start.y);
-			const height = Math.max(0, (_target.widget.height + diff));
-			_target.widget.temp = { height: height };
-			if (_target.widget.anchor[0] == 'middle')
-				_target.widget.temp.y = (_target.widget.y + (diff / 2));
-			else if (_target.widget.anchor[0] == 'bottom')
-				_target.widget.temp.y = (_target.widget.y + diff);
-		}
+			_target.move = { x: event.x, y: event.y };
+			if (_target.mode == 'n')
+			{
+				const diff = (_target.move.y - _target.start.y);
+				const height = Math.max(0, (_target.widget.height - diff));
+				_target.widget.temp = { height: height };
+				if (_target.widget.anchor[0] == 'middle')
+				{
+					_target.widget.temp.y = (_target.widget.y + (diff / 2));
+					_target.widget.temp.height = Math.max(0, (_target.widget.height - diff));
+				}
+				else if (_target.widget.anchor[0] == 'top')
+					_target.widget.temp.y = (_target.widget.y + diff);
+			}
+			else if (_target.mode == 'e')
+			{
+				const diff = (_target.move.x - _target.start.x);
+				const width = Math.max(0, (_target.widget.width + diff));
+				_target.widget.temp = { width: width };
+				if (_target.widget.anchor[1] == 'center')
+					_target.widget.temp.x = (_target.widget.x + (diff / 2));
+				else if (_target.widget.anchor[1] == 'right')
+					_target.widget.temp.x = (_target.widget.x + diff);
+			}
+			else if (_target.mode == 's')
+			{
+				const diff = (_target.move.y - _target.start.y);
+				const height = Math.max(0, (_target.widget.height + diff));
+				_target.widget.temp = { height: height };
+				if (_target.widget.anchor[0] == 'middle')
+					_target.widget.temp.y = (_target.widget.y + (diff / 2));
+				else if (_target.widget.anchor[0] == 'bottom')
+					_target.widget.temp.y = (_target.widget.y + diff);
+			}
+			else if (_target.mode == 'w')
+			{
+				const diff = (_target.move.x - _target.start.x);
+				const width = Math.max(0, (_target.widget.width - diff));
+				_target.widget.temp = { width: width };
+				if (_target.widget.anchor[1] == 'center')
+				{
+					_target.widget.temp.x = (_target.widget.x + (diff / 2));
+					_target.widget.temp.width = Math.max(0, (_target.widget.width - diff));
+				}
+				else if (_target.widget.anchor[1] == 'left')
+					_target.widget.temp.x = (_target.widget.x + diff);
+			}
 
-		if (_target.widget.temp)
-			update_widget(_target.id, _target.widget.temp.x, _target.widget.temp.y, _target.widget.temp.width, _target.widget.temp.height );
+			if (_target.widget.temp)
+				update_widget(_target.id, _target.widget.temp.x, _target.widget.temp.y, _target.widget.temp.width, _target.widget.temp.height );
+		}
 	}
 }
 
@@ -156,26 +170,28 @@ function mouseup(event)
 {
 	if (_edit)
 	{
-		if (_move && _target.widget.temp)
-			ipcRenderer.invoke('move', { id: _target.id, x: _target.widget.temp.x, y: _target.widget.temp.y });
+		if ((_move || _resize) && _target.widget.temp)
+			ipcRenderer.invoke('edit', { id: _target.id, x: _target.widget.temp.x, y: _target.widget.temp.y, width: _target.widget.temp.width, height: _target.widget.temp.height });
 	}
-	//else if (_resize && _target.widget.temp)
-	//	ipcRenderer.invoke('resize', { id: _target.id, x: _target.widget.temp.x, y: _target.widget.temp.y, width: _target.widget.temp.width, height: _target.widget.temp.height });
 
 	_move = false;
 	_resize = false;
 	if (_target)
 	{
-		if (typeof(_target.widget.temp.x) !== 'undefined')
-			_target.widget.x = _target.widget.temp.x;
-		if (typeof(_target.widget.temp.y) !== 'undefined')
-			_target.widget.y = _target.widget.temp.y;
-		if (typeof(_target.widget.temp.width) !== 'undefined')
-			_target.widget.width = _target.widget.temp.width;
-		if (typeof(_target.widget.temp.height) !== 'undefined')
-			_target.widget.height = _target.widget.temp.height;
+		if (typeof(_target.widget.temp) !== 'undefined')
+		{
+			if (typeof(_target.widget.temp.x) !== 'undefined')
+				_target.widget.x = _target.widget.temp.x;
+			if (typeof(_target.widget.temp.y) !== 'undefined')
+				_target.widget.y = _target.widget.temp.y;
+			if (typeof(_target.widget.temp.width) !== 'undefined')
+				_target.widget.width = _target.widget.temp.width;
+			if (typeof(_target.widget.temp.height) !== 'undefined')
+				_target.widget.height = _target.widget.temp.height;
 
-		delete _target.widget.temp;
+			delete _target.widget.temp;
+		}
+
 		update_widget(_target.id);
 		_target = false;
 	}
@@ -195,6 +211,7 @@ ipcRenderer.on('add', (event, data) => {
 	if (!widget)
 	{
 		widget = document.querySelector('#template > [wid]').cloneNode(true);
+
 		widget.querySelector('.move').addEventListener('mousedown', move_mousedown);
 		widget.querySelector('.resize').addEventListener('mousedown', resize_mousedown);
 		widget.querySelector('.resize').addEventListener('mousemove', function(event) {
@@ -237,19 +254,24 @@ ipcRenderer.on('add', (event, data) => {
 		data.widget.iframe = widget.querySelector('iframe');
 		data.widget.element = widget;
 
+		_widgets[data.id] = data.widget;
+		widget.setAttribute('wid', data.id);
 		document.body.appendChild(widget);
 	}
+	else
+	{
+		for (const attr in data.widget)
+			_widgets[data.id][attr] = data.widget[attr];
+	}
 
-	_widgets[data.id] = data.widget;
-	widget.setAttribute('wid', data.id);
 	update_widget(data.id);
 });
 
 ipcRenderer.on('remove', (event, data) => {
-	if (typeof(_widgets[id]) !== 'undefined')
+	if (typeof(_widgets[data.id]) !== 'undefined')
 	{
-		_widgets[id].element.remove();
-		delete _widgets[id];
+		_widgets[data.id].element.remove();
+		delete _widgets[data.id];
 	}
 
 	const widget = get_widget(data.id);

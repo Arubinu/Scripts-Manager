@@ -1,4 +1,5 @@
 const	path = require('path'),
+		uniqid = require('uniqid'),
 		keyevents = require('node-global-key-listener').GlobalKeyboardListener,
 		{ app, screen, BrowserWindow, ipcMain } = require('electron');
 
@@ -47,21 +48,30 @@ function create_window()
 	win.setMenu(null);
 	win.setIgnoreMouseEvents(true);
 	win.loadFile(path.join(__dirname, 'widgets', 'index.html')).then(() => {
-		ipcMain.handle('move', (event, data) => {
+		ipcMain.handle('edit', (event, data) => {
 			if (typeof(_config.widgets[data.id]) !== 'undefined')
 			{
 				let widget = JSON.parse(_config.widgets[data.id]);
-				widget.x = data.x;
-				widget.y = data.y;
+				for (const attr of ['x', 'y', 'width', 'height'])
+				{
+					if (typeof(data[attr]) !== 'undefined')
+						widget[attr] = data[attr];
+				}
 
 				_config.widgets[data.id] = JSON.stringify(widget);
+				_sender('message', 'add', { id: data.id, widget: _config.widgets[data.id] });
 				save_config();
 			}
 		});
 
+		for (const widget_index in _config.widgets)
+		{
+			const widget = JSON.parse(_config.widgets[widget_index]);
+			win.webContents.send('add', { id: widget_index, widget });
+		}
+
 		//win.webContents.openDevTools();
 		win.webContents.send('enabled', _config.default.enabled);
-		win.webContents.send('add', { id: '42', widget: JSON.parse(_config.widgets['42']) });
 		win.show();
 	});
 }
@@ -76,7 +86,7 @@ function update_interface()
 
 function save_config()
 {
-	_sender('manager', 'config', _config);
+	_sender('manager', 'config:override', _config);
 }
 
 function next_screen(index)
@@ -151,7 +161,6 @@ module.exports = {
 		create_window();
 	},
 	receiver: (id, name, data) => {
-		console.log('widget:', id, name, data);
 		if (id == 'manager')
 		{
 			if (name == 'show')
@@ -168,7 +177,27 @@ module.exports = {
 			if (typeof(data) === 'object')
 			{
 				const name = Object.keys(data)[0];
-				if (typeof(data[name]) === typeof(_config.settings[name]))
+
+				if (name == 'create')
+				{
+					const id = uniqid();
+					_config.widgets[id] = data[name].widget;
+					win.webContents.send('add', { id, widget: JSON.parse(_config.widgets[id]) });
+					_sender('message', 'add', { id, widget: _config.widgets[id] });
+				}
+				else if (name == 'update')
+				{
+					const id = data[name].id;
+					_config.widgets[id] = data[name].widget;
+					win.webContents.send('add', { id, widget: JSON.parse(_config.widgets[id]) });
+				}
+				else if (name == 'delete')
+				{
+					const id = data[name].id;
+					delete _config.widgets[id];
+					win.webContents.send('remove', { id });
+				}
+				else if (typeof(data[name]) === typeof(_config.settings[name]))
 					_config.settings[name] = data[name];
 				save_config();
 

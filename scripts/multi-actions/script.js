@@ -11,8 +11,10 @@ const	actions = {
 	},
 	'launch-app': (receive, data, next) => {
 		console.log('launch-app:', data);
-		child_process.spawn(data.app).on('close', exit_code => {
-			if (exit_code)
+		child_process.spawn(data.app, [], {
+			cwd: path.dirname(data.app),
+			detached: true
+		}).on('close', exit_code => {
 			next();
 		}).on('error', error => {
 			console.error('launch-app:', data, error);

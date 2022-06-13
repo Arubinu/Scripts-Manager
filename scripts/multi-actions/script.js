@@ -9,21 +9,26 @@ const	actions = {
 			setTimeout(next, data.millis);
 	},
 	'event-twitch-chat': (receive, data, next) => {
-		if (data.message && receive.id == 'twitch' && receive.name == 'Chat' && receive.data[1].toLowerCase() == data.message.toLowerCase())
+		if (data.message && receive.id == 'twitch' && receive.name == 'Chat')
 		{
-			const flags = receive.data[2];
-			const viewer = (!flags.broadcaster && !flags.mod && !flags.vip && !flags.founder && !flags.subscriber);
+			const msg_compare = (data.case ? data.message : data.message.toLowerCase());
+			const msg_receive = (data.case ? receive.data[1] : receive.data[1].toLowerCase());
+			if ((data.contains && msg_receive.indexOf(msg_compare) >= 0) || (!data.contains && msg_compare == msg_receive))
+			{
+				const flags = receive.data[2];
+				const viewer = (!flags.broadcaster && !flags.mod && !flags.vip && !flags.founder && !flags.subscriber);
 
-			let check = false;
-			check = (check || (data.broadcaster && flags.broadcaster));
-			check = (check || (data.moderator && flags.mod));
-			check = (check || (data.vip && flags.vip));
-			check = (check || (data.founder && flags.founder));
-			check = (check || (data.subscriber && flags.subscriber));
-			check = (check || (data.viewer && viewer));
+				let check = false;
+				check = (check || (data.broadcaster && flags.broadcaster));
+				check = (check || (data.moderator && flags.mod));
+				check = (check || (data.vip && flags.vip));
+				check = (check || (data.founder && flags.founder));
+				check = (check || (data.subscriber && flags.subscriber));
+				check = (check || (data.viewer && viewer));
 
-			if (check)
-				next();
+				if (check)
+					next();
+			}
 		}
 	},
 	'event-twitch-command': (receive, data, next) => {

@@ -147,8 +147,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	const bodys = {
-		trim: '<p>Message</p><input name="message" type="text" class="has-text-centered" />',
-		viewers: '<p>Type of viewer</p><hr /><label class="checkbox"><input name="viewer" type="checkbox" /><span>Viewer</span></label></div><label class="checkbox"><input name="subscriber" type="checkbox" /><span>Subscriber</span></label><label class="checkbox"><input name="founder" type="checkbox" /><span>Founder</span></label><label class="checkbox"><input name="vip" type="checkbox" /><span>VIP</span></label><label class="checkbox"><input name="moderator" type="checkbox" /><span>Moderator</span></label><label class="checkbox"><input name="broadcaster" type="checkbox" /><span>Broadcaster</span></label>',
+		text: '<label class="checkbox" title="The uppercase/lowercase will be taken into account" style="padding-left: 0em; width: 85%;"><input name="case" type="checkbox" /><span>Case sensitive</span></label><label class="checkbox" title="The message received contains the sentence (must be exact if unchecked)" style="padding-left: 0em; width: 85%;"><input name="contains" type="checkbox" /><span>Contains sentence</span></label>',
+		message: '<p>Message</p><input name="message" type="text" class="has-text-centered" />',
+		viewers: '<p>Type of viewer</p><hr /><label class="checkbox"><input name="viewer" type="checkbox" /><span>Viewer</span></label><label class="checkbox"><input name="subscriber" type="checkbox" /><span>Subscriber</span></label><label class="checkbox"><input name="founder" type="checkbox" /><span>Founder</span></label><label class="checkbox"><input name="vip" type="checkbox" /><span>VIP</span></label><label class="checkbox"><input name="moderator" type="checkbox" /><span>Moderator</span></label><label class="checkbox"><input name="broadcaster" type="checkbox" /><span>Broadcaster</span></label>',
 		scene: '<p>Scene name</p><select name="scene" class="has-text-centered"></select>',
 		source: '<p>Source name</p><select name="source" class="has-text-centered"></select>',
 		state: '<p>State</p><input name="state" type="checkbox" class="is-hidden" checked /><div class="field has-addons is-justify-content-center"><p class="control"><button class="button button-on"><span>Start</span></button></p><p class="control"><button class="button button-off"><span>Stop</span></button></p></div>',
@@ -305,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: ['circle-arrow-down', 'message'],
 			inputs: 0,
 			outputs: 1,
-			body: bodys.trim + bodys.viewers,
+			body: bodys.message + bodys.text + bodys.viewers,
 			data: {},
 			register: [['twitch', 'Chat']],
 			update: functions.trim
@@ -377,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: ['circle-arrow-up', 'message'],
 			inputs: 1,
 			outputs: 0,
-			body: bodys.trim,
+			body: bodys.message,
 			data: {},
 			register: [['twitch', 'Chat']],
 			update: functions.trim

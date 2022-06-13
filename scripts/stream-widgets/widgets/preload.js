@@ -113,11 +113,11 @@ function mousemove(event)
 		else if (_resize)
 		{
 			_target.move = { x: event.x, y: event.y };
-			if (_target.mode == 'n')
+			_target.widget.temp = {};
+			if (_target.mode.indexOf('n') >= 0)
 			{
 				const diff = (_target.move.y - _target.start.y);
-				const height = Math.max(0, (_target.widget.height - diff));
-				_target.widget.temp = { height: height };
+				_target.widget.temp.height = Math.max(0, (_target.widget.height - diff));
 				if (_target.widget.anchor[0] == 'middle')
 				{
 					_target.widget.temp.y = (_target.widget.y + (diff / 2));
@@ -126,31 +126,28 @@ function mousemove(event)
 				else if (_target.widget.anchor[0] == 'top')
 					_target.widget.temp.y = (_target.widget.y + diff);
 			}
-			else if (_target.mode == 'e')
+			if (_target.mode.indexOf('e') >= 0)
 			{
 				const diff = (_target.move.x - _target.start.x);
-				const width = Math.max(0, (_target.widget.width + diff));
-				_target.widget.temp = { width: width };
+				_target.widget.temp.width = Math.max(0, (_target.widget.width + diff));
 				if (_target.widget.anchor[1] == 'center')
 					_target.widget.temp.x = (_target.widget.x + (diff / 2));
 				else if (_target.widget.anchor[1] == 'right')
 					_target.widget.temp.x = (_target.widget.x + diff);
 			}
-			else if (_target.mode == 's')
+			if (_target.mode.indexOf('s') >= 0)
 			{
 				const diff = (_target.move.y - _target.start.y);
-				const height = Math.max(0, (_target.widget.height + diff));
-				_target.widget.temp = { height: height };
+				_target.widget.temp.height = Math.max(0, (_target.widget.height + diff));
 				if (_target.widget.anchor[0] == 'middle')
 					_target.widget.temp.y = (_target.widget.y + (diff / 2));
 				else if (_target.widget.anchor[0] == 'bottom')
 					_target.widget.temp.y = (_target.widget.y + diff);
 			}
-			else if (_target.mode == 'w')
+			if (_target.mode.indexOf('w') >= 0)
 			{
 				const diff = (_target.move.x - _target.start.x);
-				const width = Math.max(0, (_target.widget.width - diff));
-				_target.widget.temp = { width: width };
+				_target.widget.temp.width = Math.max(0, (_target.widget.width - diff));
 				if (_target.widget.anchor[1] == 'center')
 				{
 					_target.widget.temp.x = (_target.widget.x + (diff / 2));

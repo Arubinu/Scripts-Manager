@@ -80,6 +80,10 @@ function create_window()
 					manager = Object.assign(manager, data.data);
 					save_manager_config();
 				}
+				else if (data.name == 'browse')
+				{
+					win.webContents.send('manager', data);
+				}
 				else if (data.name == 'load')
 				{
 					data.data = JSON.parse(JSON.stringify(manager));

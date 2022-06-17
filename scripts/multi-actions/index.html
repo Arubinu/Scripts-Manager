@@ -12,6 +12,7 @@
 		<style type="text/css">
 			body {
 				overflow: hidden;
+				background-color: #262626;
 			}
 
 			.hero {
@@ -24,6 +25,29 @@
 
 			.drag-drawflow .fas {
 				margin-right: 7px;
+			}
+
+			.drawflow {
+				background-color: #363636;
+				outline: 2px dashed rgba(255, 255, 255, .65);
+			}
+
+			.drawflow-node .column:first-child input {
+				margin: 0px -10px 0px -20px;
+				width: calc(100% + (2 * 15px) + 1px);
+			}
+			.drawflow-node .column:not(:first-child) input {
+				margin: 0px -20px 0 -12px;
+				width: calc(100% + (2 * 15px) + 1px);
+			}
+			.drawflow-node .columns {
+				margin-bottom: 0px;
+			}
+			.drawflow-node .column {
+				padding-bottom: 0px;
+			}
+			.drawflow-node .column:first-child .is-browse button {
+				right: -10px;
 			}
 
 			.blocks-drawflow {
@@ -56,14 +80,15 @@
 				z-index: -2 !important;
 			}
 
-			.launch-app,
-			.twitch-command {
+			.is-browse,
+			.is-command {
 				position: relative;
 			}
-			.twitch-command input {
+
+			.is-command input {
 				padding-left: calc(6px + 24px) !important;
 			}
-			.twitch-command::before {
+			.is-command::before {
 				content: '!';
 				position: absolute;
 				top: 1px;
@@ -75,10 +100,10 @@
 				background-color: rgba(255, 255, 255, .06);
 			}
 
-			.launch-app input {
+			.is-browse input {
 				padding-right: calc(6px + 24px) !important;
 			}
-			.launch-app button {
+			.is-browse button {
 				position: absolute;
 				top: 1px;
 				right: -20px;
@@ -92,6 +117,9 @@
 				background-color: rgba(255, 255, 255, .06);
 				border: none;
 				cursor: pointer;
+			}
+			.is-browse button .fa-xmark {
+				vertical-align: 4px;
 			}
 
 			hr {
@@ -205,20 +233,26 @@
 				<div class="columns my-2">
 					<div class="column mx-5 has-text-centered content blocks-event">
 						<h5>Event</h5>
-						<div blocks-type="obs-studio">
-							<h6 class="has-text-left">OBS Studio</h6>
+						<div blocks-type="discord">
+							<h6 class="has-text-left mt-4">Discord</h6>
 						</div>
 						<div blocks-type="twitch">
 							<h6 class="has-text-left mt-4">Twitch</h6>
+						</div>
+						<div blocks-type="obs-studio">
+							<h6 class="has-text-left">OBS Studio</h6>
 						</div>
 					</div>
 					<div class="column mx-5 has-text-centered content blocks-trigger">
 						<h5>Trigger</h5>
-						<div blocks-type="obs-studio">
-							<h6 class="has-text-left">OBS Studio</h6>
+						<div blocks-type="discord">
+							<h6 class="has-text-left mt-4">Discord</h6>
 						</div>
 						<div blocks-type="twitch">
 							<h6 class="has-text-left mt-4">Twitch</h6>
+						</div>
+						<div blocks-type="obs-studio">
+							<h6 class="has-text-left">OBS Studio</h6>
 						</div>
 					</div>
 					<div class="column mx-5 has-text-centered content blocks-fonctionnality">

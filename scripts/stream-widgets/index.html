@@ -35,6 +35,14 @@
 				background-color: rgba(255, 255, 255, .3);
 			}
 
+			.anchor-column {
+				margin: auto;
+				width: 165px;
+				height: 175px;
+				min-width: 165px;
+				max-width: 165px;
+			}
+
 			.anchor {
 				overflow: visible;
 				position: relative;
@@ -110,36 +118,40 @@
 				<div class="columns">
 					<div class="column is-4 widgets"></div>
 					<div class="column p-4">
-						<div class="columns is-pulled-left mr-5">
+						<div class="columns mr-5">
 							<div class="column">
-								<div class="field">
-									<label class="label has-text-centered">X</label>
-									<div class="control">
-										<input name="x" type="number" value="0" class="input has-text-centered pl-5">
+								<div class="columns">
+									<div class="column">
+										<div class="field">
+											<label class="label has-text-centered">X</label>
+											<div class="control">
+												<input name="x" type="number" value="0" class="input has-text-centered pl-5">
+											</div>
+										</div>
+										<div class="field">
+											<label class="label has-text-centered">Width</label>
+											<div class="control">
+												<input name="width" type="number" value="500" class="input has-text-centered pl-5">
+											</div>
+										</div>
 									</div>
-								</div>
-								<div class="field">
-									<label class="label has-text-centered">Width</label>
-									<div class="control">
-										<input name="width" type="number" value="500" class="input has-text-centered pl-5">
+									<div class="column">
+										<div class="field">
+											<label class="label has-text-centered">Y</label>
+											<div class="control">
+												<input name="y" type="number" value="0" class="input has-text-centered pl-5">
+											</div>
+										</div>
+										<div class="field">
+											<label class="label has-text-centered">Height</label>
+											<div class="control">
+												<input name="height" type="number" value="500" class="input has-text-centered pl-5">
+											</div>
+										</div>
 									</div>
 								</div>
 							</div>
-							<div class="column">
-								<div class="field">
-									<label class="label has-text-centered">Y</label>
-									<div class="control">
-										<input name="y" type="number" value="0" class="input has-text-centered pl-5">
-									</div>
-								</div>
-								<div class="field">
-									<label class="label has-text-centered">Height</label>
-									<div class="control">
-										<input name="height" type="number" value="500" class="input has-text-centered pl-5">
-									</div>
-								</div>
-							</div>
-							<div class="column">
+							<div class="column anchor-column">
 								<div class="content is-pulled-right mr-2">
 									<h4 class="has-text-centered mb-5">Anchor</h4>
 									<div class="anchor">
@@ -156,6 +168,7 @@
 								</div>
 							</div>
 						</div>
+						<div class="is-clearfix"></div>
 						<div class="field">
 							<label class="label">Name</label>
 							<div class="control">
@@ -184,6 +197,10 @@
 
 			function get_widget(obj)
 			{
+				const selected = document.querySelector('.widgets .is-selected');
+				const eye = (selected ? selected.querySelector('.fas') : false);
+				const hide = (eye ? eye.classList.contains('fa-eye-slash') : false);
+
 				for (const attr of ['x', 'y', 'width', 'height', 'name', 'url'])
 				{
 					let value = document.querySelector(`input[name="${attr}"]`).value;
@@ -193,6 +210,7 @@
 					obj[attr] = value;
 				}
 
+				obj.hide = hide;
 				obj.anchor = document.querySelector('.anchor > .is-selected').getAttribute('title').toLowerCase().split('-');
 
 				return obj;
@@ -223,13 +241,45 @@
 				let elem = document.querySelector(`.widgets [value="${id}"]`);
 				if (!elem)
 				{
+					let init = true;
+
 					elem = document.createElement('div');
 					elem.addEventListener('click', load_widget, false);
 					elem.setAttribute('value', id);
+
+					const content = document.createElement('span');
+					elem.appendChild(content);
+
+					const eye = document.createElement('i');
+					eye.classList.add('fas', 'fa-eye', 'is-pulled-right', 'mt-1', 'ml-2');
+					eye.setAttribute('title', 'Show/Hide');
+					elem.appendChild(eye);
+
+					eye.addEventListener('click', event => {
+						event.stopPropagation();
+						if (!init)
+							elem.click();
+
+						const hide = (init ? (typeof(widget.hide) !== 'undefined' && widget.hide) : eye.classList.contains('fa-eye'));
+						eye.classList.toggle('fa-eye', !hide);
+						eye.classList.toggle('fa-eye-slash', hide);
+
+						if (!init)
+							document.querySelector('.update-widget').click();
+						init = false;
+					}, true);
+					eye.click();
+
 					widgets.appendChild(elem);
 				}
+				else
+				{
+					const eye = elem.querySelector('.fas');
+					if (typeof(widget.hide) !== 'undefined' && widget.hide != eye.classList.contains('fa-eye-slash'))
+						eye.click();
+				}
 
-				elem.innerText = widget.name;
+				elem.querySelector('span').innerText = widget.name;
 			}
 
 			function update_buttons()
@@ -266,9 +316,12 @@
 						const id = selected.getAttribute('value');
 						const widget = get_widget(JSON.parse(_config.widgets[id]));
 
-						selected.innerText = widget.name;
-						_config.widgets[id] = JSON.stringify(widget);
+						selected.querySelector('span').innerText = widget.name;
+						const eye = selected.querySelector('.fas');
+						eye.classList.toggle('fa-eye', !widget.hide);
+						eye.classList.toggle('fa-eye-slash', widget.hide);
 
+						_config.widgets[id] = JSON.stringify(widget);
 						window.parent.postMessage({ update: { id, widget: _config.widgets[id] } }, '*');
 					}
 				}
@@ -292,6 +345,7 @@
 						_config = event.data.data;
 						update_buttons();
 
+						console.log(_config.widgets);
 						for (const widget_index in _config.widgets)
 							update_widget(widget_index);
 					}

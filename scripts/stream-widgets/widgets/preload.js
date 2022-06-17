@@ -46,6 +46,8 @@ function update_widget(id, x, y, width, height)
 	if (data.url != iframe.getAttribute('src'))
 		iframe.setAttribute('src', data.url);
 
+	widget.classList.toggle('is-hide', data.hide);
+
 	widget.style.top = `calc(${(typeof(positions.y[data.anchor[0]]) === 'undefined') ? rect.y : positions.y[data.anchor[0]]}px)`;
 	widget.style.left = `calc(${(typeof(positions.x[data.anchor[1]]) === 'undefined') ? rect.x : positions.x[data.anchor[1]]}px)`;
 	widget.style.width = `${rect.width}px`;

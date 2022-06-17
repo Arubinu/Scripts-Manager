@@ -1,5 +1,7 @@
 const	path = require('path'),
-		child_process = require('child_process');
+		https = require('https'),
+		child_process = require('child_process'),
+		{ MessageEmbed, MessageAttachment, WebhookClient } = require('discord.js');
 
 let		_config = {},
 		_sender = null;
@@ -10,9 +12,8 @@ const	actions = {
 			setTimeout(next, data.millis);
 	},
 	'launch-app': (receive, data, next) => {
-		console.log('launch-app:', data);
-		child_process.spawn(data.app, [], {
-			cwd: path.dirname(data.app),
+		child_process.spawn(data.program, [], {
+			cwd: path.dirname(data.program),
 			detached: true
 		}).on('close', exit_code => {
 			next();
@@ -75,6 +76,49 @@ const	actions = {
 	'event-obs-studio-switch-scene': (receive, data, next) => {
 		if (data.scene && receive.id == 'obs-studio' && receive.name == 'SwitchScenes' && receive.data['scene-name'].toLowerCase() == data.scene.toLowerCase())
 			next();
+	},
+	'trigger-discord-webhook': (receive, data, next) => {
+		if (data.webhook && data.title)
+		{
+			let texts = {};
+			for (const name of ['title', 'inline-1-title', 'inline-1-content', 'inline-2-title', 'inline-2-content'])
+			{
+				texts[name] = data[name]
+					.replace('${date:toLocaleTimeString}', (new Date()).toLocaleTimeString())
+					.replace('${date:toLocaleDateString}', (new Date()).toLocaleDateString());
+			}
+
+			const	webhook = new WebhookClient({ url: data.webhook }),
+					bigimage = (data['big-image'] ? new MessageAttachment(data['big-image']) : false),
+					thumbnail = (data.thumbnail ? new MessageAttachment(data.thumbnail) : false);
+					embed = new MessageEmbed()
+						.setTimestamp()
+						.setColor('#c0392b')
+						.setTitle(texts.title);
+
+			let images = [];
+			if (data['big-image'])
+				images.push(bigimage);
+			if (data.thumbnail)
+				images.push(thumbnail);
+
+			if (data.url)
+				embed.setURL(data.url);
+			if (data.thumbnail)
+				embed.setThumbnail('attachment://' + path.basename(data.thumbnail));
+			if (data['big-image'])
+				embed.setImage('attachment://' + path.basename(data['big-image']));
+			if (data['inline-1-title'] && data['inline-1-content'])
+				embed.addField(texts['inline-1-title'], texts['inline-1-content'], true);
+			if (data['inline-2-title'] && data['inline-2-content'])
+				embed.addField(texts['inline-2-title'], texts['inline-2-content'], true);
+
+			//embed.setAuthor('Author here', 'https://cdn.discordapp.com/embed/avatars/0.png', 'https://www.google.com');
+			//embed.setDescription('');
+			//embed.setFooter('', 'https://cdn.discordapp.com/embed/avatars/0.png');
+
+			webhook.send({ embeds: [embed], files: images });
+		}
 	},
 	'trigger-twitch-chat': (receive, data, next) => {
 		if (data.message)

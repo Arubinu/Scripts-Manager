@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "comfy.js": "^1.1.15",
+    "discord.js": "^13.8.0",
     "electron-store": "^8.0.1",
     "node-global-key-listener": "^0.1.1",
     "obs-websocket-js": "^4.0.3",

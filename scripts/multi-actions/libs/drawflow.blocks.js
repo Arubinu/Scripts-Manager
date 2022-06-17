@@ -94,6 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
 		const id = node.data.id;
 		const block = blocks[node.data.type];
 		const node_elem = drawflow.querySelector(`#node-${id}`);
+
+		if (block.width && block.width > 0)
+			node_elem.style.width = `${block.width}px`;
+
 		node_elem.querySelectorAll('input, select, textarea').forEach(elem => {
 			const elem_name = elem.getAttribute('name');
 			if (!elem_name)
@@ -184,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					// source
 					const scene_schanged = () => {
 						const value = selects[0].value;
-						if (value)
+						if (value && selects.length > 1)
 						{
 							const selected = (selects[1].value || data.source);
 
@@ -283,6 +287,44 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	};
 
+	const browse_fas = (id, type, elem, name) => {
+		const target = `#node-${id} input[name="${name}"]`;
+
+		const change = event => {
+			const empty = !input.value;
+
+			const fas = elem.querySelector('.fas');
+			fas.classList.toggle('fa-ellipsis', empty);
+			fas.classList.toggle('fa-xmark', !empty);
+
+			if (!event && empty)
+			{
+				let node = editor.getNodeFromId(id);
+				node.data.data[name] = input.value;
+				set_data(node.data.id, node.data.data);
+			}
+		};
+
+		elem.addEventListener('click', event => {
+			const empty = !input.value;
+			if (!empty)
+			{
+				input.value = '';
+				event.preventDefault();
+				event.stopPropagation();
+			}
+
+			change();
+		}, true);
+
+		elem.setAttribute(`browse-${type}`, target);
+
+		const input = document.querySelector(target);
+		input.addEventListener('change', change, false);
+
+		change();
+	};
+
 	const blocks = {
 		'self-timer': {
 			title: 'Self-Timer',
@@ -304,10 +346,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: ['rocket'],
 			inputs: 1,
 			outputs: 1,
-			body: '<p>Application</p><div class="launch-app"><input name="app" type="text" class="has-text-centered" readonly /><button><i class="fa-solid fa-ellipsis"></i></button></div>',
+			body: '<p>Application</p><div class="is-browse launch-app"><input name="program" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div>',
 			data: {},
 			update: (id, elem, data, set_data, receive) => {
-				elem.querySelector('button').setAttribute('browse-file', `#node-${id} .launch-app input`);
+				browse_fas(id, 'file', elem.querySelector('.launch-app button'), 'program');
 			}
 		},
 		'event-twitch-chat': {
@@ -329,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: ['circle-arrow-down', 'terminal'],
 			inputs: 0,
 			outputs: 1,
-			body: '<p>Command</p><div class="twitch-command"><input name="command" type="text" class="has-text-centered" /></div>' + bodys.viewers,
+			body: '<p>Command</p><div class="is-command"><input name="command" type="text" class="has-text-centered" /></div>' + bodys.viewers,
 			data: {},
 			register: [['twitch', 'Command']],
 			update: functions.trim
@@ -394,6 +436,24 @@ document.addEventListener('DOMContentLoaded', () => {
 			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
 			update: functions.scene_source
 		},
+		'trigger-discord-webhook': {
+			type: 'discord',
+			title: 'Webhook',
+			tooltip: 'Discord - Webhook',
+			icon: ['circle-arrow-up', 'envelope-circle-check'],
+			width: 500,
+			inputs: 1,
+			outputs: 0,
+			body: '<p>Webhook</p><input name="webhook" type="url" class="has-text-centered" /><div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL</p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div></div><p>Inline 1</p><div class="columns"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2</p><div class="columns"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
+			data: {},
+			register: [],
+			update: (id, elem, data, set_data, receive) => {
+				functions.trim(id, elem, data, set_data, receive);
+
+				browse_fas(id, 'file', elem.querySelector('.discord-thumbnail button'), 'thumbnail');
+				browse_fas(id, 'file', elem.querySelector('.discord-big-image button'), 'big-image');
+			}
+		},
 		'trigger-twitch-chat': {
 			type: 'twitch',
 			title: 'Chat',
@@ -417,8 +477,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			data: {},
 			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
 			update: (id, elem, data, set_data, receive) => {
-				functions.state(id, elem, data, set_data, receive);
 				functions.scene_source(id, elem, data, set_data, receive);
+				functions.state(id, elem, data, set_data, receive);
 			}
 		},
 		'trigger-obs-studio-recording': {
@@ -483,24 +543,26 @@ document.addEventListener('DOMContentLoaded', () => {
 	window.drawflow_receiver = (id, name, data) => {
 		try
 		{
-			let i = 1;
 			let node;
-			do
+			for (const i in editor.drawflow.drawflow[editor.module].data)
 			{
-				node = editor.getNodeFromId(i++);
+				node = editor.getNodeFromId(i);
 				const block = blocks[node.data.type];
 
-				let check = false;
-				for (const item of block.register)
-					check = (check || (item[0] == id && item[1] == name));
-
-				if (check)
+				if (Array.isArray(block.register))
 				{
-					const node_elem = drawflow.querySelector(`#node-${node.data.id}`);
-					if (block.update)
-						block.update(node.data.id, node_elem, node.data.data, _data => set_data(node.data.id, _data), data);
+					let check = false;
+					for (const item of block.register)
+						check = (check || (item[0] == id && item[1] == name));
+
+					if (check)
+					{
+						const node_elem = drawflow.querySelector(`#node-${node.data.id}`);
+						if (block.update)
+							block.update(node.data.id, node_elem, node.data.data, _data => set_data(node.data.id, _data), data);
+					}
 				}
-			} while (node);
+			}
 		}
 		catch (e) {}
 	};

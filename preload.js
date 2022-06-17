@@ -118,7 +118,7 @@ ipcRenderer.on('init', (event, data) => {
 			}
 			else if (!data.name.indexOf('browse:'))
 			{
-				let elem = iframe_doc.querySelector(data.data)
+				let elem = iframe_doc.querySelector(data.data);
 				elem.value = data.result.filePaths[0];
 				elem.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
 			}
@@ -143,7 +143,7 @@ ipcRenderer.on('init', (event, data) => {
 			// to main
 			ipcRenderer.invoke('message', target);
 		}
-	});
+	}, false);
 
 	// target changed
 	iframe.addEventListener('load', event => {
@@ -205,15 +205,16 @@ ipcRenderer.on('init', (event, data) => {
 
 			// open links in default browser and open dialog
 			iframe_doc.addEventListener('click', event => {
-				let elem = event.target.closest('[browse-file], [browse-folder], [external-link]');
+				let elem = event.target.closest('[browse-file], [browse-file], [browse-folder], [external-link]');
 				if (!elem)
 					elem = event.target;
 
-				if (elem.matches('[browse-file]'))
+				if (elem.matches('[browse-file], [browse-files]'))
 				{
+					const type = (elem.hasAttribute('browse-file') ? 'file' : 'files');
 					let target = get_target();
-					target.name = 'browse:file';
-					target.data = elem.getAttribute('browse-file');
+					target.name = `browse:${type}`;
+					target.data = elem.getAttribute(`browse-${type}`);
 
 					ipcRenderer.invoke('manager', target);
 				}
@@ -230,13 +231,13 @@ ipcRenderer.on('init', (event, data) => {
 					event.preventDefault();
 					shell.openExternal(elem.getAttribute('external-link'));
 				}
-			});
+			}, false);
 
 			// removes focus from buttons and links so as not to have the blue outline
 			iframe_doc.addEventListener('mouseup', event => {
 				if (!event.target.matches('input, select, textarea') && !event.target.closest('input, select, textarea'))
 					iframe.blur();
-			});
+			}, false);
 
 			// to main
 			ipcRenderer.invoke('manager', target);
@@ -305,7 +306,7 @@ ipcRenderer.on('init', (event, data) => {
 				ipcRenderer.invoke('manager', target);
 			}, 10);
 		}
-	});
+	}, false);
 
 	// enable default target
 	setTimeout(() => {

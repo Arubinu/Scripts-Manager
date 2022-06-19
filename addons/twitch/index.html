@@ -72,7 +72,7 @@
 								<input class="input has-text-centered is-two-thirds" type="text" />
 							</div>
 							<div class="control">
-								<a class="button is-dark" external-link="http://twitchapps.com/tmi/">
+								<a class="button is-dark">
 									Generate
 								</a>
 							</div>
@@ -128,6 +128,8 @@
 
 						for (const name of ['channel', 'token'])
 							document.querySelector(`.${name} input`).value = _config.connection[name];
+
+						document.querySelector('.token .button').setAttribute('external-link', _config.authorize);
 					}
 					else if (event.data.name == 'logs')
 					{
@@ -154,25 +156,28 @@
 								cross.classList.add('fas', 'fa-xmark');
 
 								const columns = [date, type, from, sub, vip, mod, brd];
-								if (row.type.toLowerCase() == 'connected')
+								if (row.type == 'Connected')
 									columns.forEach(column => column.classList.add('is-info'));
-								else if (row.type.toLowerCase() == 'reconnect')
+								else if (row.type == 'Reconnect')
 									columns.forEach(column => column.classList.add('is-warning'));
-								else if (row.type.toLowerCase() == 'disconnected')
+								else if (row.type == 'Disconnected')
 									columns.forEach(column => column.classList.add('is-danger'));
 
 								date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
-								type.innerText = row.type;
-								from.innerText = row.from;
+								type.innerText = row.type[0].toUpperCase() + row.type.substr(1);
+								from.innerText = (row.user.name || '');
 
-								if (row.sub)
-									sub.appendChild(cross.cloneNode());
-								if (row.vip)
-									vip.appendChild(cross.cloneNode());
-								if (row.mod)
-									mod.appendChild(cross.cloneNode());
-								if (row.brd)
-									brd.appendChild(cross.cloneNode());
+								if (row.flags)
+								{
+									if (row.flags.subscriber)
+										sub.appendChild(cross.cloneNode());
+									if (row.flags.vip)
+										vip.appendChild(cross.cloneNode());
+									if (row.flags.moderator)
+										mod.appendChild(cross.cloneNode());
+									if (row.flags.broadcaster)
+										brd.appendChild(cross.cloneNode());
+								}
 
 								tr.appendChild(date);
 								tr.appendChild(type);

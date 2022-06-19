@@ -22,18 +22,18 @@ const	actions = {
 		});
 	},
 	'event-twitch-chat': (receive, data, next) => {
-		if (data.message && receive.id == 'twitch' && receive.name == 'Chat')
+		if (data.message && receive.id == 'twitch' && receive.name == 'Message')
 		{
 			const msg_compare = (data.case ? data.message : data.message.toLowerCase());
-			const msg_receive = (data.case ? receive.data[1] : receive.data[1].toLowerCase());
+			const msg_receive = (data.case ? receive.data.message : receive.data.message.toLowerCase());
 			if ((data.contains && msg_receive.indexOf(msg_compare) >= 0) || (!data.contains && msg_compare == msg_receive))
 			{
-				const flags = receive.data[2];
-				const viewer = (!flags.broadcaster && !flags.mod && !flags.vip && !flags.founder && !flags.subscriber);
+				const flags = receive.data.flags;
+				const viewer = (!flags.broadcaster && !flags.moderator && !flags.vip && !flags.founder && !flags.subscriber);
 
 				let check = false;
 				check = (check || (data.broadcaster && flags.broadcaster));
-				check = (check || (data.moderator && flags.mod));
+				check = (check || (data.moderator && flags.moderator));
 				check = (check || (data.vip && flags.vip));
 				check = (check || (data.founder && flags.founder));
 				check = (check || (data.subscriber && flags.subscriber));
@@ -47,16 +47,29 @@ const	actions = {
 	'event-twitch-command': (receive, data, next) => {
 		if (data.command && receive.id == 'twitch' && receive.name == 'Command')
 		{
-			const split = data.command.split(' ', 2);
-			if (receive.data[1].toLowerCase() == split[0].toLowerCase() && (split.length == 1 || receive.data[2].toLowerCase() == split.slice(1).join(' ').toLowerCase()))
-				next();
+			if (receive.data.message.toLowerCase() == data.command.toLowerCase())
+			{
+				const flags = receive.data.flags;
+				const viewer = (!flags.broadcaster && !flags.moderator && !flags.vip && !flags.founder && !flags.subscriber);
+
+				let check = false;
+				check = (check || (data.broadcaster && flags.broadcaster));
+				check = (check || (data.moderator && flags.moderator));
+				check = (check || (data.vip && flags.vip));
+				check = (check || (data.founder && flags.founder));
+				check = (check || (data.subscriber && flags.subscriber));
+				check = (check || (data.viewer && viewer));
+
+				if (check)
+					next();
+			}
 		}
 	},
 	'event-twitch-whisper': (receive, data, next) => {
 		if (data.message && receive.id == 'twitch' && receive.name == 'Whisper')
 		{
 			const msg_compare = (data.case ? data.message : data.message.toLowerCase());
-			const msg_receive = (data.case ? receive.data[1] : receive.data[1].toLowerCase());
+			const msg_receive = (data.case ? receive.data.message : receive.data.message.toLowerCase());
 			if ((data.contains && msg_receive.indexOf(msg_compare) >= 0) || (!data.contains && msg_compare == msg_receive))
 				next();
 		}
@@ -122,7 +135,7 @@ const	actions = {
 	},
 	'trigger-twitch-chat': (receive, data, next) => {
 		if (data.message)
-			_sender('twitch', 'Say', [data.message]);
+			_sender('twitch', 'say', { type: 'Chat', args: [data.message] });
 	},
 	'trigger-obs-studio-toggle-source': (receive, data, next) => {
 		if (data.scene && data.source)
@@ -174,7 +187,7 @@ module.exports = {
 			else if (name == 'enabled')
 				_config.default.enabled = data;
 
-			return ;
+			return;
 		}
 		else if (id == 'message' && name == 'index')
 		{
@@ -189,11 +202,11 @@ module.exports = {
 				{
 					_sender(...data.request).then(_data => {
 						_sender('message', 'receive', { id: data.request[0], name: data.request[1], data: _data });
-					});
+					}).catch(error => {});
 				}
 			}
 
-			return ;
+			return;
 		}
 
 		if (_config.default.enabled)

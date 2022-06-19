@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		node_elem.querySelectorAll('input, select, textarea').forEach(elem => {
 			const elem_name = elem.getAttribute('name');
 			if (!elem_name)
-				return ;
+				return;
 
 			const is_input = (elem.nodeName.toLowerCase() == 'input');
 			const input_type = (is_input && elem.getAttribute('type').toLowerCase());

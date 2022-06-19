@@ -102,7 +102,7 @@ function flash_screen(name, force)
 	let now = Date.now();
 	if (force || !_last || (_last + (_config.settings.delay * 1000)) < now)
 	{
-		_last = now;
+		_last = now + (force ? 1000 : 0);
 		win.webContents.send('flash', name);
 		return true;
 	}
@@ -209,29 +209,23 @@ module.exports = {
 				flash_screen('disconnected', true);
 			//	_sender('twitch', 'GetChannelRewards', ['my-client-id', true]).then(data => console.log('GetChannelRewards:', data));
 
-			if (id == 'twitch' && (name == 'Chat' || (_config.settings.join && name == 'Join') || (_config.settings.command && name == 'Command')))
+			if (id == 'twitch' && (name == 'Message' || (_config.settings.join && name == 'Join') || (_config.settings.command && name == 'Command')))
 			{
 				if (_pause || !flash_screen())
 					return;
 
 				++_config.statistics.flash;
 
-				const relation = { Chat: 2, Command: 3, Cheer: 3, Whisper: 2 };
-				if (typeof(relation[name]) !== 'undefined')
+				if (data.flags)
 				{
-					const flags = data[relation[name]];
+					let viewer = !data.flags.broadcaster;
+					if (data.flags.moderator && !(viewer = false))
+						++_config.statistics.moderator;
+					if (data.flags.subscriber && !(viewer = false))
+						++_config.statistics.subscriber;
 
-					if (!flags.broadcaster)
-					{
-						let viewer = true;
-						if (flags.mod && !(viewer = false))
-							++_config.statistics.moderator;
-						if (flags.subscriber && !(viewer = false))
-							++_config.statistics.subscriber;
-
-						if (viewer)
-							++_config.statistics.viewer;
-					}
+					if (viewer)
+						++_config.statistics.viewer;
 				}
 
 				update_interface();

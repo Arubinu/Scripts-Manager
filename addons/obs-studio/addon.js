@@ -114,7 +114,7 @@ module.exports = {
 		{
 			obs.on(method, data => {
 				if ((_connected && method == 'ConnectionOpened') || (!_connected && method == 'ConnectionClosed'))
-					return ;
+					return;
 				else if (method == 'ConnectionOpened')
 					_connected = true;
 				else if (method == 'ConnectionClosed')

@@ -19,7 +19,7 @@ function get_widget_id(widget)
 function update_widget(id, x, y, width, height)
 {
 	if (typeof(_widgets[id]) === 'undefined')
-		return ;
+		return;
 
 	const data = _widgets[id];
 	const iframe = data.iframe;

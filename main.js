@@ -1,10 +1,13 @@
 const	fs = require('fs'),
+		ws = require('ws'),
+		http = require('http'),
 		path = require('path'),
 		estore = require('electron-store'),
 		inifile = { read: require('read-ini-file'), write: require('write-ini-file') },
 		{ app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } = require('electron');
 
-const	icon = nativeImage.createFromPath(path.join(__dirname, 'public', 'images', 'logo.png')),
+const	port = 5042,
+		icon = nativeImage.createFromPath(path.join(__dirname, 'public', 'images', 'logo.png')),
 		store = new estore();
 
 let		win,
@@ -14,6 +17,30 @@ let		win,
 		manager = {},
 		scripts = {},
 		app_exit = false;
+
+function create_server()
+{
+	const server = http.createServer({}, async (req, res) => {
+		if (req.url != '/favicon.ico' && await all_methods('http', { req, res }))
+			return;
+
+		res.writeHead(200);
+		res.end('success');
+	});
+	server.addListener('upgrade', (req, res, head) => console.log('UPGRADE:', req.url));
+	server.on('error', err => console.error(err));
+	server.listen(port, () => console.log('Https running on port', port));
+
+	const wss = new ws.Server({server});
+	wss.on('connection', client => {
+		client.on('message', async data => {
+			if (await all_methods('websocket', data))
+				return;
+
+			//client.send('Receive:', data);
+		});
+	});
+}
 
 function create_window()
 {
@@ -201,9 +228,14 @@ function load_addons(dir, is_global)
 			if (err)
 				return reject(err);
 
+			const vars = {
+				http: `http://localhost:${port}`,
+				websocket: `ws://localhost:${port}`
+			};
+
 			files.forEach(file => {
 				if (typeof(addons[file]) !== 'undefined')
-					return ;
+					return;
 
 				let addon_path = path.join(dir, file);
 				let addon_file = path.join(addon_path, 'addon.js');
@@ -238,7 +270,7 @@ function load_addons(dir, is_global)
 							}
 
 							if (typeof(addons[file].include.init) === 'function')
-								addons[file].include.init(addon_path, JSON.parse(JSON.stringify(addons[file].config)), async function() { return await script_sender('addons', file, ...arguments); });
+								addons[file].include.init(addon_path, JSON.parse(JSON.stringify(addons[file].config)), async function() { return await all_sender('addons', file, ...arguments); }, vars);
 
 							console.log('Addon loaded:', file);
 						}
@@ -263,9 +295,14 @@ function load_scripts(dir, is_global)
 			if (err)
 				return reject(err);
 
+			const vars = {
+				http: `http://localhost:${port}`,
+				websocket: `ws://localhost:${port}`
+			};
+
 			files.forEach(file => {
 				if (typeof(scripts[file]) !== 'undefined')
-					return ;
+					return;
 
 				let script_path = path.join(dir, file);
 				let script_file = path.join(script_path, 'script.js');
@@ -311,7 +348,7 @@ function load_scripts(dir, is_global)
 							}
 
 							if (typeof(scripts[file].include.init) === 'function')
-								scripts[file].include.init(script_path, JSON.parse(JSON.stringify(scripts[file].config)), async function() { return await script_sender('scripts', file, ...arguments); });
+								scripts[file].include.init(script_path, JSON.parse(JSON.stringify(scripts[file].config)), async function() { return await all_sender('scripts', file, ...arguments); }, vars);
 
 							console.log('Script loaded:', file);
 						}
@@ -329,7 +366,30 @@ function load_scripts(dir, is_global)
 	});
 }
 
-async function script_sender(type, id, target, name, data)
+async function all_methods(type, data)
+{
+	for (const id in addons)
+	{
+		if (typeof(addons[id].config.default.methods) === 'string' && addons[id].config.default.methods.split(',').indexOf(type) >= 0)
+		{
+			if (await (addons[id].include.receiver('methods', type, data)))
+				return true;
+		}
+	}
+
+	for (const id in scripts)
+	{
+		if (typeof(scripts[id].config.default.methods) === 'string' && scripts[id].config.default.methods.split(',').indexOf(type) >= 0)
+		{
+			if (await (scripts[id].include.receiver('methods', type, data)))
+				return true;
+		}
+	}
+
+	return false;
+}
+
+async function all_sender(type, id, target, name, data)
 {
 	if (type == 'addons')
 	{
@@ -444,6 +504,7 @@ app.whenReady().then(() => {
 				const next = () => {
 					generate_menu();
 					create_window();
+					create_server();
 
 					app.on('activate', () => {
 						if (!win)
@@ -459,7 +520,7 @@ app.whenReady().then(() => {
 					if (fs.existsSync(scripts_path))
 					{
 						load_scripts(scripts_path).then(next).catch(next);
-						return ;
+						return;
 					}
 				}
 
@@ -473,7 +534,7 @@ app.whenReady().then(() => {
 				if (fs.existsSync(addons_path))
 				{
 					load_addons(addons_path).then(next).catch(next);
-					return ;
+					return;
 				}
 			}
 

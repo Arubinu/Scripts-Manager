@@ -22,13 +22,17 @@
     "electron": "^18.2.4"
   },
   "dependencies": {
-    "comfy.js": "^1.1.15",
+    "@twurple/api": "^5.1.6",
+    "@twurple/auth": "^5.1.6",
+    "@twurple/chat": "^5.1.6",
+    "@twurple/pubsub": "^5.1.6",
     "discord.js": "^13.8.0",
     "electron-store": "^8.0.1",
     "node-global-key-listener": "^0.1.1",
     "obs-websocket-js": "^4.0.3",
     "read-ini-file": "^3.0.1",
     "uniqid": "^5.4.0",
+    "websocket": "^1.0.34",
     "write-ini-file": "^3.0.2"
   },
   "build": {

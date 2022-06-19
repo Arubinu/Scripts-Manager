@@ -333,9 +333,16 @@
 
 			editor.on('moduleChanged', function(name) {
 				console.log("Module Changed " + name);
-				setTimeout(() => {
-					window.drawflow_initializer(editor.drawflow.drawflow);
-				}, 10);
+				const init = () => {
+					setTimeout(() => {
+						if (!window.drawflow_initializer)
+							init();
+
+						window.drawflow_initializer(editor.drawflow.drawflow);
+					}, 10);
+				};
+
+				init();
 			});
 
 			editor.on('connectionCreated', function(connection) {

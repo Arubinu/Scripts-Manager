@@ -10,7 +10,7 @@ Before using the commands that follow, you must install the dependencies with th
 npm install
 ```
 
-To launch the project from source:
+To launch the project from source _(note: add your twitch app's client_id in `addons/twitch/auth.json`)_:
 ```
 npm start
 ```

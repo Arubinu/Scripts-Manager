@@ -64,6 +64,7 @@ html, body {
 
 .content {
 	overflow: hidden scroll;
+	position: relative;
 	margin-left: 300px;
 	padding: 0px;
 	width: calc(100% - 300px);
@@ -72,6 +73,11 @@ html, body {
 }
 
 .content > iframe {
+	position: absolute;
+	top: 0px;
+	right: 0px;
+	bottom: 0px;
+	left: 0px;
 	width: 100%;
-	min-height: calc(100% - 6px);
+	min-height: 100%;
 }

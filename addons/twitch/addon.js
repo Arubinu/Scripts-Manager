@@ -18,18 +18,25 @@ function update_interface()
 	const scope = [
 		'chat:read',
 		'chat:edit',
-		'channel:read:redemptions',
-		'channel:moderate',
-		'moderation:read',
-		'moderator:manage:automod',
-		'channel:manage:polls',
-		'channel:manage:predictions',
+		'channel:read:goals',
 		'channel:read:hype_train',
+		'channel:read:redemptions',
+		'channel:read:subscriptions',
+		'channel:edit:commercial',
+		'channel:manage:polls',
+		'channel:manage:raids',
+		'channel:manage:predictions',
+		'channel:moderate',
 		'channel_editor',
+		'moderation:read',
+		'moderator:read:chat_settings',
+		'moderator:manage:automod',
+		'moderator:manage:banned_users',
+		'moderator:manage:blocked_terms',
+		'moderator:manage:chat_settings',
+		'whispers:read',
 		'whispers:edit',
 		'user:read:follows',
-		'channel:edit:commercial',
-		'channel:read:subscriptions'
 	];
 
 	const token_data = {

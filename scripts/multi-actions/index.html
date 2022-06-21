@@ -15,6 +15,34 @@
 				background-color: #262626;
 			}
 
+			hr {
+				margin: 6px 0px 15px calc(-40px / 2);
+				width: calc(100% + 40px);
+				height: 1px;
+				background-color: #2a2a2a;
+			}
+
+			label.checkbox {
+				display: block;
+				position: relative;
+				margin: .6em 1em;
+				padding-left: 1em;
+			}
+			label.checkbox span {
+				padding-left: 2em;
+				vertical-align: 1px;
+			}
+			input[type="checkbox"] {
+				position: relative;
+				width: 2em !important;
+				height: initial !important;
+				filter: invert(.83);
+			}
+
+			#template {
+				display: none;
+			}
+
 			.hero {
 				z-index: 1 !important;
 			}
@@ -23,8 +51,40 @@
 				margin-bottom: -5px;
 			}
 
-			.drag-drawflow .fas {
-				margin-right: 7px;
+			.drag-drawflow {
+				position: relative;
+				display: inline-block;
+				margin: 0.25rem !important;
+				padding: 10px 10px 10px 12px;
+				width: 8em;
+				height: 8em;
+				font-size: 1rem;
+				color: #dbdbdb;
+				text-align: center;
+				vertical-align: top;
+				line-height: 1.5;
+				white-space: nowrap;
+				background-color: #2a2a2a;
+				border: 1px solid #444;
+				border-radius: 5px;
+				cursor: pointer;
+			}
+			.drag-drawflow .icon {
+				width: 100%;
+				height: auto;
+				margin-top: 0.6em;
+			}
+			.drag-drawflow .icon img {
+				max-width: 60%;
+				filter: invert(.8) drop-shadow(2px 2px 6px rgba(0, 0, 0, .6));
+			}
+			.drag-drawflow .name {
+				overflow: hidden;
+				position: absolute;
+				bottom: 6px;
+				width: calc(100% - (2 * .5em));
+				text-overflow: ellipsis;
+				white-space: nowrap;
 			}
 
 			.drawflow {
@@ -32,6 +92,34 @@
 				outline: 2px dashed rgba(255, 255, 255, .65);
 			}
 
+			.drag-drawflow.is-outputs,
+			.drawflow-node .is-outputs .title-box {
+				position: relative;
+			}
+			.drag-drawflow.is-inputs::before,
+			.drag-drawflow.is-outputs::before,
+			.drawflow-node .is-inputs .title-box::before,
+			.drawflow-node .is-outputs .title-box::before {
+				content: '';
+				position: absolute;
+				top: 0px;
+				left: 0px;
+				width: 10px;
+				height: calc(50px - 1px);
+				border-top-left-radius: 4px;
+			}
+			.drag-drawflow.is-inputs::before,
+			.drawflow-node .is-inputs .title-box::before {
+				background-color: rgba(230, 126, 34, .7);
+			}
+			.drag-drawflow.is-outputs::before,
+			.drawflow-node .is-outputs .title-box::before {
+				background-color: rgba(46, 204, 113, .7);
+			}
+			.drag-drawflow.is-inputs.is-outputs::before,
+			.drawflow-node .is-inputs.is-outputs .title-box::before {
+				background-color: rgba(155, 89, 182, .7);
+			}
 			.drawflow-node .column:first-child input {
 				margin: 0px -10px 0px -20px;
 				width: calc(100% + (2 * 15px) + 1px);
@@ -59,15 +147,19 @@
 				bottom: 100%;
 				left: 0px;
 				width: 100%;
-				min-height: 100%;
+				min-height: calc(100% - 68px);
 				background-color: #555;
 				transition: all 500ms ease-in-out;
 				z-index: -1 !important;
 				transform: translate3d(0,0,0); /* fix */
 			}
+			.drag-drawflow::before {
+				height: 100% !important;
+				border-bottom-left-radius: 4px;
+			}
 			body.show-blocks .blocks-drawflow {
 				top: 68px;
-				bottom: -6px;
+				bottom: 0px;
 			}
 
 			.box-drawflow {
@@ -122,28 +214,39 @@
 				vertical-align: 4px;
 			}
 
-			hr {
-				margin: 6px 0px 15px calc(-40px / 2);
-				width: calc(100% + 40px);
-				height: 1px;
-				background-color: #2a2a2a;
+			.fa-circle-info {
+				cursor: pointer;
 			}
 
-			label.checkbox {
-				display: block;
-				position: relative;
-				margin: .6em 1em;
-				padding-left: 1em;
+			.container-frame {
+				position: fixed;
+				top: 0px;
+				right: 0px;
+				bottom: 0px;
+				left: 0px;
+				background-color: rgba(0, 0, 0, .65);
+				z-index: 4;
 			}
-			label.checkbox span {
-				padding-left: 2em;
-				vertical-align: 1px;
+			.container-frame > div {
+				overflow-x: visible;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				max-width: 90%;
+				max-height: 90%;
+				transform: translate(-50%, -50%);
 			}
-			input[type="checkbox"] {
-				position: relative;
-				width: 2em !important;
-				height: initial !important;
-				filter: invert(.83);
+			.container-frame > div > div {
+				position: absolute;
+				top: -1.5em;
+				left: 50%;
+				font-size: 1.5em;
+				white-space: nowrap;
+				transform: translateX(-50%);
+			}
+			.container-frame > div > img {
+				max-width: 100%;
+				max-height: 100%;
 			}
 		</style>
 
@@ -154,6 +257,21 @@
 	</head>
 
 	<body>
+		<div id="template">
+			<div class="drag-drawflow" draggable="true">
+				<div class="icon" draggable="false"><img src="" draggable="false" /></div>
+				<div class="name" draggable="false"></div>
+			</div>
+
+			<div class="block-drawflow">
+				<div class="title-box">
+					<img src="" />
+					<span>Streaming</span>
+				</div>
+				<div class="box"></div>
+			</div>
+		</div>
+
 		<div class="modal add-module">
 			<div class="modal-background"></div>
 			<div class="modal-card">
@@ -174,7 +292,7 @@
 			</div>
 		</div>
 
-		<div class="modal rename-module">
+		<div class="modal edit-module">
 			<div class="modal-background"></div>
 			<div class="modal-card">
 				<header class="modal-card-head">
@@ -187,28 +305,12 @@
 					</div>
 					<input type="text" class="input has-text-centered" />
 				</section>
-				<footer class="modal-card-foot is-justify-content-right">
-					<button class="button is-success">Confirm</button>
-					<button class="button" aria-label="close">Cancel</button>
-				</footer>
-			</div>
-		</div>
-
-		<div class="modal delete-module">
-			<div class="modal-background"></div>
-			<div class="modal-card">
-				<header class="modal-card-head">
-					<p class="modal-card-title">Rename Module</p>
-					<button class="delete" aria-label="close"></button>
-				</header>
-				<section class="modal-card-body">
-					<div class="content">
-						<h4>Really want to remove this module ?</h4>
+				<footer class="modal-card-foot is-justify-content-space-between">
+					<button class="button is-danger delete-module" style="justify-content: space-between;">Delete</button>
+					<div>
+						<button class="button is-success">Confirm</button>
+						<button class="button" aria-label="close">Cancel</button>
 					</div>
-				</section>
-				<footer class="modal-card-foot is-justify-content-right">
-					<button class="button is-success">Confirm</button>
-					<button class="button" aria-label="close">Cancel</button>
 				</footer>
 			</div>
 		</div>
@@ -218,9 +320,8 @@
 				<div class="hero-body">
 					<div class="subtitle is-size-6 has-text-white-ter">
 						Program all kinds of actions related to addons.
-						<i class="fas fa-trash is-pulled-right ml-2 delete-module" title="Delete"></i>
-						<i class="fas fa-pen-to-square is-pulled-right ml-2 rename-module" title="Rename"></i>
-						<i class="fas fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
+						<i class="fas fa-solid fa-gear is-pulled-right ml-2 edit-module" title="Edit"></i>
+						<i class="fas fa-solid fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
 						<div class="select is-small is-pulled-right ml-2">
 							<select class="modules"></select>
 						</div>
@@ -230,34 +331,25 @@
 			</section>
 
 			<div class="blocks-drawflow">
-				<div class="columns my-2">
-					<div class="column mx-5 has-text-centered content blocks-event">
-						<h5>Event</h5>
-						<div blocks-type="discord">
-							<h6 class="has-text-left mt-4">Discord</h6>
-						</div>
-						<div blocks-type="twitch">
-							<h6 class="has-text-left mt-4">Twitch</h6>
-						</div>
-						<div blocks-type="obs-studio">
-							<h6 class="has-text-left">OBS Studio</h6>
-						</div>
-					</div>
-					<div class="column mx-5 has-text-centered content blocks-trigger">
-						<h5>Trigger</h5>
-						<div blocks-type="discord">
-							<h6 class="has-text-left mt-4">Discord</h6>
-						</div>
-						<div blocks-type="twitch">
-							<h6 class="has-text-left mt-4">Twitch</h6>
-						</div>
-						<div blocks-type="obs-studio">
-							<h6 class="has-text-left">OBS Studio</h6>
-						</div>
-					</div>
-					<div class="column mx-5 has-text-centered content blocks-fonctionnality">
+				<div class="my-5">
+					<div class="mx-5 content">
 						<h5>Fonctionnality</h5>
 						<div blocks-type=""></div>
+					</div>
+					<div class="mx-5 content">
+						<div blocks-type="discord">
+							<h6 class="has-text-left mt-4">Discord</h6>
+						</div>
+					</div>
+					<div class="mx-5 content">
+						<div blocks-type="twitch">
+							<h6 class="has-text-left mt-4">Twitch</h6>
+						</div>
+					</div>
+					<div class="mx-5 content">
+						<div blocks-type="obs-studio">
+							<h6 class="has-text-left">OBS Studio</h6>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -336,7 +428,7 @@
 				const init = () => {
 					setTimeout(() => {
 						if (!window.drawflow_initializer)
-							init();
+							return init();
 
 						window.drawflow_initializer(editor.drawflow.drawflow);
 					}, 10);
@@ -418,8 +510,8 @@
 				window.drawflow_select();
 			});
 
-			document.querySelector('i.rename-module').addEventListener('click', event => {
-				const elem = document.querySelector('div.rename-module');
+			document.querySelector('i.edit-module').addEventListener('click', event => {
+				const elem = document.querySelector('div.edit-module');
 				const input = elem.querySelector('input');
 
 				elem.classList.add('is-active');
@@ -428,19 +520,14 @@
 				input.select();
 			});
 
-			document.querySelector('div.rename-module .is-success').addEventListener('click', event => {
+			document.querySelector('div.edit-module .is-success').addEventListener('click', event => {
 				const modal = event.target.closest('.modal');
 				modal.classList.remove('is-active');
 
 				editor.renameModule(modal.querySelector('input').value.trim());
 			});
 
-			document.querySelector('i.delete-module').addEventListener('click', event => {
-				const elem = document.querySelector('div.delete-module');
-				elem.classList.add('is-active');
-			});
-
-			document.querySelector('div.delete-module .is-success').addEventListener('click', event => {
+			document.querySelector('div.edit-module .delete-module').addEventListener('click', event => {
 				const modal = event.target.closest('.modal');
 				modal.classList.remove('is-active');
 

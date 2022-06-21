@@ -126,11 +126,7 @@ async function connect(clientId, accessToken, channelName, callback)
 	});
 
 	chat_listeners.Connect = chat_client.onConnect(async () => {
-		console.log('Connect');
 		callback(await get('Connect', null, null, null));
-		/*setTimeout(function() {
-			chat_client['say'](...[ 'Arubinu42', 'Yes LUL' ]);
-		}, 2000);*/
 	});
 
 	chat_listeners.Ctcp = chat_client.onCtcp(async (target, user, command, params, msg) => {
@@ -150,37 +146,31 @@ async function connect(clientId, accessToken, channelName, callback)
 
 	// Fires when emote-only mode is toggled in a channel.
 	chat_listeners.EmoteOnly = chat_client.onEmoteOnly(async (channel, enabled) => {
-		console.log('EmoteOnly:', enabled);
 		callback(await get('EmoteOnly', null, null, null, { emote_only: { enabled } }));
 	});
 
 	// Fires when followers-only mode is toggled in a channel.
 	chat_listeners.FollowersOnly = chat_client.onFollowersOnly(async (channel, enabled, delay) => {
-		console.log('FollowersOnly:', enabled, delay);
 		callback(await get('FollowersOnly', msg, message, user, { follower_only: { enabled, delay } }));
 	});
 
 	// Fires when a user upgrades their gift subscription to a paid subscription in a channel.
 	chat_listeners.GiftPaidUpgrade = chat_client.onGiftPaidUpgrade(async (channel, user, subInfo, msg) => {
-		console.log('GiftPaidUpgrade:', subInfo);
 		callback(await get('GiftPaidUpgrade', msg, null, user, { subscribe: { user, info: subInfo } }));
 	});
 
 	// Fires when a channel hosts another channel.
 	chat_listeners.Host = chat_client.onHost(async (channel, target, viewers) => {
-		console.log('Host:', target, viewers);
-		callback(await get('Host', null, null, null, { host: { target, viewers } }));
+		callback(await get('Host', null, null, null, { host: { channel: target, viewers } }));
 	});
 
 	// Fires when a channel you're logged in as its owner is being hosted by another channel.
 	chat_listeners.Hosted = chat_client.onHosted(async (channel, byChannel, auto, viewers) => {
-		console.log('Hosted:', byChannel, auto, viewers);
-		callback(await get('Hosted', msg, message, byChannel, { host: { name: byChannel, viewers, auto } }));
+		callback(await get('Hosted', msg, message, byChannel, { host: { channel: byChannel, viewers, auto } }));
 	});
 
 	// Fires when Twitch tells you the number of hosts you have remaining in the next half hour for the channel for which you're logged in as owner after hosting a channel.
 	chat_listeners.HostsRemaining = chat_client.onHostsRemaining(async (channel, numberOfHosts) => {
-		console.log('HostsRemaining:', numberOfHosts);
 		callback(await get('HostsRemaining', null, null, null, { host: { remaining: numberOfHosts } }));
 	});
 
@@ -215,8 +205,7 @@ async function connect(clientId, accessToken, channelName, callback)
 	});
 
 	chat_listeners.NickChange = chat_client.onNickChange(async (oldNick, newNick, msg) => {
-		console.log('NickChange:', oldNick, newNick);
-		callback(await get('NickChange', msg, null, null, { user: { old:  oldNick} }));
+		callback(await get('NickChange', msg, null, newNick, { user: { old: oldNick } }));
 	});
 
 	// Fires when you tried to execute a command you don't have sufficient permission for.
@@ -232,7 +221,6 @@ async function connect(clientId, accessToken, channelName, callback)
 
 	// Fires when a user leaves ("parts") a channel.
 	chat_listeners.Part = chat_client.onPart(async (channel, user) => {
-		console.log('Part:', error);
 		callback(await get('Part', null, null, user));
 	});
 
@@ -243,26 +231,22 @@ async function connect(clientId, accessToken, channelName, callback)
 
 	// Fires when a user gifts a Twitch Prime benefit to the channel.
 	chat_listeners.PrimeCommunityGift = chat_client.onPrimeCommunityGift(async (channel, user, subInfo, msg) => {
-		console.log('PrimeCommunityGift:', subInfo);
 		callback(await get('PrimeCommunityGift', msg, null, user));
 	});
 
 	// Fires when a user upgrades their Prime subscription to a paid subscription in a channel.
 	chat_listeners.PrimePaidUpgrade = chat_client.onPrimePaidUpgrade(async (channel, user, subInfo, msg) => {
-		console.log('PrimePaidUpgrade:', subInfo);
 		callback(await get('PrimePaidUpgrade', msg, null, user));
 	});
 
-	// Fires when R9K mode is toggled in a channel.
+	// Fires when R9K mode is toggled in a channel (UniqueChat).
 	chat_listeners.R9k = chat_client.onR9k(async (channel, enabled) => {
-		console.log('R9k:', enabled);
 		callback(await get('R9k', null, null, null, { r9k: enabled }));
 	});
 
 	// Fires when a user raids a channel.
 	chat_listeners.Raid = chat_client.onRaid(async (channel, user, raidInfo, msg) => {
-		console.log('Raid:', raidInfo);
-		callback(await get('Raid', msg, null, user, { raid: { user, info: raidInfo } }));
+		callback(await get('Raid', msg, null, user, { raid: { channel: user, info: raidInfo } }));
 	});
 
 	// Fires when a user cancels a raid.
@@ -271,24 +255,21 @@ async function connect(clientId, accessToken, channelName, callback)
 	});
 
 	chat_listeners.Register = chat_client.onRegister(async () => {
-		console.log('Register');
 		callback(await get('Register', null, null, null));
 	});
 
 	// Fires when a user resubscribes to a channel.
 	chat_listeners.Resub = chat_client.onResub(async (channel, user, subInfo) => {
-		console.log('Resub:', subInfo);
 		callback(await get('Resub', null, null, user, { subscribe: { user, info: subInfo } }));
 		//chat_client.say(channel, `Merci @${user} pour le réabonnement (${subInfo.months} mois)!`);
 	});
 
 	// Fires when a user gifts rewards during a special event.
 	chat_listeners.RewardGift = chat_client.onRewardGift(async (channel, user, rewardGiftInfo, msg) => {
-		console.log('RewardGift:', rewardGiftInfo);
 		callback(await get('RewardGift', msg, null, user, { reward: { user, info: rewardGiftInfo } }));
 	});
 
-	// Fires when a user performs a "ritual" in a channel.
+	// Fires when a user performs a "ritual" in a channel (new user).
 	chat_listeners.Ritual = chat_client.onRitual(async (channel, user, ritualInfo, msg) => {
 		console.log('Ritual:', ritualInfo);
 		callback(await get('Ritual', msg, null, user, { ritual: { user, info: ritualInfo } }));
@@ -296,45 +277,38 @@ async function connect(clientId, accessToken, channelName, callback)
 
 	// Fires when slow mode is toggled in a channel.
 	chat_listeners.Slow = chat_client.onSlow(async (channel, enabled, delay) => {
-		console.log('Slow:', enabled, delay);
 		callback(await get('Slow', null, null, null, { slow: { enabled, delay } }));
 	});
 
 	// Fires when a user pays forward a subscription that was gifted to them to a specific user.
 	chat_listeners.StandardPayForward = chat_client.onStandardPayForward(async (channel, user, subInfo, msg) => {
-		console.log('StandardPayForward:', subInfo);
 		callback(await get('StandardPayForward', msg, null, user, { subscribe: { user, info: subInfo } }));
 	});
 
 	// Fires when a user subscribes to a channel.
 	chat_listeners.Sub = chat_client.onSub(async (channel, user) => {
-		console.log('Sub:', user);
 		callback(await get('Sub', null, null, user, { subscribe: { user, info: subInfo } }));
 		//chat_client.say(channel, `Merci @${user} pour l'abonnement!`);
 	});
 
 	// Fires when a user extends their subscription using a Sub Token.
 	chat_listeners.SubExtend = chat_client.onSubExtend(async (channel, user, subInfo, msg) => {
-		console.log('SubExtend:', subInfo);
 		callback(await get('SubExtend', msg, null, user, { subscribe: { user, info: subInfo } }));
 	});
 
 	// Fires when a user gifts a subscription to a channel to another user.
 	chat_listeners.SubGift = chat_client.onSubGift(async (channel, user, subInfo) => {
-		console.log('SubGift:', subInfo);
 		callback(await get('SubGift', null, null, user, { subscribe: { user, info: subInfo } }));
 		//chat_client.say(channel, `Merci @${subInfo.gifter} pour l'abonnement offert à @${user}!`);
 	});
 
 	// Fires when a user is timed out from a channel.
 	chat_listeners.Timeout = chat_client.onTimeout(async (channel, user, duration, msg) => {
-		console.log('Timeout:', duration);
 		callback(await get('Timeout', msg, null, user, { timeout: { user, duration } }));
 	});
 
 	// Fires when sub only mode is toggled in a channel.
 	chat_listeners.SubsOnly = chat_client.onSubsOnly(async (channel, enabled) => {
-		console.log('SubsOnly:', enabled);
 		callback(await get('SubsOnly', null, null, null, { subscribe_only: { enabled } }));
 	});
 
@@ -390,8 +364,6 @@ async function connect(clientId, accessToken, channelName, callback)
 
 async function disconnect()
 {
-	//await chat_client.disconnect();
-
 	for (const name in chat_listeners)
 	{
 		const listener = chat_listeners[name];
@@ -409,6 +381,8 @@ async function disconnect()
 	// await onlineSubscription.stop();
 	// await offlineSubscription.stop();
 
+	await chat_client.quit();
+
 	pubsub_client = null;
 	chat_client = null;
 	api_client = null;
@@ -417,6 +391,7 @@ async function disconnect()
 async function exec(type, name, args)
 {
 	let c = null;
+	name = name[0].toLowerCase() + name.substr(1);
 
 	try
 	{
@@ -426,7 +401,39 @@ async function exec(type, name, args)
 		{
 			c = chat_client;
 
-			if (name == 'say')
+			const prefix_channel = [
+				'action',
+				'addVip',
+				'announce',
+				'ban',
+				'clear',
+				'deleteMessage',
+				'disableEmoteOnly',
+				'disableFollowersOnly',
+				'disableSlow',
+				'disableSubsOnly',
+				'disableUniqueChat',
+				'enableEmoteOnly',
+				'enableFollowersOnly',
+				'enableSlow',
+				'enableSubsOnly',
+				'enableUniqueChat',
+				'getMods',
+				'getVips',
+				'host',
+				'mod',
+				'purge',
+				'raid',
+				'removeVip',
+				'runCommercial',
+				'timeout',
+				'unhostOutside',
+				'unmod',
+				'unraid',
+				'say'
+			];
+
+			if (prefix_channel.indexOf(name) >= 0)
 				args.unshift(channel.name);
 		}
 		else if (type == 'PubSub')
@@ -449,8 +456,6 @@ async function exec(type, name, args)
 
 async function get(type, msg, message, user, merge)
 {
-	//console.log('get:', type, JSON.stringify(msg, null, 2));
-
 	msg = (msg || {});
 	channel.id = (channel.id || msg.channelId);
 	const is_command = (message && message.length && message[0] == '!');

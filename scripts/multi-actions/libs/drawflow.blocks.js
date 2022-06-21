@@ -14,20 +14,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	function drag(event)
 	{
+		const elem = event.target.closest('.drag-drawflow');
+
 		document.body.classList.remove('show-blocks');
 		if (event.type === 'touchstart')
-			mobile_item_selec = event.target.closest('.drag-drawflow').getAttribute('data-node');
+			mobile_item_selec = elem.getAttribute('data-node');
 		else
-			event.dataTransfer.setData('node', event.target.getAttribute('data-node'));
+			event.dataTransfer.setData('node', elem.getAttribute('data-node'));
 	}
 
 	function drop(event)
 	{
 		if (event.type === 'touchend')
 		{
-			var parentdrawflow = document.elementFromPoint( mobile_last_move.touches[0].clientX, mobile_last_move.touches[0].clientY).closest('.parent-drawflow');
+			const touches = mobile_last_move.touches[0];
+			const parentdrawflow = document.elementFromPoint(touches.clientX, touches.clientY).closest('.parent-drawflow');
 			if (parentdrawflow != null)
-				add_node(mobile_item_selec, mobile_last_move.touches[0].clientX, mobile_last_move.touches[0].clientY);
+				add_node(mobile_item_selec, touches.clientX, touches.clientY);
 
 			mobile_item_selec = '';
 		}
@@ -42,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	function drag_event(event)
 	{
 		const elem = event.target.closest('.drag-drawflow');
+
 		if (elem)
 		{
 			switch (event.type)
@@ -151,13 +155,54 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	const bodys = {
-		text: '<label class="checkbox" title="The uppercase/lowercase will be taken into account" style="padding-left: 0em; width: 85%;"><input name="case" type="checkbox" /><span>Case sensitive</span></label><label class="checkbox" title="The message received contains the sentence (must be exact if unchecked)" style="padding-left: 0em; width: 85%;"><input name="contains" type="checkbox" /><span>Contains sentence</span></label>',
-		message: '<p>Message</p><input name="message" type="text" class="has-text-centered" />',
+		text: (title, name) => {
+			if (!name)
+				name = title.toLowerCase().replace(/\s/g, '-');
+
+			return `<p>${title}</p><input name="${name}" type="text" class="has-text-centered" />`;
+		},
+		number: (title, name, value, step, min, max) => {
+			if (!name)
+				name = title.toLowerCase().replace(/\s/g, '-');
+
+			let attrs = '';
+			if (value)
+				attrs += ` value="${value}"`;
+			if (step)
+				attrs += ` step="${step}"`;
+			if (min)
+				attrs += ` min="${min}"`;
+			if (max)
+				attrs += ` max="${max}"`;
+
+			return `<p>${title}</p><input name="${name}" type="number"${attrs} class="has-text-centered" />`;
+		},
+		select: (title, name, options, select) => {
+			if (!name)
+				name = title.toLowerCase().replace(/\s/g, '-');
+
+			let list = '';
+			if (options)
+			{
+				for (const option of options)
+				{
+					if (typeof(option) === 'object')
+						list += `<option value="${option.value}"` + ((option.value == select) ? ' selected' : '') + `>${option.name}</option>`;
+					else
+						list += '<option' + ((option == select) ? ' selected' : '') + `>${option}</option>`;
+				}
+			}
+
+			return `<p>${title}</p><select name="${name}" class="has-text-centered">${list}</select>`;
+		},
+		match: '<label class="checkbox" title="The uppercase/lowercase will be taken into account" style="padding-left: 0em; width: 85%;"><input name="case" type="checkbox" /><span>Case sensitive</span></label><label class="checkbox" title="The message received contains the sentence (must be exact if unchecked)" style="padding-left: 0em; width: 85%;"><input name="contains" type="checkbox" /><span>Contains sentence</span></label>',
 		viewers: '<p>Type of viewer</p><hr /><label class="checkbox"><input name="viewer" type="checkbox" /><span>Viewer</span></label><label class="checkbox"><input name="subscriber" type="checkbox" /><span>Subscriber</span></label><label class="checkbox"><input name="founder" type="checkbox" /><span>Founder</span></label><label class="checkbox"><input name="vip" type="checkbox" /><span>VIP</span></label><label class="checkbox"><input name="moderator" type="checkbox" /><span>Moderator</span></label><label class="checkbox"><input name="broadcaster" type="checkbox" /><span>Broadcaster</span></label>',
-		scene: '<p>Scene name</p><select name="scene" class="has-text-centered"></select>',
-		source: '<p>Source name</p><select name="source" class="has-text-centered"></select>',
-		state: '<p>State</p><input name="state" type="checkbox" class="is-hidden" checked /><div class="field has-addons is-justify-content-center"><p class="control"><button class="button button-on"><span>Start</span></button></p><p class="control"><button class="button button-off"><span>Stop</span></button></p></div>',
-		state_toggle: '<p>State</p><div class="field has-addons is-justify-content-center"><p class="control"><input name="state" type="radio" value="on" class="is-hidden" checked /><button class="button button-on"><span>Start</span></button></p><p class="control"><input name="state" type="radio" value="toggle" class="is-hidden" /><button class="button button-toggle"><span>Toggle</span></button></p><p class="control"><input name="state" type="radio" value="off" class="is-hidden" /><button class="button button-off"><span>Stop</span></button></p></div>',
+		state: (on, off) => {
+			return `<p>State</p><input name="state" type="checkbox" class="is-hidden" checked /><div class="field has-addons is-justify-content-center"><p class="control"><button class="button button-on"><span>${on || 'Start'}</span></button></p><p class="control"><button class="button button-off"><span>${off || 'Stop'}</span></button></p></div>`;
+		},
+		state_toggle: (on, off, toggle) => {
+			return `<p>State</p><div class="field has-addons is-justify-content-center"><p class="control"><input name="state" type="radio" value="on" class="is-hidden" checked /><button class="button button-on"><span>${on || 'Start'}</span></button></p><p class="control"><input name="state" type="radio" value="toggle" class="is-hidden" /><button class="button button-toggle"><span>${toggle || 'Toggle'}</span></button></p><p class="control"><input name="state" type="radio" value="off" class="is-hidden" /><button class="button button-off"><span>${off || 'Stop'}</span></button></p></div>`;
+		},
 	};
 
 	const functions = {
@@ -175,6 +220,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			if (trim)
 				set_data(data);
+		},
+		number: (id, elem, data, set_data, receive, arg, min, max) => {
+			if (typeof(min) === 'number' && data[arg] < min)
+			{
+				data[arg] = min;
+				set_data(data);
+			}
+			else if (typeof(max) === 'number' && data[arg] < max)
+			{
+				data[arg] = max;
+				set_data(data);
+			}
 		},
 		scene_source: (id, elem, data, set_data, receive) => {
 			const selects = elem.querySelectorAll('select');
@@ -325,77 +382,669 @@ document.addEventListener('DOMContentLoaded', () => {
 		change();
 	};
 
+	const display_image = (image, title) => {
+		if (document.querySelector('.container-frame'))
+			return;
+
+		const container_frame = document.createElement('div');
+		container_frame.classList.add('container-frame');
+		container_frame.addEventListener('click', () => {
+			container_frame.remove();
+		}, false);
+
+		const frame = document.createElement('div');
+		container_frame.appendChild(frame);
+
+		if (title)
+		{
+			const _title = document.createElement('div');
+			_title.innerText = title;
+			frame.appendChild(_title);
+		}
+
+		const _image = document.createElement('img');
+		_image.setAttribute('src', image);
+		frame.appendChild(_image);
+
+		document.body.appendChild(container_frame);
+	};
+
 	const blocks = {
 		'self-timer': {
 			title: 'Self-Timer',
-			icon: ['clock'],
+			icon: 'self-timer',
 			inputs: 1,
 			outputs: 1,
-			body: '<p>Time in milliseconds</p><input name="millis" type="number" step="100" value="1000" class="has-text-centered" />',
+			body: bodys.number('Time in milliseconds', 'millis', 1000, 100),
 			data: {},
-			update: (id, elem, data, set_data, receive) => {
-				if (data.millis < 1)
-				{
-					data.millis = 1;
-					set_data(data);
-				}
-			}
+			update: (id, elem, data, set_data, receive) => functions.number(id, elem, data, set_data, receive, 'millis', 1)
 		},
 		'launch-app': {
 			title: 'Launch App',
-			icon: ['rocket'],
+			icon: 'launch-app',
 			inputs: 1,
 			outputs: 1,
 			body: '<p>Application</p><div class="is-browse launch-app"><input name="program" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div>',
 			data: {},
 			update: (id, elem, data, set_data, receive) => {
-				browse_fas(id, 'file', elem.querySelector('.launch-app button'), 'program');
+				if (!elem.classList.contains('block-init'))
+				{
+					elem.classList.add('block-init');
+					browse_fas(id, 'file', elem.querySelector('.launch-app button'), 'program');
+				}
 			}
 		},
-		'event-twitch-chat': {
+		'event-twitch-action': {
 			type: 'twitch',
-			title: 'Chat',
-			tooltip: 'Twitch - Chat',
-			icon: ['circle-arrow-down', 'message'],
+			title: 'Action',
+			tooltip: 'Twitch - Action',
+			icon: 'action',
 			inputs: 0,
 			outputs: 1,
-			body: bodys.message + bodys.text + bodys.viewers,
+			body: bodys.text('Message') + bodys.match + bodys.viewers,
 			data: {},
-			register: [['twitch', 'Chat']],
+			register: [],
 			update: functions.trim
+		},
+		'trigger-twitch-action': {
+			type: 'twitch',
+			title: 'Action',
+			tooltip: 'Twitch - Action',
+			icon: 'action',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('Message'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-announcement': {
+			type: 'twitch',
+			title: 'Announcement',
+			tooltip: 'Twitch - Announcement',
+			icon: 'announce',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('Message') + bodys.match + bodys.viewers,
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'trigger-twitch-announce': {
+			type: 'twitch',
+			title: 'Announce',
+			tooltip: 'Twitch - Announce',
+			icon: 'announce',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('Message'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-any-message': {
+			type: 'twitch',
+			title: 'Any Message',
+			tooltip: 'Twitch - Any Message',
+			icon: 'message',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('Message') + bodys.match + bodys.viewers,
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-ban': {
+			type: 'twitch',
+			title: 'Ban',
+			tooltip: 'Twitch - Ban',
+			icon: 'ban',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'trigger-twitch-ban': {
+			type: 'twitch',
+			title: 'Ban',
+			tooltip: 'Twitch - Ban',
+			icon: 'ban',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('User') + bodys.text('Reason'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-chat-clear': {
+			type: 'twitch',
+			title: 'Chat Clear',
+			tooltip: 'Twitch - Chat Clear',
+			icon: 'chat-clear',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'trigger-twitch-chat-clear': {
+			type: 'twitch',
+			title: 'Chat Clear',
+			tooltip: 'Twitch - Chat Clear',
+			icon: 'chat-clear',
+			inputs: 1,
+			outputs: 0,
+			body: false,
+			data: {},
+			register: [],
+			update: false
 		},
 		'event-twitch-command': {
 			type: 'twitch',
 			title: 'Command',
 			tooltip: 'Twitch - Command',
-			icon: ['circle-arrow-down', 'terminal'],
+			icon: 'command',
 			inputs: 0,
 			outputs: 1,
 			body: '<p>Command</p><div class="is-command"><input name="command" type="text" class="has-text-centered" /></div>' + bodys.viewers,
 			data: {},
-			register: [['twitch', 'Command']],
+			register: [],
 			update: functions.trim
+		},
+		'event-twitch-community-pay-forward': {
+			type: 'twitch',
+			title: 'Community Pay Forward',
+			tooltip: 'Twitch - Community Pay Forward',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-community-sub': {
+			type: 'twitch',
+			title: 'Community Sub',
+			tooltip: 'Twitch - Community Sub',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-community-sub': {
+			type: 'twitch',
+			title: 'Community Sub',
+			tooltip: 'Twitch - Community Sub',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-emote-only': {
+			type: 'twitch',
+			title: 'Emote Only',
+			tooltip: 'Twitch - Emote Only',
+			icon: 'emotes',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state_toggle('On', 'Off', 'Both'),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'trigger-twitch-emote-only': {
+			type: 'twitch',
+			title: 'Emote Only',
+			tooltip: 'Twitch - Emote Only',
+			icon: 'emotes',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state(),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'event-twitch-followers-only': {
+			type: 'twitch',
+			title: 'Followers Only',
+			tooltip: 'Twitch - Followers Only',
+			icon: 'followers',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state_toggle('On', 'Off', 'Both'),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'trigger-twitch-followers-only': {
+			type: 'twitch',
+			title: 'Followers Only',
+			tooltip: 'Twitch - Followers Only',
+			icon: 'followers',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state(),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'event-twitch-gift-paid-upgrade': {
+			type: 'twitch',
+			title: 'Gift Paid Upgrade',
+			tooltip: 'Twitch - Gift Paid Upgrade',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-host': {
+			type: 'twitch',
+			title: 'Host',
+			tooltip: 'Twitch - Host',
+			icon: 'host',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('Channel'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-hosted': {
+			type: 'twitch',
+			title: 'Hosted',
+			tooltip: 'Twitch - Hosted',
+			icon: 'host',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('Channel'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'trigger-twitch-host': {
+			type: 'twitch',
+			title: 'Host',
+			tooltip: 'Twitch - Host',
+			icon: 'host',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('Channel'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-message': {
+			type: 'twitch',
+			title: 'Message',
+			tooltip: 'Twitch - Message',
+			icon: 'message',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('Message') + bodys.match + bodys.viewers,
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'trigger-twitch-message': {
+			type: 'twitch',
+			title: 'Message',
+			tooltip: 'Twitch - Message',
+			icon: 'message',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('Message'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-message-remove': {
+			type: 'twitch',
+			title: 'Message Remove',
+			tooltip: 'Twitch - Message Remove',
+			icon: 'message-remove',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('Message') + bodys.match + bodys.viewers,
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-prime-community-gift': {
+			type: 'twitch',
+			title: 'Prime Community Gift',
+			tooltip: 'Twitch - Prime Community Gift',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-prime-paid-upgrade': {
+			type: 'twitch',
+			title: 'Prime Paid Upgrade',
+			tooltip: 'Twitch - Prime Paid Upgrade',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-raid': {
+			type: 'twitch',
+			title: 'Raid',
+			tooltip: 'Twitch - Raid',
+			icon: 'raid',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('Channel'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'trigger-twitch-raid': {
+			type: 'twitch',
+			title: 'Raid',
+			tooltip: 'Twitch - Raid',
+			icon: 'raid',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('Channel'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-raid-cancel': {
+			type: 'twitch',
+			title: 'Raid Cancel',
+			tooltip: 'Twitch - Raid Cancel',
+			icon: 'raid-cancel',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'trigger-twitch-raid-cancel': {
+			type: 'twitch',
+			title: 'Raid Cancel',
+			tooltip: 'Twitch - Raid Cancel',
+			icon: 'raid-cancel',
+			inputs: 1,
+			outputs: 0,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-reward-gift': {
+			type: 'twitch',
+			title: 'Reward Gift',
+			tooltip: 'Twitch - Reward Gift',
+			icon: 'reward-gift',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-ritual': {
+			type: 'twitch',
+			title: 'Ritual',
+			tooltip: 'Twitch - Ritual',
+			icon: 'ritual',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('User') + bodys.number('Duration') + bodys.text('Reason'),
+			data: {},
+			register: [],
+			update: functions.trim
+		},
+		'event-twitch-slow': {
+			type: 'twitch',
+			title: 'Slow',
+			tooltip: 'Twitch - Slow',
+			icon: 'slow',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'trigger-twitch-slow': {
+			type: 'twitch',
+			title: 'Slow',
+			tooltip: 'Twitch - Slow',
+			icon: 'slow',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state(),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'event-twitch-standard-pay-forward': {
+			type: 'twitch',
+			title: 'Standard Pay Forward',
+			tooltip: 'Twitch - Standard Pay Forward',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-sub': {
+			type: 'twitch',
+			title: 'Subscribe',
+			tooltip: 'Twitch - Subscribe',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-resub': {
+			type: 'twitch',
+			title: 'Subscribe Again',
+			tooltip: 'Twitch - Subscribe Again',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-sub-extend': {
+			type: 'twitch',
+			title: 'Subscribe Extend',
+			tooltip: 'Twitch - Subscribe Extend',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-sub-gift': {
+			type: 'twitch',
+			title: 'Subscribe Gift',
+			tooltip: 'Twitch - Subscribe Gift',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-subs-only': {
+			type: 'twitch',
+			title: 'Subscribers Only',
+			tooltip: 'Twitch - Subscribers Only',
+			icon: 'subscribers',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state_toggle('On', 'Off', 'Both'),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'trigger-twitch-subs-only': {
+			type: 'twitch',
+			title: 'Subscribers Only',
+			tooltip: 'Twitch - Subscribers Only',
+			icon: 'subscribers',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state(),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'event-twitch-timeout': {
+			type: 'twitch',
+			title: 'Timeout',
+			tooltip: 'Twitch - Timeout',
+			icon: 'timeout',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'trigger-twitch-timeout': {
+			type: 'twitch',
+			title: 'Timeout',
+			tooltip: 'Twitch - Timeout',
+			icon: 'timeout',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('User') + bodys.number('Duration', false, 300, 10) + bodys.text('Reason'),
+			data: {},
+			register: [],
+			update: (id, elem, data, set_data, receive) => {
+				functions.trim(id, elem, data, set_data, receive);
+				functions.number(id, elem, data, set_data, receive, 'duration', 1);
+			}
+		},
+		'event-twitch-unhost': {
+			type: 'twitch',
+			title: 'Unhost',
+			tooltip: 'Twitch - Unhost',
+			icon: 'unhost',
+			inputs: 0,
+			outputs: 1,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'trigger-twitch-unhost': {
+			type: 'twitch',
+			title: 'Unhost',
+			tooltip: 'Twitch - Unhost',
+			icon: 'unhost',
+			inputs: 1,
+			outputs: 0,
+			body: false,
+			data: {},
+			register: [],
+			update: false
+		},
+		'event-twitch-unique-message': {
+			type: 'twitch',
+			title: 'Unique Message',
+			tooltip: 'Twitch - Unique Message',
+			icon: 'message',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'trigger-twitch-unique-message': {
+			type: 'twitch',
+			title: 'Unique Message',
+			tooltip: 'Twitch - Unique Message',
+			icon: 'message',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state(),
+			data: {},
+			register: [],
+			update: functions.state
 		},
 		'event-twitch-whisper': {
 			type: 'twitch',
 			title: 'Whisper',
 			tooltip: 'Twitch - Whisper',
-			icon: ['circle-arrow-down', 'comments'],
+			icon: 'whisper',
 			inputs: 0,
 			outputs: 1,
-			body: bodys.message + bodys.text,
+			body: bodys.text('Message') + bodys.match,
 			data: {},
-			register: [['twitch', 'Whisper']],
+			register: [],
+			update: functions.trim
+		},
+		'trigger-twitch-whisper': {
+			type: 'twitch',
+			title: 'Whisper',
+			tooltip: 'Twitch - Whisper',
+			icon: 'whisper',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('User') + bodys.text('Message'),
+			data: {},
+			register: [],
 			update: functions.trim
 		},
 		'event-obs-studio-recording': {
 			type: 'obs-studio',
 			title: 'Recording',
 			tooltip: 'OBS Studio - Recording',
-			icon: ['circle-arrow-down', 'floppy-disk'],
+			icon: 'recording',
 			inputs: 0,
 			outputs: 1,
-			body: bodys.state,
+			body: bodys.state(),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'trigger-obs-studio-recording': {
+			type: 'obs-studio',
+			title: 'Recording',
+			tooltip: 'OBS Studio - Recording',
+			icon: 'recording',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state_toggle(),
 			data: {},
 			register: [],
 			update: functions.state
@@ -404,91 +1053,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			type: 'obs-studio',
 			title: 'Replay',
 			tooltip: 'OBS Studio - Replay',
-			icon: ['circle-arrow-down', 'video'],
+			icon: 'replay',
 			inputs: 0,
 			outputs: 1,
-			body: bodys.state,
-			data: {},
-			register: [],
-			update: functions.state
-		},
-		'event-obs-studio-streaming': {
-			type: 'obs-studio',
-			title: 'Streaming',
-			tooltip: 'OBS Studio - Streaming',
-			icon: ['circle-arrow-down', 'video'],
-			inputs: 0,
-			outputs: 1,
-			body: bodys.state,
-			data: {},
-			register: [],
-			update: functions.state
-		},
-		'event-obs-studio-switch-scene': {
-			type: 'obs-studio',
-			title: 'Switch Scene',
-			tooltip: 'OBS Studio - Switch Scene',
-			icon: ['circle-arrow-down', 'repeat'],
-			inputs: 0,
-			outputs: 1,
-			body: bodys.scene,
-			data: {},
-			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
-			update: functions.scene_source
-		},
-		'trigger-discord-webhook': {
-			type: 'discord',
-			title: 'Webhook',
-			tooltip: 'Discord - Webhook',
-			icon: ['circle-arrow-up', 'envelope-circle-check'],
-			width: 500,
-			inputs: 1,
-			outputs: 0,
-			body: '<p>Webhook</p><input name="webhook" type="url" class="has-text-centered" /><div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL</p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div></div><p>Inline 1</p><div class="columns"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2</p><div class="columns"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
-			data: {},
-			register: [],
-			update: (id, elem, data, set_data, receive) => {
-				functions.trim(id, elem, data, set_data, receive);
-
-				browse_fas(id, 'file', elem.querySelector('.discord-thumbnail button'), 'thumbnail');
-				browse_fas(id, 'file', elem.querySelector('.discord-big-image button'), 'big-image');
-			}
-		},
-		'trigger-twitch-chat': {
-			type: 'twitch',
-			title: 'Chat',
-			tooltip: 'Twitch - Chat',
-			icon: ['circle-arrow-up', 'message'],
-			inputs: 1,
-			outputs: 0,
-			body: bodys.message,
-			data: {},
-			register: [['twitch', 'Chat']],
-			update: functions.trim
-		},
-		'trigger-obs-studio-toggle-source': {
-			type: 'obs-studio',
-			title: 'Toggle Source',
-			tooltip: 'OBS Studio - Toggle Source',
-			icon: ['circle-arrow-up', 'eye'],
-			inputs: 1,
-			outputs: 0,
-			body: bodys.scene + bodys.source + bodys.state_toggle.replace('Start', 'Show').replace('Stop', 'Hide'),
-			data: {},
-			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
-			update: (id, elem, data, set_data, receive) => {
-				functions.scene_source(id, elem, data, set_data, receive);
-				functions.state(id, elem, data, set_data, receive);
-			}
-		},
-		'trigger-obs-studio-recording': {
-			type: 'obs-studio',
-			title: 'Recording',
-			tooltip: 'OBS Studio - Recording',
-			icon: ['circle-arrow-up', 'floppy-disk'],
-			inputs: 1,
-			outputs: 0,
-			body: bodys.state_toggle,
+			body: bodys.state(),
 			data: {},
 			register: [],
 			update: functions.state
@@ -497,10 +1065,22 @@ document.addEventListener('DOMContentLoaded', () => {
 			type: 'obs-studio',
 			title: 'Replay',
 			tooltip: 'OBS Studio - Replay',
-			icon: ['circle-arrow-up', 'video'],
+			icon: 'replay',
 			inputs: 1,
 			outputs: 0,
-			body: bodys.state_toggle,
+			body: bodys.state_toggle(),
+			data: {},
+			register: [],
+			update: functions.state
+		},
+		'event-obs-studio-streaming': {
+			type: 'obs-studio',
+			title: 'Streaming',
+			tooltip: 'OBS Studio - Streaming',
+			icon: 'streaming',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(),
 			data: {},
 			register: [],
 			update: functions.state
@@ -509,25 +1089,79 @@ document.addEventListener('DOMContentLoaded', () => {
 			type: 'obs-studio',
 			title: 'Streaming',
 			tooltip: 'OBS Studio - Streaming',
-			icon: ['circle-arrow-up', 'video'],
+			icon: 'streaming',
 			inputs: 1,
 			outputs: 0,
-			body: bodys.state_toggle,
+			body: bodys.state_toggle(),
 			data: {},
 			register: [],
 			update: functions.state
+		},
+		'event-obs-studio-switch-scene': {
+			type: 'obs-studio',
+			title: 'Switch Scene',
+			tooltip: 'OBS Studio - Switch Scene',
+			icon: 'switch-scene',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.select('Scene name', 'scene'),
+			data: {},
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
+			update: functions.scene_source
 		},
 		'trigger-obs-studio-switch-scene': {
 			type: 'obs-studio',
 			title: 'Switch Scene',
 			tooltip: 'OBS Studio - Switch Scene',
-			icon: ['circle-arrow-up', 'repeat'],
+			icon: 'switch-scene',
 			inputs: 1,
 			outputs: 0,
-			body: bodys.scene,
+			body: bodys.select('Scene name', 'scene'),
 			data: {},
 			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
 			update: functions.scene_source
+		},
+		'trigger-discord-webhook': {
+			type: 'discord',
+			title: 'Webhook',
+			tooltip: 'Discord - Webhook',
+			icon: 'webhook',
+			width: 500,
+			inputs: 1,
+			outputs: 0,
+			body: '<p>Webhook <i class="fas fa-solid fa-circle-info is-pulled-right"></i></p><input name="webhook" type="url" class="has-text-centered" /><div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL</p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div></div><p>Inline 1</p><div class="columns"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2</p><div class="columns"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
+			data: {},
+			register: [],
+			update: (id, elem, data, set_data, receive) => {
+				functions.trim(id, elem, data, set_data, receive);
+
+				if (!elem.classList.contains('block-init'))
+				{
+					elem.classList.add('block-init');
+
+					browse_fas(id, 'file', elem.querySelector('.discord-thumbnail button'), 'thumbnail');
+					browse_fas(id, 'file', elem.querySelector('.discord-big-image button'), 'big-image');
+
+					elem.querySelector('.fa-circle-info').addEventListener('click', () => {
+						display_image('guide.png', 'Discord Publication - Guide');
+					}, false);
+				}
+			}
+		},
+		'trigger-obs-studio-toggle-source': {
+			type: 'obs-studio',
+			title: 'Toggle Source',
+			tooltip: 'OBS Studio - Toggle Source',
+			icon: 'toggle-source',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle('Show', 'Hide'),
+			data: {},
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
+			update: (id, elem, data, set_data, receive) => {
+				functions.scene_source(id, elem, data, set_data, receive);
+				functions.state(id, elem, data, set_data, receive);
+			}
 		},
 	};
 
@@ -570,29 +1204,36 @@ document.addEventListener('DOMContentLoaded', () => {
 	for (const name in blocks)
 	{
 		const block_data = blocks[name];
-		const block = document.createElement('div');
-		const title = document.createElement('div');
-		const body = document.createElement('div');
+		const block_icon = `./icons/${block_data.icon}.png`;
 
-		title.classList.add('title-box');
+		const block = document.querySelector('#template .block-drawflow').cloneNode(true);
+		const button = document.querySelector('#template .drag-drawflow').cloneNode(true);
+
+		const title = block.querySelector('.title-box span');
+		const icon = block.querySelector('.title-box img');
+		const body = block.querySelector('.box');
+
+		block.classList.toggle('is-inputs', block_data.inputs);
+		block.classList.toggle('is-outputs', block_data.outputs);
+
+		icon.setAttribute('src', block_icon);
+		icon.addEventListener('error', () => {
+			const block_icon = `./icons/empty.png`;
+			icon.setAttribute('src', block_icon);
+			button.querySelector('.icon img').setAttribute('src', block_icon);
+		}, false);
+
 		title.innerHTML = block_data.title;
 		if (block_data.tooltip)
-			title.setAttribute('title', block_data.tooltip);
-		if (block_data.icon)
+			title.parentElement.setAttribute('title', block_data.tooltip);
+
+		if (!block_data.body)
 		{
-			for (const icon_name of block_data.icon.reverse())
-			{
-				const icon = document.createElement('i');
-				icon.classList.add('fas', `fa-${icon_name}`);
-				title.prepend(icon);
-			}
+			block.classList.add('no-box');
+			body.remove();
 		}
-
-		body.classList.add('box');
-		body.innerHTML = block_data.body;
-
-		block.appendChild(title);
-		block.appendChild(body);
+		else
+			body.innerHTML = block_data.body;
 
 		editor.registerNode(name, block);
 
@@ -600,12 +1241,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (['event', 'trigger'].indexOf(type) < 0)
 			type = 'fonctionnality';
 
-		const button = title.cloneNode(true);
-		button.removeAttribute('class');
-		button.classList.add('button', 'm-1', 'drag-drawflow');
-		button.setAttribute('draggable', 'true');
 		button.setAttribute('data-node', name);
-		document.querySelector(`.blocks-${type} [blocks-type="${block_data.type || ''}"]`).appendChild(button);
+		button.setAttribute('title', block_data.title);
+
+		button.classList.toggle('is-inputs', block_data.inputs);
+		button.classList.toggle('is-outputs', block_data.outputs);
+
+		button.querySelector('.icon img').setAttribute('src', block_icon);
+		button.querySelector('.name').innerText = block_data.title;
+
+		document.querySelector(`[blocks-type="${block_data.type || ''}"]`).appendChild(button);
 	}
 
 	drawflow.addEventListener('drop', drop, false);

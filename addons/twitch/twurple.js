@@ -83,7 +83,6 @@ async function connect(clientId, accessToken, channelName, callback)
 
 	// Fires when a user sends an announcement (/announce) to a channel.
 	chat_listeners.Announcement = chat_client.onAnnouncement(async (channel, user, announcementInfo, msg) => {
-		console.log('Announcement:', announcementInfo);
 		callback(await get('Announcement', msg, null, user, { announcement: { user, info: announcementInfo } }));
 	});
 

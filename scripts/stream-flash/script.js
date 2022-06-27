@@ -203,7 +203,7 @@ module.exports = {
 
 		if (_config.default.enabled)
 		{
-			if (id == 'twitch' && name == 'Connected')
+			if (id == 'twitch' && name == 'Register')
 				flash_screen('connected', true);
 			else if (id == 'twitch' && (name == 'Error' || name == 'Disconnected'))
 				flash_screen('disconnected', true);

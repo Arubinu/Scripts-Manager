@@ -2,6 +2,7 @@ const	fs = require('fs'),
 		ws = require('ws'),
 		http = require('http'),
 		path = require('path'),
+		elog = require('electron-log'),
 		estore = require('electron-store'),
 		inifile = { read: require('read-ini-file'), write: require('write-ini-file') },
 		{ app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } = require('electron');
@@ -483,6 +484,10 @@ function generate_menu()
 		} }
 	])));
 }
+
+const logpath = (process.env.PORTABLE_EXECUTABLE_DIR ? process.env.PORTABLE_EXECUTABLE_DIR : __dirname);
+elog.transports.file.resolvePath = () => path.join(logpath, 'ScriptsManager.log');
+Object.assign(console, elog.functions);
 
 app.whenReady().then(() => {
 	// init tray

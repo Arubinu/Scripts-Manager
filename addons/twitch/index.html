@@ -156,7 +156,7 @@
 								cross.classList.add('fas', 'fa-xmark');
 
 								const columns = [date, type, from, sub, vip, mod, brd];
-								if (row.type == 'Connected')
+								if (row.type == 'Register')
 									columns.forEach(column => column.classList.add('is-info'));
 								else if (row.type == 'Reconnect')
 									columns.forEach(column => column.classList.add('is-warning'));
@@ -165,7 +165,7 @@
 
 								date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
 								type.innerText = row.type[0].toUpperCase() + row.type.substr(1);
-								from.innerText = (row.user.name || '');
+								from.innerText = (row.user ? (row.user.name || '') : '');
 
 								if (row.flags)
 								{

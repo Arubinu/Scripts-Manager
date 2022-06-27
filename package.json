@@ -27,6 +27,7 @@
     "@twurple/chat": "^5.1.6",
     "@twurple/pubsub": "^5.1.6",
     "discord.js": "^13.8.0",
+    "electron-log": "^4.4.7",
     "electron-store": "^8.0.1",
     "node-global-key-listener": "^0.1.1",
     "obs-websocket-js": "^4.0.3",

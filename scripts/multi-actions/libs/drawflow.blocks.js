@@ -71,7 +71,18 @@ document.addEventListener('DOMContentLoaded', () => {
 		{
 			const elem = node_elem.querySelector(`input[name="${data_name}"], select[name="${data_name}"], textarea[name="${data_name}"]`);
 			if (elem)
-				elem.value = node.data.data[data_name];
+			{
+				const is_input = (elem.nodeName.toLowerCase() == 'input');
+				const input_type = (is_input && elem.getAttribute('type').toLowerCase());
+
+				if (is_input && input_type == 'radio')
+				{
+					for (const elem of node_elem.querySelectorAll(`input[name="${data_name}"]`))
+						elem.checked = (elem.value == node.data.data[data_name]);
+				}
+				else
+					elem.value = node.data.data[data_name];
+			}
 		}
 	};
 
@@ -86,14 +97,14 @@ document.addEventListener('DOMContentLoaded', () => {
 		const block = blocks[type];
 		const id = editor.addNode(`${editor.nodeId}.${type}`, block.inputs, block.outputs, pos_x, pos_y, `block-${type}`, {}, type, true);
 
-		let data = { id: id, type: type, data: block.data };
+		let data = { id: id, type: type, data: {} };
 		editor.updateNodeDataFromId(id, data);
-		set_data(id, block.data);
+		set_data(id, (block.data || {}));
 
-		init_node(editor.getNodeFromId(id));
+		init_node(editor.getNodeFromId(id), true);
 	}
 
-	function init_node(node)
+	function init_node(node, first)
 	{
 		const id = node.data.id;
 		const block = blocks[node.data.type];
@@ -106,6 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			const elem_name = elem.getAttribute('name');
 			if (!elem_name)
 				return;
+
+			if (first && block.init)
+				block.init(node.data.id, node_elem, node.data.data, _data => set_data(id, _data));
 
 			const is_input = (elem.nodeName.toLowerCase() == 'input');
 			const input_type = (is_input && elem.getAttribute('type').toLowerCase());
@@ -142,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				block.update(node.data.id, node_elem, node.data.data, _data => set_data(id, _data));
 
 			const update = event => {
-				node.data.data[elem_name] = ((is_input && input_type == 'checkbox') ? elem.checked : elem.value);
+				node.data.data[elem_name] = ((is_input && (input_type == 'radio' || input_type == 'checkbox')) ? elem.checked : elem.value);
 
 				set_data(id, node.data.data);
 				if (block.update)
@@ -166,13 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
 				name = title.toLowerCase().replace(/\s/g, '-');
 
 			let attrs = '';
-			if (value)
+			if (typeof(value) === 'number')
 				attrs += ` value="${value}"`;
-			if (step)
+			if (typeof(step) === 'number')
 				attrs += ` step="${step}"`;
-			if (min)
+			if (typeof(min) === 'number')
 				attrs += ` min="${min}"`;
-			if (max)
+			if (typeof(max) === 'number')
 				attrs += ` max="${max}"`;
 
 			return `<p>${title}</p><input name="${name}" type="number"${attrs} class="has-text-centered" />`;
@@ -195,13 +209,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			return `<p>${title}</p><select name="${name}" class="has-text-centered">${list}</select>`;
 		},
+		type: '<p>Type of value</p><hr /><label class="radio"><input name="type" type="radio" value="string" checked /><span>String</span></label><label class="radio"><input name="type" type="radio" value="number" /><span>Number</span></label><label class="radio"><input name="type" type="radio" value="boolean" /><span>Boolean</span></label>',
 		match: '<label class="checkbox" title="The uppercase/lowercase will be taken into account" style="padding-left: 0em; width: 85%;"><input name="case" type="checkbox" /><span>Case sensitive</span></label><label class="checkbox" title="The message received contains the sentence (must be exact if unchecked)" style="padding-left: 0em; width: 85%;"><input name="contains" type="checkbox" /><span>Contains sentence</span></label>',
 		viewers: '<p>Type of viewer</p><hr /><label class="checkbox"><input name="viewer" type="checkbox" /><span>Viewer</span></label><label class="checkbox"><input name="subscriber" type="checkbox" /><span>Subscriber</span></label><label class="checkbox"><input name="founder" type="checkbox" /><span>Founder</span></label><label class="checkbox"><input name="vip" type="checkbox" /><span>VIP</span></label><label class="checkbox"><input name="moderator" type="checkbox" /><span>Moderator</span></label><label class="checkbox"><input name="broadcaster" type="checkbox" /><span>Broadcaster</span></label>',
-		state: (on, off) => {
-			return `<p>State</p><input name="state" type="checkbox" class="is-hidden" checked /><div class="field has-addons is-justify-content-center"><p class="control"><button class="button button-on"><span>${on || 'Start'}</span></button></p><p class="control"><button class="button button-off"><span>${off || 'Stop'}</span></button></p></div>`;
+		state: (title, name, on, off) => {
+			title = (title || 'State');
+			if (!name)
+				name = title.toLowerCase().replace(/\s/g, '-');
+
+			return `<p>${title}</p><div><input name="${name}" type="checkbox" class="is-hidden" checked /><div class="field has-addons is-justify-content-center"><p class="control"><button class="button button-on"><span>${on || 'Start'}</span></button></p><p class="control"><button class="button button-off"><span>${off || 'Stop'}</span></button></p></div></div>`;
 		},
-		state_toggle: (on, off, toggle) => {
-			return `<p>State</p><div class="field has-addons is-justify-content-center"><p class="control"><input name="state" type="radio" value="on" class="is-hidden" checked /><button class="button button-on"><span>${on || 'Start'}</span></button></p><p class="control"><input name="state" type="radio" value="toggle" class="is-hidden" /><button class="button button-toggle"><span>${toggle || 'Toggle'}</span></button></p><p class="control"><input name="state" type="radio" value="off" class="is-hidden" /><button class="button button-off"><span>${off || 'Stop'}</span></button></p></div>`;
+		state_toggle: (title, name, on, off, toggle) => {
+			title = (title || 'State');
+			if (!name)
+				name = title.toLowerCase().replace(/\s/g, '-');
+
+			return `<p>${title}</p><div class="field has-addons is-justify-content-center"><p class="control"><input name="${name}" type="radio" value="on" class="is-hidden" checked /><button class="button button-on"><span>${on || 'Start'}</span></button></p><p class="control"><input name="${name}" type="radio" value="toggle" class="is-hidden" /><button class="button button-toggle"><span>${toggle || 'Toggle'}</span></button></p><p class="control"><input name="${name}" type="radio" value="off" class="is-hidden" /><button class="button button-off"><span>${off || 'Stop'}</span></button></p></div>`;
 		},
 	};
 
@@ -300,47 +323,66 @@ document.addEventListener('DOMContentLoaded', () => {
 					request('obs-studio', 'GetScenes');
 			}
 		},
-		state: (id, elem, data, set_data, receive) => {
-			const input = elem.querySelector('input');
-			const on = elem.querySelector('.button-on');
-			const toggle = elem.querySelector('.button-toggle');
-			const off = elem.querySelector('.button-off');
+		state: (id, elem, data, set_data, receive, arg, callback) => {
+			arg = (arg || 'state');
 
-			const change_state = (state, save) => {
-				on.classList.toggle('is-active', (toggle ? (state == 'on') : state));
-				off.classList.toggle('is-active', (toggle ? (state == 'off') : !state));
-				if (toggle)
-					toggle.classList.toggle('is-active', (state == 'toggle'));
+			const selector = `input[name="${arg}"]`;
+			const inputs = elem.querySelectorAll(selector);
+			const on = elem.querySelector(`${selector}[value="on"]`);
+			const toggle = elem.querySelector(`${selector}[value="toggle"]`);
+			const off = elem.querySelector(`${selector}[value="off"]`);
 
-				if (save)
-				{
-					data.state = state;
-					set_data(data);
-				}
-			};
-
-			if (!elem.querySelector('.is-active'))
+			if (inputs.length)
 			{
-				on.addEventListener('click', () => change_state((toggle ? 'on' : true), true), false);
-				off.addEventListener('click', () => change_state((toggle ? 'off' : false), true), false);
-				if (toggle)
-					toggle.addEventListener('click', () => change_state('toggle', true), false);
-			}
+				const button_on = (on ? on : inputs[0]).parentElement.querySelector('.button-on');
+				const button_toggle = (toggle ? toggle : inputs[0]).parentElement.querySelector('.button-toggle');
+				const button_off = (off ? off : inputs[0]).parentElement.querySelector('.button-off');
 
-			if (toggle)
-			{
-				let value = 'on';
-				const radio_elems = elem.querySelectorAll(`input[name="${input.getAttribute('name')}"]`);
-				for (const radio_elem of radio_elems)
+				const input_type = inputs[0].getAttribute('type').toLowerCase();
+
+				if((input_type == 'checkbox' && button_on && button_off) || (input_type == 'radio' && on && off))
 				{
-					if (radio_elem.checked)
-						value = radio_elem.value;
-				}
+					const change_state = (state, save) => {
+						button_on.classList.toggle('is-active', (toggle ? (state == 'on') : state));
+						button_off.classList.toggle('is-active', (toggle ? (state == 'off') : !state));
+						if (button_toggle)
+							button_toggle.classList.toggle('is-active', (state == 'toggle'));
 
-				change_state(value);
+						if (save)
+						{
+							data[arg] = state;
+							set_data(data);
+						}
+
+						if (callback)
+							callback(state);
+					};
+
+					if (!elem.querySelector('.is-active'))
+					{
+						button_on.addEventListener('click', () => change_state((toggle ? 'on' : true), true), false);
+						button_off.addEventListener('click', () => change_state((toggle ? 'off' : false), true), false);
+						if (button_toggle)
+							button_toggle.addEventListener('click', () => change_state('toggle', true), false);
+					}
+
+					if (toggle)
+					{
+						let value = 'on';
+						const radio_elems = elem.querySelectorAll(`input[name="${arg}"]`);
+						for (const radio_elem of radio_elems)
+						{
+							if (radio_elem.checked)
+								value = radio_elem.value;
+						}
+
+						change_state(value);
+					}
+					else
+						change_state(inputs[0].checked);
+						//change_state(elem.querySelector(`input[name="${arg}"]:checked`).value);
+				}
 			}
-			else
-				change_state(input.checked);
 		}
 	};
 
@@ -410,14 +452,22 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
 	const blocks = {
-		'self-timer': {
-			title: 'Self-Timer',
-			icon: 'self-timer',
+		'cooldown': {
+			title: 'Cooldown',
+			icon: 'cooldown',
 			inputs: 1,
 			outputs: 1,
-			body: bodys.number('Time in milliseconds', 'millis', 1000, 100),
+			body: bodys.text('Variable name', 'variable') + bodys.number('Time in seconds', 'seconds', 10, 1),
 			data: {},
-			update: (id, elem, data, set_data, receive) => functions.number(id, elem, data, set_data, receive, 'millis', 1)
+			register: [],
+			init: (id, elem, data, set_data) => {
+				data.variable = Date.now().toString();
+				set_data(data);
+			},
+			update: (id, elem, data, set_data, receive) => {
+				functions.trim(id, elem, data, set_data, receive);
+				functions.number(id, elem, data, set_data, receive, 'seconds', 1);
+			}
 		},
 		'launch-app': {
 			title: 'Launch App',
@@ -425,7 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 1,
 			body: '<p>Application</p><div class="is-browse launch-app"><input name="program" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div>',
-			data: {},
 			update: (id, elem, data, set_data, receive) => {
 				if (!elem.classList.contains('block-init'))
 				{
@@ -433,6 +482,49 @@ document.addEventListener('DOMContentLoaded', () => {
 					browse_fas(id, 'file', elem.querySelector('.launch-app button'), 'program');
 				}
 			}
+		},
+		'self-timer': {
+			title: 'Self-Timer',
+			icon: 'self-timer',
+			inputs: 1,
+			outputs: 1,
+			body: bodys.number('Time in milliseconds', 'millis', 1000, 100),
+			update: (id, elem, data, set_data, receive) => functions.number(id, elem, data, set_data, receive, 'millis', 1)
+		},
+		'variable-setter': {
+			title: 'Variable Setter',
+			icon: 'variable-setter',
+			inputs: 1,
+			outputs: 1,
+			body: bodys.text('Variable name', 'variable') + bodys.text('Value', 'string') + bodys.number('Value', 'number', 0) + bodys.select('Value', 'boolean', ['false', 'true']) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number') + bodys.state_toggle('Scope', false, 'Global', 'Next', 'Local'), //  + bodys.type
+			update: (id, elem, data, set_data, receive) => {
+				const change_state = state => {
+					const names = { 'on': 'string', 'toggle': 'number', 'off': 'boolean' };
+					state = names[state];
+
+					for (const input of elem.querySelectorAll(`select, input:not([type="radio"])`))
+					{
+						const name = input.getAttribute('name');
+						if (name != 'variable')
+						{
+							input.previousElementSibling.style.display = ((name == state) ? 'block' : 'none');
+							input.style.display = ((name == state) ? 'block' : 'none');
+						}
+					}
+				};
+
+				functions.trim(id, elem, data, set_data, receive);
+				functions.state(id, elem, data, set_data, receive, 'type', change_state);
+				functions.state(id, elem, data, set_data, receive, 'scope');
+			}
+		},
+		'variable-remove': {
+			title: 'Variable Remove',
+			icon: 'variable-remove',
+			inputs: 1,
+			outputs: 1,
+			body: bodys.text('Variable name', 'variable'),
+			update: functions.trim
 		},
 		'event-twitch-action': {
 			type: 'twitch',
@@ -442,8 +534,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Message') + bodys.match + bodys.viewers,
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'trigger-twitch-action': {
@@ -454,8 +544,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('Message'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-announcement': {
@@ -466,8 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Message') + bodys.match + bodys.viewers,
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'trigger-twitch-announce': {
@@ -478,8 +564,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('Message'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-any-message': {
@@ -490,8 +574,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Message') + bodys.match + bodys.viewers,
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-ban': {
@@ -500,11 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Ban',
 			icon: 'ban',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'trigger-twitch-ban': {
 			type: 'twitch',
@@ -514,8 +592,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('User') + bodys.text('Reason'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-chat-clear': {
@@ -524,11 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Chat Clear',
 			icon: 'chat-clear',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'trigger-twitch-chat-clear': {
 			type: 'twitch',
@@ -536,11 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Chat Clear',
 			icon: 'chat-clear',
 			inputs: 1,
-			outputs: 0,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 0
 		},
 		'event-twitch-command': {
 			type: 'twitch',
@@ -550,8 +618,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: '<p>Command</p><div class="is-command"><input name="command" type="text" class="has-text-centered" /></div>' + bodys.viewers,
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-community-pay-forward': {
@@ -560,11 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Community Pay Forward',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-community-sub': {
 			type: 'twitch',
@@ -572,11 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Community Sub',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-community-sub': {
 			type: 'twitch',
@@ -584,11 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Community Sub',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-emote-only': {
 			type: 'twitch',
@@ -597,9 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: 'emotes',
 			inputs: 0,
 			outputs: 1,
-			body: bodys.state_toggle('On', 'Off', 'Both'),
-			data: {},
-			register: [],
+			body: bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
 			update: functions.state
 		},
 		'trigger-twitch-emote-only': {
@@ -610,8 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'event-twitch-followers-only': {
@@ -621,9 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: 'followers',
 			inputs: 0,
 			outputs: 1,
-			body: bodys.state_toggle('On', 'Off', 'Both'),
-			data: {},
-			register: [],
+			body: bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
 			update: functions.state
 		},
 		'trigger-twitch-followers-only': {
@@ -634,8 +682,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'event-twitch-gift-paid-upgrade': {
@@ -644,11 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Gift Paid Upgrade',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-host': {
 			type: 'twitch',
@@ -658,8 +700,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Channel'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-hosted': {
@@ -670,8 +710,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Channel'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'trigger-twitch-host': {
@@ -682,8 +720,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('Channel'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-message': {
@@ -694,8 +730,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Message') + bodys.match + bodys.viewers,
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'trigger-twitch-message': {
@@ -706,8 +740,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('Message'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-message-remove': {
@@ -718,8 +750,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Message') + bodys.match + bodys.viewers,
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-prime-community-gift': {
@@ -728,11 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Prime Community Gift',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-prime-paid-upgrade': {
 			type: 'twitch',
@@ -740,11 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Prime Paid Upgrade',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-raid': {
 			type: 'twitch',
@@ -754,8 +776,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Channel'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'trigger-twitch-raid': {
@@ -766,8 +786,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('Channel'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-raid-cancel': {
@@ -776,11 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Raid Cancel',
 			icon: 'raid-cancel',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'trigger-twitch-raid-cancel': {
 			type: 'twitch',
@@ -788,11 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Raid Cancel',
 			icon: 'raid-cancel',
 			inputs: 1,
-			outputs: 0,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 0
 		},
 		'event-twitch-reward-gift': {
 			type: 'twitch',
@@ -800,11 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Reward Gift',
 			icon: 'reward-gift',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-ritual': {
 			type: 'twitch',
@@ -814,8 +820,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('User') + bodys.number('Duration') + bodys.text('Reason'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-twitch-slow': {
@@ -824,11 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Slow',
 			icon: 'slow',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'trigger-twitch-slow': {
 			type: 'twitch',
@@ -838,8 +838,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'event-twitch-standard-pay-forward': {
@@ -848,11 +846,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Standard Pay Forward',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-sub': {
 			type: 'twitch',
@@ -860,11 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Subscribe',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-resub': {
 			type: 'twitch',
@@ -872,11 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Subscribe Again',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-sub-extend': {
 			type: 'twitch',
@@ -884,11 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Subscribe Extend',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-sub-gift': {
 			type: 'twitch',
@@ -896,11 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Subscribe Gift',
 			icon: 'subscribers',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'event-twitch-subs-only': {
 			type: 'twitch',
@@ -909,9 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: 'subscribers',
 			inputs: 0,
 			outputs: 1,
-			body: bodys.state_toggle('On', 'Off', 'Both'),
-			data: {},
-			register: [],
+			body: bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
 			update: functions.state
 		},
 		'trigger-twitch-subs-only': {
@@ -922,8 +898,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'event-twitch-timeout': {
@@ -932,11 +906,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Timeout',
 			icon: 'timeout',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'trigger-twitch-timeout': {
 			type: 'twitch',
@@ -946,8 +916,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('User') + bodys.number('Duration', false, 300, 10) + bodys.text('Reason'),
-			data: {},
-			register: [],
 			update: (id, elem, data, set_data, receive) => {
 				functions.trim(id, elem, data, set_data, receive);
 				functions.number(id, elem, data, set_data, receive, 'duration', 1);
@@ -959,11 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Unhost',
 			icon: 'unhost',
 			inputs: 0,
-			outputs: 1,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 1
 		},
 		'trigger-twitch-unhost': {
 			type: 'twitch',
@@ -971,11 +935,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			tooltip: 'Twitch - Unhost',
 			icon: 'unhost',
 			inputs: 1,
-			outputs: 0,
-			body: false,
-			data: {},
-			register: [],
-			update: false
+			outputs: 0
 		},
 		'event-twitch-unique-message': {
 			type: 'twitch',
@@ -985,8 +945,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'trigger-twitch-unique-message': {
@@ -997,8 +955,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'event-twitch-whisper': {
@@ -1009,8 +965,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Message') + bodys.match,
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'trigger-twitch-whisper': {
@@ -1021,8 +975,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('User') + bodys.text('Message'),
-			data: {},
-			register: [],
 			update: functions.trim
 		},
 		'event-obs-studio-recording': {
@@ -1033,8 +985,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'trigger-obs-studio-recording': {
@@ -1044,9 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: 'recording',
 			inputs: 1,
 			outputs: 0,
-			body: bodys.state_toggle(),
-			data: {},
-			register: [],
+			body: bodys.state_toggle(false),
 			update: functions.state
 		},
 		'event-obs-studio-replay': {
@@ -1057,8 +1005,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'trigger-obs-studio-replay': {
@@ -1068,9 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: 'replay',
 			inputs: 1,
 			outputs: 0,
-			body: bodys.state_toggle(),
-			data: {},
-			register: [],
+			body: bodys.state_toggle(false),
 			update: functions.state
 		},
 		'event-obs-studio-streaming': {
@@ -1081,8 +1025,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.state(),
-			data: {},
-			register: [],
 			update: functions.state
 		},
 		'trigger-obs-studio-streaming': {
@@ -1092,9 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: 'streaming',
 			inputs: 1,
 			outputs: 0,
-			body: bodys.state_toggle(),
-			data: {},
-			register: [],
+			body: bodys.state_toggle(false),
 			update: functions.state
 		},
 		'event-obs-studio-switch-scene': {
@@ -1105,7 +1045,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.select('Scene name', 'scene'),
-			data: {},
 			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
 			update: functions.scene_source
 		},
@@ -1117,7 +1056,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.select('Scene name', 'scene'),
-			data: {},
 			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
 			update: functions.scene_source
 		},
@@ -1130,8 +1068,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: '<p>Webhook <i class="fas fa-solid fa-circle-info is-pulled-right"></i></p><input name="webhook" type="url" class="has-text-centered" /><div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL</p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div></div><p>Inline 1</p><div class="columns"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2</p><div class="columns"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
-			data: {},
-			register: [],
 			update: (id, elem, data, set_data, receive) => {
 				functions.trim(id, elem, data, set_data, receive);
 
@@ -1155,12 +1091,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: 'toggle-source',
 			inputs: 1,
 			outputs: 0,
-			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle('Show', 'Hide'),
-			data: {},
+			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'Show', 'Hide'),
 			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
 			update: (id, elem, data, set_data, receive) => {
 				functions.scene_source(id, elem, data, set_data, receive);
-				functions.state(id, elem, data, set_data, receive);
+				if (!receive)
+					functions.state(id, elem, data, set_data, receive);
 			}
 		},
 	};

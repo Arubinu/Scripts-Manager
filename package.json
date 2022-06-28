@@ -1,6 +1,6 @@
 {
   "name": "Scripts-Manager",
-  "version": "1.0.0",
+  "version": "1.0.0b2",
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
@@ -19,7 +19,7 @@
   "author": "GitHub",
   "license": "CC0-1.0",
   "devDependencies": {
-    "electron": "^18.2.4"
+    "electron": "^19.0.6"
   },
   "dependencies": {
     "@twurple/api": "^5.1.6",
@@ -32,7 +32,10 @@
     "node-global-key-listener": "^0.1.1",
     "obs-websocket-js": "^4.0.3",
     "read-ini-file": "^3.0.1",
+    "serialport": "^10.4.0",
+    "undici": "^5.5.1",
     "uniqid": "^5.4.0",
+    "usb": "^2.4.3",
     "websocket": "^1.0.34",
     "write-ini-file": "^3.0.2"
   },

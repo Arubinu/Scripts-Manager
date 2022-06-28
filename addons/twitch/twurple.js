@@ -63,6 +63,80 @@ let		channel = { id: '', name: '' },
 };
 
 
+const methods = {
+	isStreamLive: async userName => {
+		const user = await api_client.users.getUserByName(userName || channel.name);
+		if (!user)
+			return false;
+
+		return await user.getStream() !== null;
+	},
+	getAllClipsForBroadcaster: async userName => {
+		const user = await api_client.users.getUserByName(userName || channel.name);
+		if (!user)
+			return false;
+
+		return api_client.clips.getClipsForBroadcasterPaginated(user.id).getAll();
+	},
+	getAllRewards: async (userName, onlyManageable) => {
+		const user = await api_client.users.getUserByName(userName || channel.name);
+		if (!user)
+			return false;
+
+		return api_client.channelPoints.getCustomRewards(user.id, onlyManageable);
+	},
+	updateReward: async (userName, rewardId, isEnabled, isPaused) => { // Doesn't work if the reward was not created by the app
+		const user = await api_client.users.getUserByName(userName || channel.name);
+		if (!user)
+			return false;
+
+		//const reward = await api_client.channelPoints.getCustomRewardById(user.id, rewardId);
+		//if (!reward)
+		//	return false;
+
+		const data = {};
+		//const data = { title: reward.title, cost: reward.cost };
+		if (typeof(isPaused) === 'boolean')
+			data.isPaused = isPaused;
+		if (typeof(isEnabled) === 'boolean')
+			data.isEnabled = isEnabled;
+
+		return api_client.channelPoints.updateCustomReward(user.id, rewardId, data);
+	}
+};
+
+
+function convert(obj)
+{
+	let items;
+	if (Array.isArray(obj))
+	{
+		items = [];
+		for (const item of obj)
+			items.push(convert(item));
+	}
+	else if (typeof(obj) === 'object')
+	{
+		const name = obj.constructor.name;
+
+		let keys = [];
+		if (name == 'HelixCustomReward')
+			keys = ['autoFulfill', 'backgroundColor', 'broadcasterDisplayName', 'broadcasterId', 'broadcasterName', 'cooldownExpiryDate', 'cost', 'globalCooldown', 'id', 'isEnabled', 'isInStock', 'isPaused', 'maxRedemptionsPerStream', 'maxRedemptionsPerUserPerStream', 'prompt', 'redemptionsThisStream', 'title', 'userInputRequired'];
+
+		items = {};
+		for (const key of keys)
+		{
+			if (obj[key] !== 'undefined')
+				items[key] = obj[key];
+		}
+	}
+	else
+		items = obj;
+
+	return items;
+}
+
+
 async function connect(clientId, accessToken, channelName, callback)
 {
 	channel.id = '';
@@ -328,32 +402,6 @@ async function connect(clientId, accessToken, channelName, callback)
 	pubsub_listeners.Redemption = await pubsub_client.onRedemption(pubsub_userid, async msg => {
 		callback(await get('Redemption', msg, null, null));
 	});
-/*
-	const onlineSubscription = await listener.subscribeToStreamOnlineEvents(pubsub_userid, e => {
-		console.log(`${e.broadcasterDisplayName} just went live!`);
-	});
-	// await onlineSubscription.stop();
-
-	const offlineSubscription = await listener.subscribeToStreamOfflineEvents(pubsub_userid, e => {
-		console.log(`${e.broadcasterDisplayName} just went offline`);
-	});
-	// await offlineSubscription.stop();
-*/
-	async function isStreamLive(userName)
-	{
-		const user = await api_client.users.getUserByName(userName);
-		if (!user)
-			return false;
-
-		return await user.getStream() !== null;
-	}
-
-	async function getAllClipsForBroadcaster(userId)
-	{
-		const request = api_client.clips.getClipsForBroadcasterPaginated(userId);
-
-		return request.getAll();
-	}
 
 	await chat_client.connect();
 
@@ -376,9 +424,6 @@ async function disconnect()
 		if (listener)
 			listener.remove();
 	}
-
-	// await onlineSubscription.stop();
-	// await offlineSubscription.stop();
 
 	await chat_client.quit();
 
@@ -437,12 +482,20 @@ async function exec(type, name, args)
 		}
 		else if (type == 'PubSub')
 			c = pubsub_client;
+		else if (type == 'Methods' || type == 'Methods:convert')
+			c = methods;
 
 		if (c)
 		{
+			let result;
 			if (args && args.length)
-				return await c[name](...args);
-			return await c[name]();
+				result = await c[name](...args);
+			else
+				result = await c[name]();
+
+			if (type.split(':').slice(-1)[0] == 'convert')
+				return convert(result);
+			return result;
 		}
 	}
 	catch (e)

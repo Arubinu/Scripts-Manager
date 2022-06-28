@@ -1,5 +1,6 @@
 const	fs = require('fs'),
 		ws = require('ws'),
+		{ usb } = require('usb'),
 		http = require('http'),
 		path = require('path'),
 		elog = require('electron-log'),
@@ -485,6 +486,12 @@ function generate_menu()
 	])));
 }
 
+function usb_detection()
+{
+	usb.on('attach', device => all_methods('usb', { type: 'add', device }));
+	usb.on('detach', device => all_methods('usb', { type: 'remove', device }));
+}
+
 const logpath = (process.env.PORTABLE_EXECUTABLE_DIR ? process.env.PORTABLE_EXECUTABLE_DIR : __dirname);
 elog.transports.file.resolvePath = () => path.join(logpath, 'ScriptsManager.log');
 Object.assign(console, elog.functions);
@@ -510,6 +517,7 @@ app.whenReady().then(() => {
 					generate_menu();
 					create_window();
 					create_server();
+					usb_detection();
 
 					app.on('activate', () => {
 						if (!win)

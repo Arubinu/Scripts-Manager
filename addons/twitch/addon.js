@@ -26,6 +26,7 @@ function update_interface()
 		'channel:manage:polls',
 		'channel:manage:raids',
 		'channel:manage:predictions',
+		'channel:manage:redemptions',
 		'channel:moderate',
 		'channel_editor',
 		'moderation:read',

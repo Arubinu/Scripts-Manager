@@ -1,5 +1,8 @@
-const	path = require('path'),
+const	ws = require('ws'),
+		path = require('path'),
 		https = require('https'),
+		socket = require('dgram'),
+		{ request } = require('undici'),
 		child_process = require('child_process'),
 		{ MessageEmbed, MessageAttachment, WebhookClient } = require('discord.js');
 
@@ -64,6 +67,63 @@ const	actions = {
 				set_variable(data.variable, now, VARIABLE_TYPE.NEXT, module_name, next_data);
 				next();
 			}
+		}
+	},
+	'http-request': async (module_name, receive, data, next_data, next) => {
+		if (data.url && data.method)
+		{
+			const {
+				status,
+				headers,
+				trailers,
+				body
+			} = await request(data.url, { method: data.method.toUpperCase() });
+
+			//if (body)
+			//	console.log('http-request body:', await body.json());
+
+			next();
+		}
+	},
+	'socket-request': (module_name, receive, data, next_data, next) => {
+		if (data.host && data.port && data.data)
+		{
+			const tdata = Buffer.from(data.data);
+
+			const client = socket.createSocket('udp4');
+
+			//client.on('message', (msg, info) => console.log('socket-request message:', info, msg.toString()));
+
+			client.send(tdata, parseInt(data.port), data.host, error => {
+				if (error)
+					console.log('socket-request error:', error);
+
+				client.close();
+				next();
+			});
+
+		}
+	},
+	'websocket-request': (module_name, receive, data, next_data, next) => {
+		console.log('websocket-request:', data);
+		if (data.url && data.data)
+		{
+			let tdata = data.data;
+			try
+			{
+				tdata = JSON.parse(tdata);
+			}
+			catch (e) {}
+
+			const client = new ws(data.url);
+			client.on('error', error => console.error('websocket-request error:', error));
+
+			client.onopen = () => {
+				client.send(tdata, () => {
+					client.close();
+					next();
+				});
+			};
 		}
 	},
 	'launch-app': (module_name, receive, data, next_data, next) => {
@@ -187,6 +247,10 @@ const	actions = {
 		_sender('twitch', 'Unraid', { type: 'Chat', args: [] });
 	},
 	'event-twitch-resub': (module_name, receive, data, next_data, next) => {},
+	'event-twitch-redemption': (module_name, receive, data, next_data, next) => {
+		if (receive.data.reward && (!data.reward || data.reward == receive.data.reward.id))
+			next();
+	},
 	'event-twitch-reward-gift': (module_name, receive, data, next_data, next) => {},
 	'event-twitch-ritual': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
 		if (true) // gérer le nombre de viewers (receive.data.host.viewers)

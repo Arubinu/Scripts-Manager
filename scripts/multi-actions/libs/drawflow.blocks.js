@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						global_datas.scenes = receive.scenes;
 
 					// source
-					const scene_schanged = () => {
+					const scenes_changed = () => {
 						const value = selects[0].value;
 						if (value && selects.length > 1)
 						{
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						if (!elem.classList.contains('block-init'))
 						{
 							elem.classList.add('block-init');
-							selects[0].addEventListener('change', scene_schanged, false);
+							selects[0].addEventListener('change', scenes_changed, false);
 						}
 					}
 
@@ -317,9 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 
 					selects[0].value = selected;
-					scene_schanged();
+					scenes_changed();
 				}
-				else
+				else if (typeof(receive) === 'undefined')
 					request('obs-studio', 'GetScenes');
 			}
 		},
@@ -469,6 +469,33 @@ document.addEventListener('DOMContentLoaded', () => {
 				functions.number(id, elem, data, set_data, receive, 'seconds', 1);
 			}
 		},
+		'http-request': {
+			title: 'HTTP Request',
+			icon: 'request',
+			inputs: 1,
+			outputs: 1,
+			body: bodys.text('URL') + bodys.text('Method'),
+			update: functions.trim
+		},
+		'socket-request': {
+			title: 'Socket Request',
+			icon: 'request',
+			inputs: 1,
+			outputs: 1,
+			body: bodys.text('IPv4', 'host') + bodys.number('Port', false, 3000, 1, 1) + bodys.text('Data'),
+			update: (id, elem, data, set_data, receive) => {
+				functions.trim(id, elem, data, set_data, receive);
+				functions.number(id, elem, data, set_data, receive, 'port', 1);
+			}
+		},
+		'websocket-request': {
+			title: 'WebSocket Request',
+			icon: 'request',
+			inputs: 1,
+			outputs: 1,
+			body: bodys.text('URL') + bodys.text('Data'),
+			update: functions.trim
+		},
 		'launch-app': {
 			title: 'Launch App',
 			icon: 'launch-app',
@@ -499,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			body: bodys.text('Variable name', 'variable') + bodys.text('Value', 'string') + bodys.number('Value', 'number', 0) + bodys.select('Value', 'boolean', ['false', 'true']) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number') + bodys.state_toggle('Scope', false, 'Global', 'Next', 'Local'), //  + bodys.type
 			update: (id, elem, data, set_data, receive) => {
 				const change_state = state => {
-					const names = { 'on': 'string', 'toggle': 'number', 'off': 'boolean' };
+					const names = { on: 'string', toggle: 'number', off: 'boolean' };
 					state = names[state];
 
 					for (const input of elem.querySelectorAll(`select, input:not([type="radio"])`))
@@ -803,6 +830,44 @@ document.addEventListener('DOMContentLoaded', () => {
 			icon: 'raid-cancel',
 			inputs: 1,
 			outputs: 0
+		},
+		'event-twitch-redemption': {
+			type: 'twitch',
+			title: 'Redemption',
+			tooltip: 'Twitch - Redemption',
+			icon: 'redemption',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.select('Reward'),
+			register: [['twitch', 'getAllRewards']],
+			update: (id, elem, data, set_data, receive) => {
+				const select = elem.querySelector('select');
+				if (!select.children.length)
+				{
+					if (receive || global_datas.rewards)
+					{
+						if (Array.isArray(receive) && receive.length)
+							global_datas.rewards = receive;
+
+						const selected = (select.value || data.reward);
+
+						select.innerHTML = '';
+						select.appendChild(document.createElement('option'));
+
+						for (const reward of global_datas.rewards)
+						{
+							const option = document.createElement('option');
+							option.value = reward.id;
+							option.innerText = reward.title;
+							select.appendChild(option);
+						}
+
+						select.value = selected;
+					}
+					else if (typeof(receive) === 'undefined')
+						request('twitch', 'getAllRewards', { type: 'Methods:convert', args: [ false, false ] });
+				}
+			}
 		},
 		'event-twitch-reward-gift': {
 			type: 'twitch',

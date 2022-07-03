@@ -105,7 +105,8 @@ module.exports = {
 		_vars = vars;
 		_sender = sender;
 		_config = config;
-
+	},
+	initialized: () => {
 		if (_config.default.enabled)
 			connect();
 	},
@@ -164,7 +165,7 @@ module.exports = {
 		{
 			const url = '/twitch/authorize';
 
-			if (name == 'http')
+			if (name == 'http' && data.req && data.req.url == url)
 			{
 				data.res.writeHead(200);
 				data.res.end(`<script type="text/javascript">
@@ -178,12 +179,12 @@ module.exports = {
 
 					socket.onerror = error => console.error(error);
 				</script>`);
+
+				return true;
 			}
 			else if (name == 'websocket')
 			{
-				data = JSON.parse(data);
-
-				if (data.url == url && !data.data.indexOf('#'))
+				if (typeof(data) === 'object' && data.url == url && !data.data.indexOf('#'))
 				{
 					const hash = querystring.parse(data.data.substr(1));
 
@@ -194,10 +195,12 @@ module.exports = {
 
 						update_interface();
 					}
+
+					return true;
 				}
 			}
 
-			return true;
+			return;
 		}
 
 		let check = false;

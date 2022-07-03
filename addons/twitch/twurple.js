@@ -400,7 +400,7 @@ async function connect(clientId, accessToken, channelName, callback)
 	});
 
 	pubsub_listeners.Redemption = await pubsub_client.onRedemption(pubsub_userid, async msg => {
-		callback(await get('Redemption', msg, null, null));
+		callback(await get('Redemption', msg, msg.message, null));
 	});
 
 	await chat_client.connect();

@@ -138,7 +138,8 @@ module.exports = {
 
 		_config.settings.delay = Math.max(1, _config.settings.delay);
 		_config.settings.duration = Math.max(100, _config.settings.duration);
-
+	},
+	initialized: () => {
 		_sender('manager', 'menu', [
 			{ label: 'Pause', type: 'checkbox', click : item => {
 				clearTimeout(_pause);

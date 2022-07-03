@@ -70,7 +70,8 @@ module.exports = {
 	init: (origin, config, sender) => {
 		_sender = sender;
 		_config = config;
-
+	},
+	initialized: () => {
 		const methods = [
 			'CurrentSceneCollectionChanging',
 			'CurrentSceneTransitionChanged',

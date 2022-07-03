@@ -13,12 +13,14 @@ const	port = 5042,
 		store = new estore();
 
 let		win,
+		wss,
 		tray,
 		menus = {},
 		addons = {},
 		manager = {},
 		scripts = {},
-		app_exit = false;
+		app_exit = false,
+		bluetooth_callback = null;
 
 function create_server()
 {
@@ -33,9 +35,18 @@ function create_server()
 	server.on('error', err => console.error(err));
 	server.listen(port, () => console.log('Https running on port', port));
 
-	const wss = new ws.Server({server});
+	wss = new ws.Server({server});
 	wss.on('connection', client => {
 		client.on('message', async data => {
+			if (typeof(data) === 'object')
+				data = String.fromCharCode.apply(null, new Uint16Array(data));
+
+			try
+			{
+				data = JSON.parse(data);
+			}
+			catch (e) {}
+
 			if (await all_methods('websocket', data))
 				return;
 
@@ -64,75 +75,144 @@ function create_window()
 	win.setMenu(null);
 	win.setTitle('Scripts Manager');
 	win.loadFile(path.join(__dirname, 'public', 'index.html')).then(() => {
-		ipcMain.handle('manager', (event, data) => {
-			let obj = false;
-			if (data.type == 'addons' && typeof(addons[data.id]) === 'object')
-				obj = addons[data.id];
-			else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object')
-				obj = scripts[data.id];
+		ipcMain.handleOnce('init', (event, data) => {
+			ipcMain.handle('manager', (event, data) => {
+				let id = 'manager';
 
-			if (data.name == 'enabled')
-			{
-				obj.config.default.enabled = data.data;
-				save_config(data.type, data.id);
-			}
-			else if (data.name == 'browse:file' || data.name == 'browse:files')
-			{
-				dialog.showOpenDialog({
-					properties: [(data.name == 'browse:files') ? 'openFiles' : 'openFile']
-				}).then(result => {
-					if (!result.canceled)
+				let obj = false;
+				if (data.type == 'addons' && typeof(addons[data.id]) === 'object')
+					obj = addons[data.id];
+				else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object')
+					obj = scripts[data.id];
+
+				if (data.name == 'enabled')
+				{
+					obj.config.default.enabled = data.data;
+					save_config(data.type, data.id);
+				}
+				else if (data.name == 'websocket')
+				{
+					for (const client of wss.clients)
+						client.send(data.data);
+				}
+				else if (data.name == 'bluetooth:disconnect')
+				{
+					win.webContents.send('manager', { name: data.name, data: data.data });
+					return;
+				}
+				else if (data.name == 'bluetooth:data' || data.name == 'bluetooth:error')
+				{
+					all_methods('bluetooth', { name: data.name, data: data.data });
+					return;
+				}
+				else if (data.name == 'browse:file' || data.name == 'browse:files')
+				{
+					dialog.showOpenDialog({
+						properties: [(data.name == 'browse:files') ? 'openFiles' : 'openFile']
+					}).then(result => {
+						if (!result.canceled)
+						{
+							data.result = result;
+							win.webContents.send('manager', data);
+						}
+					});
+				}
+				else if (data.name == 'browse:folder')
+				{
+					dialog.showOpenDialog({
+						properties: ['openDirectory']
+					}).then(result => {
+						if (!result.canceled)
+						{
+							data.result = result;
+							win.webContents.send('manager', data);
+						}
+					});
+				}
+
+				if (data.type == 'general')
+				{
+					//console.log('main manager receive:', data);
+					if (data.name == 'save')
 					{
-						data.result = result;
+						manager = Object.assign(manager, data.data);
+						save_manager_config();
+					}
+					else if (data.name == 'browse')
+					{
 						win.webContents.send('manager', data);
 					}
-				});
-			}
-			else if (data.name == 'browse:folder')
-			{
-				dialog.showOpenDialog({
-					properties: ['openDirectory']
-				}).then(result => {
-					if (!result.canceled)
+					else if (data.name == 'load')
 					{
-						data.result = result;
+						data.data = JSON.parse(JSON.stringify(manager));
 						win.webContents.send('manager', data);
 					}
-				});
-			}
+				}
+				else if (obj && typeof(obj.include.receiver) === 'function')
+					obj.include.receiver(id, data.name, data.data);
+			});
 
-			if (data.type == 'general')
+			ipcMain.handle('message', (event, data) => {
+				let obj = false;
+				if (data.type == 'addons' && typeof(addons[data.id]) === 'object')
+					obj = addons[data.id];
+				else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object')
+					obj = scripts[data.id];
+
+				if (data.type == 'general')
+					; //console.log('main message receive:', data);
+				else if (obj && typeof(obj.include.receiver) === 'function')
+					obj.include.receiver('message', data.name, data.data);
+			});
+
+			win.webContents.on('select-bluetooth-device', (event, device_list, callback) => {
+				event.preventDefault(); // important, otherwise first available device will be selected
+
+				if (typeof(bluetooth_callback) !== 'function')
+				{
+					const timeout = setTimeout(() => {
+						if (typeof(bluetooth_callback) === 'function')
+							bluetooth_callback('');
+					}, 30000);
+
+					bluetooth_callback = device => {
+						console.log('bluetooth selected:', device);
+
+						bluetooth_callback = null;
+						all_methods('bluetooth', { devices: false });
+
+						clearTimeout(timeout);
+						callback((typeof(device) === 'object' && typeof(device.deviceId) === 'string') ? device.deviceId : device);
+					};
+				}
+
+				all_methods('bluetooth', device_list);
+			});
+
+			const vars = {
+				http: `http://localhost:${port}`,
+				websocket: `ws://localhost:${port}`
+			};
+
+			for (const id in addons)
 			{
-				//console.log('main manager receive:', data);
-				if (data.name == 'save')
+				const addon = addons[id];
+				try
 				{
-					manager = Object.assign(manager, data.data);
-					save_manager_config();
+					addon.include.initialized();
 				}
-				else if (data.name == 'browse')
-				{
-					win.webContents.send('manager', data);
-				}
-				else if (data.name == 'load')
-				{
-					data.data = JSON.parse(JSON.stringify(manager));
-					win.webContents.send('manager', data);
-				}
+				catch (e) {}
 			}
-			else if (obj && typeof(obj.include.receiver) === 'function')
-				obj.include.receiver('manager', data.name, data.data);
-		});
-		ipcMain.handle('message', (event, data) => {
-			let obj = false;
-			if (data.type == 'addons' && typeof(addons[data.id]) === 'object')
-				obj = addons[data.id];
-			else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object')
-				obj = scripts[data.id];
 
-			if (data.type == 'general')
-				; //console.log('main message receive:', data);
-			else if (obj && typeof(obj.include.receiver) === 'function')
-				obj.include.receiver('message', data.name, data.data);
+			for (const id in scripts)
+			{
+				const script = scripts[id];
+				try
+				{
+					script.include.initialized();
+				}
+				catch (e) {}
+			}
 		});
 
 		let configs = { addons: {}, scripts: {} };
@@ -142,6 +222,7 @@ function create_window()
 			configs.scripts[id] = scripts[id].config;
 
 		//win.webContents.openDevTools();
+		win.webContents.executeJavaScript('console.log("user gesture fired");', true);
 		win.webContents.send('init', { menus, configs });
 	});
 
@@ -266,13 +347,17 @@ function load_addons(dir, is_global)
 							}
 
 							addons[file] = {
+								path: addon_path,
 								config: config,
 								include: require(addon_file),
 								is_global: is_global
 							}
 
-							if (typeof(addons[file].include.init) === 'function')
+							try
+							{
 								addons[file].include.init(addon_path, JSON.parse(JSON.stringify(addons[file].config)), async function() { return await all_sender('addons', file, ...arguments); }, vars);
+							}
+							catch (e) {}
 
 							console.log('Addon loaded:', file);
 						}
@@ -344,13 +429,17 @@ function load_scripts(dir, is_global)
 
 							scripts[file] = {
 								menu: [],
+								path: script_path,
 								config: config,
 								include: require(script_file),
 								is_global: is_global
 							}
 
-							if (typeof(scripts[file].include.init) === 'function')
+							try
+							{
 								scripts[file].include.init(script_path, JSON.parse(JSON.stringify(scripts[file].config)), async function() { return await all_sender('scripts', file, ...arguments); }, vars);
+							}
+							catch (e) {}
 
 							console.log('Script loaded:', file);
 						}
@@ -393,6 +482,31 @@ async function all_methods(type, data)
 
 async function all_sender(type, id, target, name, data)
 {
+	if (target == 'manager')
+	{
+		const names = name.split(':');
+
+		if (names[0] == 'websocket')
+		{
+			data = JSON.stringify(data);
+			for (const client of wss.clients)
+				client.send(data);
+
+			return;
+		}
+		else if (names[0] == 'bluetooth' && names.length > 1)
+		{
+			if (names[1] == 'scan' || names[1] == 'disconnect')
+				win.webContents.send('manager', { type, id, name, data });
+			else if (names[1] == 'list')
+				all_methods('bluetooth', data);
+			else if (names[1] == 'connect' && typeof(bluetooth_callback) === 'function')
+				bluetooth_callback(data);
+
+			return;
+		}
+	}
+
 	if (type == 'addons')
 	{
 		if (target == 'manager')
@@ -515,9 +629,9 @@ app.whenReady().then(() => {
 				// init app
 				const next = () => {
 					generate_menu();
-					create_window();
 					create_server();
 					usb_detection();
+					create_window();
 
 					app.on('activate', () => {
 						if (!win)

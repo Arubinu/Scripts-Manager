@@ -132,7 +132,8 @@ module.exports = {
 				}
 			}
 		}
-
+	},
+	initialized: () => {
 		_sender('manager', 'menu', [
 			{ label: 'Edit Mode', click : () => {
 				if (_config.default.enabled)

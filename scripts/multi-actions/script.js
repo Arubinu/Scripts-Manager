@@ -101,7 +101,6 @@ const	actions = {
 				client.close();
 				next();
 			});
-
 		}
 	},
 	'websocket-request': (module_name, receive, data, next_data, next) => {
@@ -190,9 +189,14 @@ const	actions = {
 		_sender('twitch', 'Clear', { type: 'Chat', args: [] });
 	},
 	'event-twitch-command': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Command', 'command', true),
-	'event-twitch-community-pay-forward': (module_name, receive, data, next_data, next) => {},
-	'event-twitch-community-sub': (module_name, receive, data, next_data, next) => {},
-	'event-twitch-community-sub': (module_name, receive, data, next_data, next) => {},
+	'event-twitch-community-pay-forward': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'CommunityPayForward')
+			next();
+	},
+	'event-twitch-community-sub': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'CommunitySub')
+			next();
+	},
 	'event-twitch-emote-only': (module_name, receive, data, next_data, next) => {
 		if (receive.id == 'twitch' && receive.name == 'EmoteOnly')
 		{
@@ -216,7 +220,10 @@ const	actions = {
 		const method = ((data.state == 'on') ? 'enableFollowersOnly' : 'disableFollowersOnly');
 		_sender('twitch', method, { type: 'Chat', args: [min] });
 	},
-	'event-twitch-gift-paid-upgrade': (module_name, receive, data, next_data, next) => {},
+	'event-twitch-gift-paid-upgrade': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'GiftPaidUpgrade')
+			next();
+	},
 	'event-twitch-host': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
 		if (true) // gérer le nombre de viewers (receive.data.host.viewers)
 			next();
@@ -232,8 +239,14 @@ const	actions = {
 			_sender('twitch', 'Say', { type: 'Chat', args: [data.message] });
 	},
 	'event-twitch-message-remove': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
-	'event-twitch-prime-community-gift': (module_name, receive, data, next_data, next) => {},
-	'event-twitch-prime-paid-upgrade': (module_name, receive, data, next_data, next) => {},
+	'event-twitch-prime-community-gift': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'PrimeCommunityGift')
+			next();
+	},
+	'event-twitch-prime-paid-upgrade': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'PrimePaidUpgrade')
+			next();
+	},
 	'event-twitch-raid': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
 		if (true) // gérer le nombre de viewers (receive.data.host.viewers)
 			next();
@@ -246,12 +259,18 @@ const	actions = {
 	'trigger-twitch-raid-cancel': (module_name, receive, data, next_data) => {
 		_sender('twitch', 'Unraid', { type: 'Chat', args: [] });
 	},
-	'event-twitch-resub': (module_name, receive, data, next_data, next) => {},
-	'event-twitch-redemption': (module_name, receive, data, next_data, next) => {
-		if (receive.data.reward && (!data.reward || data.reward == receive.data.reward.id))
+	'event-twitch-resub': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'Resub')
 			next();
 	},
-	'event-twitch-reward-gift': (module_name, receive, data, next_data, next) => {},
+	'event-twitch-redemption': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'Redemption' && receive.data.reward && (!data.reward || data.reward == receive.data.reward.id))
+			next();
+	},
+	'event-twitch-reward-gift': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'RewardGift')
+			next();
+	},
 	'event-twitch-ritual': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
 		if (true) // gérer le nombre de viewers (receive.data.host.viewers)
 			next();
@@ -268,10 +287,22 @@ const	actions = {
 		const method = ((data.state == 'on') ? 'enableSlow' : 'disableSlow');
 		_sender('twitch', method, { type: 'Chat', args: [min] });
 	},
-	'event-twitch-standard-pay-forward': (module_name, receive, data, next_data, next) => {},
-	'event-twitch-sub': (module_name, receive, data, next_data, next) => {},
-	'event-twitch-sub-extend': (module_name, receive, data, next_data, next) => {},
-	'event-twitch-sub-gift': (module_name, receive, data, next_data, next) => {},
+	'event-twitch-standard-pay-forward': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'StandardPayForward')
+			next();
+	},
+	'event-twitch-sub': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'Subscription')
+			next();
+	},
+	'event-twitch-sub-extend': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'SubExtend')
+			next();
+	},
+	'event-twitch-sub-gift': (module_name, receive, data, next_data, next) => {
+		if (receive.id == 'twitch' && receive.name == 'SubGift')
+			next();
+	},
 	'event-twitch-subs-only': (module_name, receive, data, next_data, next) => {
 		if (receive.id == 'twitch' && receive.name == 'SubsOnly')
 		{

@@ -4,6 +4,7 @@ const	{ ApiClient } = require('@twurple/api'),
 		{ StaticAuthProvider } = require('@twurple/auth');
 
 let		channel = { id: '', name: '' },
+		channel_ids = {},
 		api_client = null,
 		chat_client = null,
 		chat_listeners = {
@@ -40,8 +41,8 @@ let		channel = { id: '', name: '' },
 	PrimeCommunityGift: null,
 	PrimePaidUpgrade: null,
 	R9k: null,
-	raid: null,
-	raidCancel: null,
+	Raid: null,
+	RaidCancel: null,
 	Register: null,
 	Resub: null,
 	RewardGift: null,
@@ -62,40 +63,118 @@ let		channel = { id: '', name: '' },
 	Redemption: null,
 };
 
-
 const methods = {
 	isStreamLive: async userName => {
-		const user = await api_client.users.getUserByName(userName || channel.name);
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
 		if (!user)
 			return false;
 
 		return await user.getStream() !== null;
 	},
+	checkFollow: async (userName, userIdCheck) => {
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
+		if (!user)
+			return false;
+
+		return await api_client.users.getFollowFromUserToBroadcaster(userIdCheck, user.id);
+	},
 	getAllClipsForBroadcaster: async userName => {
-		const user = await api_client.users.getUserByName(userName || channel.name);
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
 		if (!user)
 			return false;
 
 		return api_client.clips.getClipsForBroadcasterPaginated(user.id).getAll();
 	},
+	getSubscriptions: async userName => {
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
+		if (!user)
+			return false;
+
+		return api_client.subscriptions.getSubscriptionsPaginated(user.id).getTotalCount();
+	},
+	getSubscriptionsUsers: async userName => {
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
+		if (!user)
+			return false;
+
+		return api_client.subscriptions.getSubscriptionsPaginated(user.id).getAll();
+	},
 	getAllRewards: async (userName, onlyManageable) => {
-		const user = await api_client.users.getUserByName(userName || channel.name);
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
 		if (!user)
 			return false;
 
 		return api_client.channelPoints.getCustomRewards(user.id, onlyManageable);
 	},
-	updateReward: async (userName, rewardId, isEnabled, isPaused) => { // Doesn't work if the reward was not created by the app
-		const user = await api_client.users.getUserByName(userName || channel.name);
+	getChannelGame: async userName => {
+		if (!api_client)
+			return false;
+
+		const info = await methods.getChannelInfo(userName || channel.name);
+		if (!info)
+			return false;
+
+		return await info.getGame();
+	},
+	getChannelInfo: async userName => {
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
 		if (!user)
 			return false;
 
-		//const reward = await api_client.channelPoints.getCustomRewardById(user.id, rewardId);
-		//if (!reward)
-		//	return false;
+		return await api_client.channels.getChannelInfo(user.id);
+	},
+	updateChannelInfo: async (userName, title, game) => {
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
+		if (!user)
+			return false;
+
+		if (game)
+		{
+			const tgame = await api_client.games.getGameByName(game);
+			game = ((tgame && tgame.id) ? tgame.id : false);
+		}
+
+		if (!title && !game)
+			return false;
+
+		return await api_client.channels.updateChannelInfo(user.id, {
+			title: (title || undefined),
+			gameId: (game || undefined),
+		});
+	},
+	updateReward: async (userName, rewardId, isEnabled, isPaused) => { // Doesn't work if the reward was not created by the app
+		if (!api_client)
+			return false;
+
+		const user = await getChannelUser(userName || channel.name);
+		if (!user)
+			return false;
 
 		const data = {};
-		//const data = { title: reward.title, cost: reward.cost };
 		if (typeof(isPaused) === 'boolean')
 			data.isPaused = isPaused;
 		if (typeof(isEnabled) === 'boolean')
@@ -117,17 +196,28 @@ function convert(obj)
 	}
 	else if (typeof(obj) === 'object')
 	{
-		const name = obj.constructor.name;
-
-		let keys = [];
-		if (name == 'HelixCustomReward')
-			keys = ['autoFulfill', 'backgroundColor', 'broadcasterDisplayName', 'broadcasterId', 'broadcasterName', 'cooldownExpiryDate', 'cost', 'globalCooldown', 'id', 'isEnabled', 'isInStock', 'isPaused', 'maxRedemptionsPerStream', 'maxRedemptionsPerUserPerStream', 'prompt', 'redemptionsThisStream', 'title', 'userInputRequired'];
-
-		items = {};
-		for (const key of keys)
+		try
 		{
-			if (obj[key] !== 'undefined')
-				items[key] = obj[key];
+			const name = obj.constructor.name;
+
+			let keys = [];
+			if (name == 'HelixCustomReward')
+				keys = ['autoFulfill', 'backgroundColor', 'broadcasterDisplayName', 'broadcasterId', 'broadcasterName', 'cooldownExpiryDate', 'cost', 'globalCooldown', 'id', 'isEnabled', 'isInStock', 'isPaused', 'maxRedemptionsPerStream', 'maxRedemptionsPerUserPerStream', 'prompt', 'redemptionsThisStream', 'title', 'userInputRequired'];
+			else if (name == 'HelixChannel')
+				keys = ['delay', 'displayName', 'gameId', 'gameName', 'id', 'language', 'name', 'title'];
+			else if (name == 'HelixGame')
+				keys = ['boxArtUrl', 'id', 'name'];
+
+			items = {};
+			for (const key of keys)
+			{
+				if (obj[key] !== 'undefined')
+					items[key] = obj[key];
+			}
+		}
+		catch (e)
+		{
+			items = obj;
 		}
 	}
 	else
@@ -136,6 +226,18 @@ function convert(obj)
 	return items;
 }
 
+
+async function getChannelUser(userName)
+{
+	if (typeof(channel_ids[userName]) !== 'undefined' && channel_ids[userName].expire > Date.now())
+		return channel_ids[userName].user;
+
+	const user = await api_client.users.getUserByName(userName);
+	if (user)
+		channel_ids[userName] = { user, expire: (Date.now() + (5 * 60 * 1000)) };
+
+	return user;
+}
 
 async function connect(clientId, accessToken, channelName, callback)
 {
@@ -177,7 +279,6 @@ async function connect(clientId, accessToken, channelName, callback)
 
 	// Fires when a user upgrades their bits badge in a channel.
 	chat_listeners.BitsBadgeUpgrade = chat_client.onBitsBadgeUpgrade(async (channel, user, upgradeInfo, msg) => {
-		//console.log('BitsBadgeUpgrade:', upgradeInfo);
 		//callback(await get('BitsBadgeUpgrade', msg, null, user, { upgrade: { user, info: upgradeInfo } }));
 	});
 
@@ -239,7 +340,7 @@ async function connect(clientId, accessToken, channelName, callback)
 
 	// Fires when a channel you're logged in as its owner is being hosted by another channel.
 	chat_listeners.Hosted = chat_client.onHosted(async (channel, byChannel, auto, viewers) => {
-		callback(await get('Hosted', msg, message, byChannel, { host: { channel: byChannel, viewers, auto } }));
+		callback(await get('Hosted', null, null, byChannel, { host: { channel: byChannel, viewers, auto } }));
 	});
 
 	// Fires when Twitch tells you the number of hosts you have remaining in the next half hour for the channel for which you're logged in as owner after hosting a channel.
@@ -334,7 +435,6 @@ async function connect(clientId, accessToken, channelName, callback)
 	// Fires when a user resubscribes to a channel.
 	chat_listeners.Resub = chat_client.onResub(async (channel, user, subInfo) => {
 		callback(await get('Resub', null, null, user, { subscribe: { user, info: subInfo } }));
-		//chat_client.say(channel, `Merci @${user} pour le réabonnement (${subInfo.months} mois)!`);
 	});
 
 	// Fires when a user gifts rewards during a special event.
@@ -360,8 +460,7 @@ async function connect(clientId, accessToken, channelName, callback)
 
 	// Fires when a user subscribes to a channel.
 	chat_listeners.Sub = chat_client.onSub(async (channel, user) => {
-		callback(await get('Sub', null, null, user, { subscribe: { user, info: subInfo } }));
-		//chat_client.say(channel, `Merci @${user} pour l'abonnement!`);
+		callback(await get('Sub', null, null, user, { subscribe: { user, info: null } }));
 	});
 
 	// Fires when a user extends their subscription using a Sub Token.
@@ -372,7 +471,6 @@ async function connect(clientId, accessToken, channelName, callback)
 	// Fires when a user gifts a subscription to a channel to another user.
 	chat_listeners.SubGift = chat_client.onSubGift(async (channel, user, subInfo) => {
 		callback(await get('SubGift', null, null, user, { subscribe: { user, info: subInfo } }));
-		//chat_client.say(channel, `Merci @${subInfo.gifter} pour l'abonnement offert à @${user}!`);
 	});
 
 	// Fires when a user is timed out from a channel.
@@ -404,9 +502,6 @@ async function connect(clientId, accessToken, channelName, callback)
 	});
 
 	await chat_client.connect();
-
-	//for (const clip of await getAllClipsForBroadcaster(userId))
-	//	console.log(clip.url);
 }
 
 async function disconnect()
@@ -512,7 +607,6 @@ async function get(type, msg, message, user, merge)
 	channel.id = (channel.id || msg.channelId);
 	const is_command = (message && message.length && message[0] == '!');
 
-	// parseEmotesAndBits(cheermotes, cheermoteFormat)
 	let emotes = [];
 	if (typeof(msg.parseEmotes) !== 'undefined')
 	{
@@ -547,13 +641,14 @@ async function get(type, msg, message, user, merge)
 			founder: msg.userInfo.isFounder,
 			moderator: msg.userInfo.isMod,
 			subscriber: msg.userInfo.isSubscriber,
-			vip: msg.userInfo.isVip
+			vip: msg.userInfo.isVip,
+			follower: (msg.userId ? await methods.checkFollow(false, msg.userId) : false)
 		} : null),
 		user: { // type: mod, global_mod, admin, staff
-			id: (msg.userInfo ? msg.userInfo.userId : null),
+			id: (msg.userInfo ? msg.userInfo.userId : (msg.userId ? msg.userId : null)),
 			type: (msg.userInfo ? msg.userInfo.userType : null),
-			name: (msg.userInfo ? msg.userInfo.userName : (user || null)),
-			display: (msg.userInfo ? msg.userInfo.displayName : null)
+			name: (msg.userInfo ? msg.userInfo.userName : (msg.userName ? msg.userName : (user || null))),
+			display: (msg.userInfo ? msg.userInfo.displayName : (msg.userDisplayName ? msg.userDisplayName : null))
 		},
 		color: (msg.userInfo ? msg.userInfo.color : null),
 		message: (is_command ? message.substr(1) : message),

@@ -31,7 +31,6 @@ function create_server()
 		res.writeHead(200);
 		res.end('success');
 	});
-	server.addListener('upgrade', (req, res, head) => console.log('UPGRADE:', req.url));
 	server.on('error', err => console.error(err));
 	server.listen(port, () => console.log('Https running on port', port));
 
@@ -49,8 +48,6 @@ function create_server()
 
 			if (await all_methods('websocket', data))
 				return;
-
-			//client.send('Receive:', data);
 		});
 	});
 }
@@ -100,6 +97,12 @@ function create_window()
 					win.webContents.send('manager', { name: data.name, data: data.data });
 					return;
 				}
+				else if (data.name == 'bluetooth:connect')
+				{
+					if (typeof(bluetooth_callback) === 'function')
+						bluetooth_callback(data.data);
+					return;
+				}
 				else if (data.name == 'bluetooth:data' || data.name == 'bluetooth:error')
 				{
 					all_methods('bluetooth', { name: data.name, data: data.data });
@@ -132,7 +135,6 @@ function create_window()
 
 				if (data.type == 'general')
 				{
-					//console.log('main manager receive:', data);
 					if (data.name == 'save')
 					{
 						manager = Object.assign(manager, data.data);
@@ -160,7 +162,7 @@ function create_window()
 					obj = scripts[data.id];
 
 				if (data.type == 'general')
-					; //console.log('main message receive:', data);
+					;
 				else if (obj && typeof(obj.include.receiver) === 'function')
 					obj.include.receiver('message', data.name, data.data);
 			});
@@ -501,7 +503,7 @@ async function all_sender(type, id, target, name, data)
 			else if (names[1] == 'list')
 				all_methods('bluetooth', data);
 			else if (names[1] == 'connect' && typeof(bluetooth_callback) === 'function')
-				bluetooth_callback(data);
+				win.webContents.send('manager', { type, id, name, data });
 
 			return;
 		}
@@ -545,7 +547,7 @@ async function all_sender(type, id, target, name, data)
 			else if (split[0] == 'config')
 				save_config(type, id, data, (split.length == 2 && split[1] == 'override'));
 			else
-				return 'feature not found'; // retourner une exception
+				return 'feature not found';
 
 			return true;
 		}
@@ -559,11 +561,11 @@ async function all_sender(type, id, target, name, data)
 		}
 
 		if (typeof(addons[target]) !== 'object')
-			return 'addon not found'; // retourner une exception
+			return 'addon not found';
 		else if (typeof(scripts[id].config.default.addons) !== 'string' || scripts[id].config.default.addons.split(',').indexOf(target) < 0)
-			return 'unregistered addon'; // retourner une exception
+			return 'unregistered addon';
 		else if (typeof(scripts[id].include.receiver) !== 'function')
-			return 'addon receiver not found'; // retourner une exception
+			return 'addon receiver not found';
 
 		return await addons[target].include.receiver(id, name, data);
 	}
@@ -613,7 +615,7 @@ Object.assign(console, elog.functions);
 app.whenReady().then(() => {
 	// init tray
 	tray = new Tray(icon);
-	tray.setToolTip('ScriptManager');
+	tray.setToolTip('Scripts Manager');
 
 	tray.on('double-click', () => {
 		if (win)

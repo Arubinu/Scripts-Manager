@@ -66,6 +66,7 @@ function disconnect(broadcast)
 		obs.disconnect().catch(() => {});
 }
 
+
 module.exports = {
 	init: (origin, config, sender) => {
 		_sender = sender;

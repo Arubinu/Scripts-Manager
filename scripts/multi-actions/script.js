@@ -1,9 +1,12 @@
-const	ws = require('ws'),
+const	fs = require('fs'),
+		ws = require('ws'),
 		path = require('path'),
+		temp = require('temp'),
 		https = require('https'),
 		socket = require('dgram'),
 		{ request } = require('undici'),
 		child_process = require('child_process'),
+		StreamTransform = require('stream').Transform,
 		{ MessageEmbed, MessageAttachment, WebhookClient } = require('discord.js');
 
 const	VARIABLE_TYPE = Object.freeze({
@@ -19,7 +22,18 @@ let		_config = {},
 			locals: {}
 		};
 
-const functions = {
+// color redemption (to delete)
+let		_color = { r: 255, g: 0, b: 0 };
+
+const	functions = {
+	hex2rgb: hex => {
+		var bigint = parseInt(hex, 16);
+		var r = (bigint >> 16) & 255;
+		var g = (bigint >> 8) & 255;
+		var b = bigint & 255;
+
+		return `${r},${g},${b}`;
+	},
 	twitch_compare: (module_name, receive, data, next_data, next, name, arg, simple, force_receive) => {
 		if (receive.id == 'twitch' && receive.name == name)
 		{
@@ -51,6 +65,19 @@ const functions = {
 			}
 		}
 	}
+};
+
+const	pregetters = {
+	'twitch_channel_game': async (get_data, channel_name) => [await _sender('twitch', 'getChannelGame', { type: 'Methods', args: [channel_name || false] }), channel_name],
+	'twitch_channel_info': async (get_data, channel_name) => [await _sender('twitch', 'getChannelInfo', { type: 'Methods', args: [channel_name || false] }), channel_name],
+};
+
+const	getters = {
+	'date:toLocaleTimeString': ['Date Locale Time', [], get_data => (new Date()).toLocaleTimeString()],
+	'date:toLocaleDateString': ['Date Locale Date', [], get_data => (new Date()).toLocaleDateString()],
+	'twitch:channelGame': ['Twitch Channel Game', ['Channel Name'], (get_data, channel_name) => (get_data[`twitch_channel_info:${channel_name}`].displayName || '').replace('Just Chatting', 'Discussion'), ['twitch_channel_info']],
+	'twitch:channelName': ['Twitch Channel Name', ['Channel Name'], (get_data, channel_name) => (get_data[`twitch_channel_info:${channel_name}`].title || ''), ['twitch_channel_info']],
+	'twitch:channelTitle': ['Twitch Channel Title', ['Channel Name'], (get_data, channel_name) => (get_data[`twitch_channel_info:${channel_name}`].gameName || ''), ['twitch_channel_info']],
 };
 
 const	actions = {
@@ -225,13 +252,17 @@ const	actions = {
 			next();
 	},
 	'event-twitch-host': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
-		if (true) // gérer le nombre de viewers (receive.data.host.viewers)
+		if (true) // todo: manage the number of viewers (receive.data.host.viewers)
 			next();
 	}, 'Host', 'channel', true, () => receive.data.host.channel),
 	'event-twitch-hosted': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Hosted', 'channel', true, () => receive.data.host.channel),
 	'trigger-twitch-host': (module_name, receive, data, next_data) => {
 		if (data.channel)
 			_sender('twitch', 'Host', { type: 'Chat', args: [data.channel] });
+	},
+	'trigger-twitch-info': (module_name, receive, data, next_data) => {
+		if (data.status || data.game)
+			_sender('twitch', 'updateChannelInfo', { type: 'Methods', args: [false, data.status, data.game] });
 	},
 	'event-twitch-message': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
 	'trigger-twitch-message': (module_name, receive, data, next_data) => {
@@ -390,47 +421,83 @@ const	actions = {
 		if (data.scene)
 			_sender('obs-studio', 'SetCurrentScene', [data.scene]);
 	},
-	'trigger-discord-webhook': (module_name, receive, data, next_data) => {
+	'trigger-discord-webhook': async (module_name, receive, data, next_data) => {
 		if (data.webhook && data.title)
 		{
+			const next = () => {
+				const	webhook = new WebhookClient({ url: data.webhook }),
+						bigimage = (data['big-image'] ? new MessageAttachment(data['big-image']) : false),
+						thumbnail = (data.thumbnail ? new MessageAttachment(data.thumbnail) : false);
+						embed = new MessageEmbed()
+							//.setTimestamp()
+							.setColor('#c0392b')
+							.setTitle(texts.title);
+
+				let images = [];
+				if (data['big-image'])
+					images.push(bigimage);
+				if (data.thumbnail)
+					images.push(thumbnail);
+
+				if (data.url)
+					embed.setURL(data.url);
+				if (data.thumbnail)
+					embed.setThumbnail('attachment://' + path.basename(data.thumbnail));
+				if (data['big-image'])
+					embed.setImage('attachment://' + encodeURI(path.basename(data['big-image'])));
+				if (data['inline-1-title'] && data['inline-1-content'])
+					embed.addField(texts['inline-1-title'], texts['inline-1-content'], true);
+				if (data['inline-2-title'] && data['inline-2-content'])
+					embed.addField(texts['inline-2-title'], texts['inline-2-content'], true);
+
+				//embed.setAuthor('Author here', 'https://cdn.discordapp.com/embed/avatars/0.png', 'https://www.google.com');
+				//embed.setDescription('');
+				//embed.setFooter('', 'https://cdn.discordapp.com/embed/avatars/0.png');
+
+				webhook.send({ content: '@everyone', embeds: [embed], files: images, allowed_mentions: { parse: ['everyone'] } });
+			};
+
 			let texts = {};
+			const channel_game = await _sender('twitch', 'getChannelGame', { type: 'Methods', args: [false] });
+			const channel_info = await _sender('twitch', 'getChannelInfo', { type: 'Methods', args: [false] });
 			for (const name of ['title', 'inline-1-title', 'inline-1-content', 'inline-2-title', 'inline-2-content'])
 			{
 				texts[name] = data[name]
 					.replace('${date:toLocaleTimeString}', (new Date()).toLocaleTimeString())
-					.replace('${date:toLocaleDateString}', (new Date()).toLocaleDateString());
+					.replace('${date:toLocaleDateString}', (new Date()).toLocaleDateString())
+					.replace('${twitch:channelName}', ((channel_info && channel_info.displayName) || ''))
+					.replace('${twitch:channelTitle}', ((channel_info && channel_info.title) || ''))
+					.replace('${twitch:channelGame}', ((channel_info && channel_info.gameName) || '').replace('Just Chatting', 'Discussion'));
 			}
 
-			const	webhook = new WebhookClient({ url: data.webhook }),
-					bigimage = (data['big-image'] ? new MessageAttachment(data['big-image']) : false),
-					thumbnail = (data.thumbnail ? new MessageAttachment(data.thumbnail) : false);
-					embed = new MessageEmbed()
-						//.setTimestamp()
-						.setColor('#c0392b')
-						.setTitle(texts.title);
+			if (!data.thumbnail && channel_game)
+			{
+				const url = channel_game.boxArtUrl.replace('{width}', '188').replace('{height}', '250');
 
-			let images = [];
-			if (data['big-image'])
-				images.push(bigimage);
-			if (data.thumbnail)
-				images.push(thumbnail);
+				https.request(url, response => {
+					var sdata = new StreamTransform();
 
-			if (data.url)
-				embed.setURL(data.url);
-			if (data.thumbnail)
-				embed.setThumbnail('attachment://' + path.basename(data.thumbnail));
-			if (data['big-image'])
-				embed.setImage('attachment://' + encodeURI(path.basename(data['big-image'])));
-			if (data['inline-1-title'] && data['inline-1-content'])
-				embed.addField(texts['inline-1-title'], texts['inline-1-content'], true);
-			if (data['inline-2-title'] && data['inline-2-content'])
-				embed.addField(texts['inline-2-title'], texts['inline-2-content'], true);
+					response.on('data', chunk => {
+						sdata.push(chunk);
+					});
 
-			//embed.setAuthor('Author here', 'https://cdn.discordapp.com/embed/avatars/0.png', 'https://www.google.com');
-			//embed.setDescription('');
-			//embed.setFooter('', 'https://cdn.discordapp.com/embed/avatars/0.png');
-
-			webhook.send({ embeds: [embed], files: images, allowed_mentions: { parse: ['everyone'] } });
+					response.on('end', () => {
+						const thumbnail_path = path.join(temp.mkdirSync(), ('thumbnail' + path.extname(url)));
+						fs.writeFileSync(thumbnail_path, sdata.read());
+						data.thumbnail = thumbnail_path;
+						next();
+					});
+				}).end();
+			}
+			else if (data.thumbnail)
+			{
+				const thumbnail_path = path.join(temp.mkdirSync(), ('thumbnail' + path.extname(data.thumbnail)));
+				fs.copyFileSync(data.thumbnail, thumbnail_path);
+				data.thumbnail = thumbnail_path;
+				next();
+			}
+			else
+				next();
 		}
 	},
 	'trigger-obs-studio-toggle-source': (module_name, receive, data, next_data) => {
@@ -486,6 +553,11 @@ function set_variable(name, value, variable_type, module_name, next_data)
 		_variables.globals[name] = value;
 }
 
+async function preaction(action_data, module_name, receive, data, next_data, next)
+{
+	actions[action_name](module_name, receive, data, next_data, next);
+}
+
 module.exports = {
 	init: (origin, config, sender) => {
 		_sender = sender;
@@ -520,6 +592,19 @@ module.exports = {
 
 			return;
 		}
+		else if (id == 'methods')
+		{
+			if (name == 'websocket')
+			{
+				if (typeof(data) === 'object' && data.target == 'multi-actions' && data.name == 'color:get')
+				{
+					_sender('manager', 'websocket', { name: 'color:set', target: 'multi-actions', data: _color });
+					return true;
+				}
+			}
+
+			return;
+		}
 
 		if (_config.default.enabled)
 		{
@@ -530,6 +615,8 @@ module.exports = {
 			{
 				const action = _config.actions[module_name];
 				let next_data = {};
+				let getters_data = {};
+				let getters_storage = {};
 
 				for (const node_index in action.data)
 				{
@@ -544,12 +631,12 @@ module.exports = {
 								{
 									const node = action.data[connection.node];
 									if (typeof(actions[node.data.type]) !== 'undefined')
-										actions[node.data.type](module_name, receive, node.data.data, next_data, () => next(node));
+										actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
 								}
 							}
 						};
 
-						actions[node.data.type](module_name, receive, node.data.data, next_data, () => next(node));
+						actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
 					}
 				}
 			}

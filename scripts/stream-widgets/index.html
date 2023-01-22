@@ -197,7 +197,7 @@
 
 			function get_widget(obj)
 			{
-				const selected = document.querySelector('.widgets .is-selected');
+				const selected = widgets.querySelector('.is-selected');
 				const eye = (selected ? selected.querySelector('.fas') : false);
 				const hide = (eye ? eye.classList.contains('fa-eye-slash') : false);
 

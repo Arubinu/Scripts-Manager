@@ -749,6 +749,16 @@ document.addEventListener('DOMContentLoaded', () => {
 			body: bodys.text('Channel'),
 			update: functions.trim
 		},
+		'trigger-twitch-info': {
+			type: 'twitch',
+			title: 'Info',
+			tooltip: 'Twitch - Info',
+			icon: 'info',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('Status') + bodys.text('Game'),
+			update: functions.trim
+		},
 		'event-twitch-message': {
 			type: 'twitch',
 			title: 'Message',

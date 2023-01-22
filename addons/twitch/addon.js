@@ -1,6 +1,5 @@
 const	twurple = require('./twurple'),
-		querystring = require('node:querystring'),
-		WebSocketClient = require('websocket').client;
+		querystring = require('node:querystring');
 
 const	CLIENT_ID = require('./auth.json').client_id;
 
@@ -8,9 +7,8 @@ let		_logs = [],
 		_vars = {},
 		_config = {},
 		_sender = null,
-		_pubsub = false,
 		_changes = false,
-		_connected = { irc: false, pubsub: false };
+		_connected = false;
 
 function update_interface()
 {
@@ -51,11 +49,17 @@ function update_interface()
 	_sender('message', 'config', Object.assign({ authorize: authorize.replace(/%2B/g, '+') }, _config));
 }
 
+async function global_send(type, obj)
+{
+	_sender('broadcast', type, obj);
+	_sender('manager', 'websocket', { name: type, target: 'twitch', data: obj });
+}
+
 async function connect()
 {
 	if (_config.connection.channel && _config.connection.token)
 	{
-		_sender('broadcast', 'Connection', []);
+		global_send('Connection', []);
 		_connected = true;
 		await twurple.connect(CLIENT_ID, _config.connection.token, _config.connection.channel, obj => {
 			_logs.unshift(obj);
@@ -63,7 +67,7 @@ async function connect()
 				delete _logs[i];
 
 			_sender('message', 'logs', obj);
-			_sender('broadcast', obj.type, JSON.parse(JSON.stringify(obj)));
+			global_send(obj.type, JSON.parse(JSON.stringify(obj)));
 		});
 	}
 }
@@ -95,7 +99,7 @@ async function disconnect(broadcast)
 		_sender('message', 'logs', obj);
 
 		if (typeof(broadcast) === 'undefined' || broadcast)
-			_sender('broadcast', 'Disconnected', []);
+			global_send('Disconnected', []);
 	}
 }
 
@@ -184,19 +188,28 @@ module.exports = {
 			}
 			else if (name == 'websocket')
 			{
-				if (typeof(data) === 'object' && data.url == url && !data.data.indexOf('#'))
+				if (typeof(data) === 'object')
 				{
-					const hash = querystring.parse(data.data.substr(1));
-
-					if (typeof(hash.access_token) === 'string')
+					if (data.url == url && !data.data.indexOf('#'))
 					{
-						_config.connection.token = hash.access_token;
-						_sender('manager', 'config', _config);
+						const hash = querystring.parse(data.data.substr(1));
 
-						update_interface();
+						if (typeof(hash.access_token) === 'string')
+						{
+							_config.connection.token = hash.access_token;
+							_sender('manager', 'config', _config);
+
+							update_interface();
+						}
+
+						return true;
 					}
-
-					return true;
+					else if (data.target == 'twitch' && data.name == 'subscriptions:get')
+					{
+						const subscriptions = await twurple.exec('Methods', 'getSubscriptions');
+						_sender('manager', 'websocket', { name: data.name, target: 'twitch', data: subscriptions });
+						return true;
+					}
 				}
 			}
 

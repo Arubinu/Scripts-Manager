@@ -1,6 +1,6 @@
 {
   "name": "Scripts-Manager",
-  "version": "1.0.0b2",
+  "version": "1.0.1",
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
@@ -33,6 +33,8 @@
     "obs-websocket-js": "^4.0.3",
     "read-ini-file": "^3.0.1",
     "serialport": "^10.4.0",
+    "spotify-web-api-node": "^5.0.2",
+    "temp": "^0.9.4",
     "undici": "^5.5.1",
     "uniqid": "^5.4.0",
     "usb": "^2.4.3",

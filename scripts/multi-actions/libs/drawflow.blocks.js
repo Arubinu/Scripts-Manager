@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				if (receive || global_datas.scenes)
 				{
 					if (receive)
-						global_datas.scenes = receive.scenes;
+						global_datas.scenes = receive;
 
 					// source
 					const scenes_changed = () => {
@@ -277,13 +277,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 							for (const scene of global_datas.scenes)
 							{
-								if (scene.name == value)
+								if (scene.sceneName === value)
 								{
 									for (const source of scene.sources)
 									{
 										const option = document.createElement('option');
-										option.value = source.name;
-										option.innerText = source.name;
+										option.value = source.sourceName;
+										option.innerText = source.sourceName;
 										selects[1].appendChild(option);
 									}
 								}
@@ -311,8 +311,8 @@ document.addEventListener('DOMContentLoaded', () => {
 					for (const scene of global_datas.scenes)
 					{
 						const option = document.createElement('option');
-						option.value = scene.name;
-						option.innerText = scene.name;
+						option.value = scene.sceneName;
+						option.innerText = scene.sceneName;
 						selects[0].appendChild(option);
 					}
 
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					scenes_changed();
 				}
 				else if (typeof(receive) === 'undefined')
-					request('obs-studio', 'GetScenes');
+					request('obs-studio', 'GetScenes', [ true ]);
 			}
 		},
 		state: (id, elem, data, set_data, receive, arg, callback) => {
@@ -601,6 +601,16 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.text('Message') + bodys.match + bodys.viewers,
+			update: functions.trim
+		},
+		'event-twitch-first-message': {
+			type: 'twitch',
+			title: 'First Message',
+			tooltip: 'Twitch - First Message',
+			icon: 'first',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.text('Message') + bodys.select('For all viewers', 'all', ['false', 'true']) + bodys.match + bodys.viewers,
 			update: functions.trim
 		},
 		'event-twitch-ban': {
@@ -1120,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 0,
 			outputs: 1,
 			body: bodys.select('Scene name', 'scene'),
-			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
 			update: functions.scene_source
 		},
 		'trigger-obs-studio-switch-scene': {
@@ -1131,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.select('Scene name', 'scene'),
-			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
 			update: functions.scene_source
 		},
 		'trigger-discord-webhook': {
@@ -1167,7 +1177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'Show', 'Hide'),
-			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'ScenesChanged']],
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
 			update: (id, elem, data, set_data, receive) => {
 				functions.scene_source(id, elem, data, set_data, receive);
 				if (!receive)

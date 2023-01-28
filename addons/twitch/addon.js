@@ -14,10 +14,14 @@ function update_interface()
 {
 	const url = 'https://id.twitch.tv/oauth2/authorize?';
 	const scope = [
+		'bits:read',
 		'chat:read',
 		'chat:edit',
 		'channel:read:goals',
+		'channel:read:polls',
+		'channel:read:charity',
 		'channel:read:hype_train',
+		'channel:read:predictions',
 		'channel:read:redemptions',
 		'channel:read:subscriptions',
 		'channel:edit:commercial',
@@ -26,7 +30,6 @@ function update_interface()
 		'channel:manage:predictions',
 		'channel:manage:redemptions',
 		'channel:moderate',
-		'channel_editor',
 		'moderation:read',
 		'moderator:read:chat_settings',
 		'moderator:manage:automod',

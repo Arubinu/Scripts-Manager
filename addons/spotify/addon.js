@@ -16,7 +16,7 @@ function update_interface()
 		'playlist-read-private',
 		'playlist-modify-public',
 		'playlist-modify-private',
-    ];
+	];
 
 	_sender('message', 'config', Object.assign({ authorize: instance.createAuthorizeURL(scopes, '') }, _config));
 }

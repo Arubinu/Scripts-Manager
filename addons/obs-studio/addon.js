@@ -1,4 +1,7 @@
-const	OBSWebSocket = require( 'obs-websocket-js' ),
+const	{
+			default: OBSWebSocket,
+			EventSubscription
+		} = require('obs-websocket-js'),
 		obs = new OBSWebSocket();
 
 let		_logs = [],
@@ -8,42 +11,60 @@ let		_logs = [],
 		_connected = false;
 
 const	functions = {
-	GetScenes: async function() {
-		return await obs.send('GetSceneList');
-	},
-	GetScene: async function(scene_name) {
-		for (let scene of (await functions.GetScenes()).scenes)
+	GetScenes: async withSources => {
+		let scenes = [];
+		for (let scene of (await obs.call('GetSceneList')).scenes)
 		{
-			if (scene_name.toLowerCase() == scene.name.toLowerCase())
+			if (withSources)
+				scene.sources = await functions.GetSources(scene.sceneName);
+
+			scenes.push(scene);
+		}
+
+		return scenes;
+	},
+	GetScene: async (sceneName, withSources) => {
+		for (const scene of await functions.GetScenes(withSources))
+		{
+			if (sceneName.toLowerCase() == scene.sceneName.toLowerCase())
 				return scene;
 		}
 
 		return false;
 	},
-	GetSources: async function(scene_name) {
-		return await functions.GetScene(scene_name).sources;
+	GetSources: async sceneName => {
+		return (await obs.call('GetSceneItemList', { sceneName })).sceneItems;
 	},
-	GetSource: async function(source_name, scene_name) {
-		return await obs.send('GetSceneItemProperties', { 'item': { 'name': source_name }, 'scene-name': scene_name });
-	},
-	SetCurrentScene: async function(scene_name) {
-		return await obs.send('SetCurrentScene', { 'scene-name': scene_name });
-	},
-	ToggleSource: async function(source, scene_name, visible) {
-		if (typeof(source) === 'string' || typeof(source) === 'object')
-			source = await functions.GetSource(((typeof(source) === 'string') ? source : source.name), scene_name);
+	GetSource: async (source_name, sceneName) => {
+		for (const source of await functions.GetSources(sceneName))
+		{
+			if (source_name.toLowerCase() == source.sourceName.toLowerCase())
+				return source;
+		}
 
-		if (typeof(visible) === 'undefined')
-			visible = !source.visible;
+		return false;
+	},
+	SetCurrentScene: async sceneName => {
+		return await obs.call('SetCurrentProgramScene', { sceneName });
+	},
+	ToggleSource: async (source, sceneName, sceneItemEnabled) => {
+		if (typeof source === 'string' || typeof source === 'object')
+			source = await functions.GetSource(((typeof source === 'string') ? source : source.sourceName), sceneName);
 
-		return await obs.send('SetSceneItemProperties', { 'item': source, 'scene-name': scene_name, 'visible': visible });
+		if (typeof sceneItemEnabled === 'undefined')
+			sceneItemEnabled = !source.sceneItemEnabled;
+
+		return await obs.call('SetSceneItemEnabled', { sceneName, sceneItemId: source.sceneItemId, sceneItemEnabled });
 	}
 }
 
 function connect()
 {
-	_sender('broadcast', 'Connextion', []);
-	obs.connect(url = _config.connection.address, password = _config.connection.password).then(() => {
+	global_send('Connection', []);
+	obs.connect(_config.connection.address, _config.connection.password, {
+		eventSubscriptions: EventSubscription.All,
+		rpcVersion: 1
+	}).then(() => {
 		//console.log(`${_config.default.name} connected`);
 	}).catch(error => {
 		//console.log(`${_config.default.name} connection error:`, error);
@@ -58,12 +79,18 @@ function reconnect()
 
 function disconnect(broadcast)
 {
-	if (typeof(broadcast) === 'undefined' || broadcast)
-		_sender('broadcast', 'Disconnection', []);
+	if (typeof broadcast === 'undefined' || broadcast)
+		global_send('Disconnection', []);
 
 	_changes = false;
-	if (obs._connected)
+	if (_connected)
 		obs.disconnect().catch(() => {});
+}
+
+async function global_send(type, obj)
+{
+	_sender('broadcast', type, obj);
+	_sender('manager', 'websocket', { name: type, target: 'obs-studio', data: obj });
 }
 
 
@@ -74,43 +101,77 @@ module.exports = {
 	},
 	initialized: () => {
 		const methods = [
-			'CurrentSceneCollectionChanging',
-			'CurrentSceneTransitionChanged',
-			'MediaInputPlaybackStarted',
-			'StudioModeStateChanged',
+				'CurrentSceneCollectionChanged',
+				'CurrentSceneCollectionChanging',
+				'CurrentSceneTransitionChanged',
+				'CurrentPreviewSceneChanged',
+				'CurrentProfileChanged',
+				'CurrentProfileChanging',
+				'CurrentProgramSceneChanged',
+				'CurrentSceneTransitionDurationChanged',
+				'CustomEvent',
+				'ExitStarted',
+				'InputCreated',
+				'InputActiveStateChanged',
+				'InputAudioBalanceChanged',
+				'InputAudioMonitorTypeChanged',
+				'InputAudioSyncOffsetChanged',
+				'InputAudioTracksChanged',
+				'InputMuteStateChanged',
+				'InputNameChanged',
+				'InputRemoved',
+				'InputShowStateChanged',
+				'InputVolumeChanged',
+				'InputVolumeMeters',
+				'MediaInputActionTriggered',
+				'MediaInputPlaybackEnded',
+				'MediaInputPlaybackStarted',
+				'ProfileListChanged',
+				'RecordStateChanged',
+				'ReplayBufferSaved',
+				'ReplayBufferStateChanged',
+				'SceneCreated',
+				'SceneCollectionListChanged',
+				'SceneItemCreated',
+				'SceneItemEnableStateChanged',
+				'SceneItemListReindexed',
+				'SceneItemLockStateChanged',
+				'SceneItemRemoved',
+				'SceneItemSelected',
+				'SceneItemTransformChanged',
+				'SceneListChanged',
+				'SceneNameChanged',
+				'SceneRemoved',
+				'SceneTransitionEnded',
+				'SceneTransitionStarted',
+				'SceneTransitionVideoEnded',
+				'ScreenshotSaved',
+				'SourceFilterCreated',
+				'SourceFilterEnableStateChanged',
+				'SourceFilterListReindexed',
+				'SourceFilterNameChanged',
+				'SourceFilterRemoved',
+				'StreamStateChanged',
+				'StudioModeStateChanged',
+				'VendorEvent',
+				'VirtualcamStateChanged',
 
-			'RecordingStarted',
-			'RecordingStopped',
-			'ReplayStarting',
-			'ReplayStarted',
-			'ReplayStopping',
-			'ReplayStopped',
-			'StreamStarted',
-			'StreamStopped',
-			'SwitchScenes',
-			'ScenesChanged',
-			'SourceFilterVisibilityChanged',
-			'SourceVolumeChanged',
-			'SwitchTransition',
-			'TransitionListChanged',
-			'TransitionBegin',
-			'TransitionEnd',
-			'PreviewSceneChanged',
-			'MediaPlaying',
-			'MediaPaused',
-			'MediaRestarted',
-			'MediaStopped',
-			'MediaNext',
-			'MediaPrevious',
-			'MediaStarted',
-			'MediaEnded',
-
-			'ConnectionOpened',
-			'ConnectionClosed',
-			'AuthenticationSuccess',
-			'AuthenticationFailure',
-			'error'
-		];
+				'ConnectionOpened',
+				'ConnectionClosed',
+				'AuthenticationSuccess',
+				'AuthenticationFailure',
+				'error'
+			],
+			deprecated = {
+				'CurrentPreviewSceneChanged': 'PreviewSceneChanged',
+				'CurrentSceneTransitionChanged': 'SwitchTransition',
+				'InputVolumeChanged': 'SourceVolumeChanged',
+				'MediaInputPlaybackEnded': 'MediaStopped',
+				'MediaInputPlaybackStarted': 'MediaStarted',
+				'SceneTransitionEnded': 'TransitionEnd',
+				'SceneTransitionStarted': 'TransitionBegin',
+				'SourceFilterEnableStateChanged': 'SourceFilterVisibilityChanged',
+			};
 
 		for (const method of methods)
 		{
@@ -131,8 +192,28 @@ module.exports = {
 				for (let i = (_logs.length - 1); i >= 20; --i)
 					delete _logs[i];
 
+				data = ((typeof data !== 'undefined') ? JSON.parse(JSON.stringify(data)) : data);
+
 				_sender('message', 'logs', obj);
-				_sender('broadcast', method, ((typeof(data) !== 'undefined') ? JSON.parse(JSON.stringify(data)) : data));
+				global_send(method, data);
+
+				// deprecated
+				if (method === 'CurrentProgramSceneChanged')
+				{
+					global_send('SwitchScenes', data);
+					global_send('ScenesChanged', data);
+				}
+				else if (method === 'ReplayBufferStateChanged')
+				{
+					global_send(((data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? 'ReplayStarting' : 'ReplayStopping'), data);
+					global_send(((data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? 'ReplayStarted' : 'ReplayStopped'), data);
+				}
+				else if (method === 'RecordStateChanged')
+					global_send(((data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? 'RecordingStarted' : 'RecordingStopped'), data);
+				else if (method === 'StreamStateChanged')
+					global_send(((data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? 'StreamStarted' : 'StreamStopped'), data);
+				else if (typeof deprecated[method] !== 'undefined')
+					global_send(deprecated[method], data);
 			});
 		}
 
@@ -140,7 +221,7 @@ module.exports = {
 			connect();
 
 		setInterval(() => {
-			if (_config.default.enabled && !obs._connected)
+			if (_config.default.enabled && !_connected)
 				connect();
 		}, 5000);
 	},
@@ -168,7 +249,7 @@ module.exports = {
 		}
 		else if (id == 'message')
 		{
-			if (typeof(data) === 'object')
+			if (typeof data === 'object')
 			{
 				const name = Object.keys(data)[0];
 				if (name == 'refresh')
@@ -179,7 +260,7 @@ module.exports = {
 					return;
 				}
 
-				if (typeof(data[name]) === typeof(_config.connection[name]))
+				if (typeof data[name] === typeof _config.connection[name])
 				{
 					_changes = true;
 					_config.connection[name] = data[name];
@@ -198,7 +279,7 @@ module.exports = {
 
 		if (!check)
 		{
-			if (typeof(functions[name]) === 'function')
+			if (typeof functions[name] === 'function')
 			{
 				if (Array.isArray(data) && data.length)
 					return await functions[name](...data);
@@ -206,7 +287,7 @@ module.exports = {
 					return await functions[name]();
 			}
 			else
-				return await obs.send(name, data);
+				return await obs.call(name, data);
 		}
 	}
 }

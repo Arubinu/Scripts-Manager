@@ -31,6 +31,7 @@ function create_server()
 		res.writeHead(200);
 		res.end('success');
 	});
+
 	server.on('error', err => console.error(err));
 	server.listen(port, () => console.log('Https running on port', port));
 
@@ -547,7 +548,7 @@ async function all_sender(type, id, target, name, data)
 			else if (split[0] == 'config')
 				save_config(type, id, data, (split.length == 2 && split[1] == 'override'));
 			else
-				return 'feature not found';
+				return 'feature not found'; // retourner une exception
 
 			return true;
 		}

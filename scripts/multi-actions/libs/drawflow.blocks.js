@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	};
 
-	function add_node(type, pos_x, pos_y)
+	function add_node(type, pos_x, pos_y, data)
 	{
 		if (editor.editor_mode === 'fixed' || typeof(blocks[type]) === 'undefined')
 			return false;
@@ -97,9 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		const block = blocks[type];
 		const id = editor.addNode(`${editor.nodeId}.${type}`, block.inputs, block.outputs, pos_x, pos_y, `block-${type}`, {}, type, true);
 
-		let data = { id: id, type: type, data: {} };
-		editor.updateNodeDataFromId(id, data);
-		set_data(id, (block.data || {}));
+		editor.updateNodeDataFromId(id, { id: id, type: type, data: {} });
+		set_data(id, Object.assign((block.data || {}), data));
 
 		init_node(editor.getNodeFromId(id), true);
 	}
@@ -320,7 +319,29 @@ document.addEventListener('DOMContentLoaded', () => {
 					scenes_changed();
 				}
 				else if (typeof(receive) === 'undefined')
+				{
 					request('obs-studio', 'GetScenes', [ true ]);
+
+					if (data.scene)
+					{
+						const option = document.createElement('option');
+						option.value = data.scene;
+						option.innerText = data.scene;
+
+						selects[0].innerHTML = '';
+						selects[0].appendChild(option);
+					}
+
+					if (data.source)
+					{
+						const option = document.createElement('option');
+						option.value = data.source;
+						option.innerText = data.source;
+
+						selects[1].innerHTML = '';
+						selects[1].appendChild(option);
+					}
+				}
 			}
 		},
 		state: (id, elem, data, set_data, receive, arg, callback) => {
@@ -509,6 +530,14 @@ document.addEventListener('DOMContentLoaded', () => {
 					browse_fas(id, 'file', elem.querySelector('.launch-app button'), 'program');
 				}
 			}
+		},
+		'open-url': {
+			title: 'Open URL',
+			icon: 'open-url',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('Address'),
+			update: functions.trim
 		},
 		'self-timer': {
 			title: 'Self-Timer',
@@ -1285,4 +1314,76 @@ document.addEventListener('DOMContentLoaded', () => {
 	document.addEventListener('touchend', drag_event, false);
 	document.addEventListener('touchmove', drag_event, false);
 	document.addEventListener('touchstart', drag_event, false);
+
+	let double_click = 0;
+	let node_selected = -1;
+	const reset_selection = () => {
+		node_selected = -1;
+	};
+
+	editor.on('moduleChanged', reset_selection);
+	editor.on('nodeUnselected', reset_selection);
+	editor.on('nodeRemoved', reset_selection);
+	editor.on('nodeSelected', id => {
+		node_selected = id;
+	});
+	editor.on('contextmenu', event => {
+		const	dbclick		= (double_click && (Date.now() - double_click) <= 250);
+				duplicate	= (dbclick && node_selected >= 0);
+
+		double_click = Date.now();
+		console.log('dbclick:', dbclick);
+		if (duplicate)
+		{
+			const	node	= editor.drawflow.drawflow[editor.module].data[node_selected],
+					type	= node.html,
+					block	= blocks[type],
+					pos_x	= ((typeof event.touches !== 'undefined') ? event.touches[0].clientX : event.clientX),
+					pos_y	= ((typeof event.touches !== 'undefined') ? event.touches[0].clientY : event.clientY),
+					elem	= document.querySelector(`#node-${node_selected}`);
+
+			add_node(type, pos_x, pos_y, Object.assign({}, node.data.data));
+		}
+		else if (dbclick)
+		{
+			const	elem	= event.target.closest('[id^="node-"]'),
+					id		= parseInt(elem.getAttribute('id').substr(5)),
+					node	= editor.drawflow.drawflow[editor.module].data[id];
+
+			if (!isNaN(id) && event.target.classList.contains('output'))
+			{
+				for (const output of Object.keys(node.outputs))
+				{
+					if (event.target.classList.contains(output))
+					{
+						const connections = node.outputs[output].connections;
+						for (let i = (connections.length - 1); i >= 0; --i)
+						{
+							const connection = connections[i];
+							editor.removeSingleConnection(id, parseInt(connection.node), output, connection.output);
+						}
+
+						break;
+					}
+				}
+			}
+			else if (!isNaN(id) && event.target.classList.contains('input'))
+			{
+				for (const input of Object.keys(node.inputs))
+				{
+					if (event.target.classList.contains(input))
+					{
+						const connections = node.inputs[input].connections;
+						for (let i = (connections.length - 1); i >= 0; --i)
+						{
+							const connection = connections[i];
+							editor.removeSingleConnection(parseInt(connection.node), id, connection.input, input);
+						}
+
+						break;
+					}
+				}
+			}
+		}
+	});
 });

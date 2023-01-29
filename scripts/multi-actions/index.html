@@ -369,7 +369,7 @@
 			window.editor = editor;
 
 			window.drawflow_save = () => {
-				window.parent.postMessage({save: editor.export().drawflow}, '*');
+				window.parent.postMessage({ save: editor.export().drawflow }, '*');
 			};
 
 			window.drawflow_select = () => {
@@ -388,7 +388,7 @@
 					module_name = Object.keys(editor.drawflow.drawflow)[0];
 
 				selector.value = module_name;
-				if (module_name != current)
+				if (module_name !== current)
 					editor.changeModule(module_name);
 			};
 
@@ -438,6 +438,8 @@
 				};
 
 				init();
+				if (typeof editor.drawflow.drawflow[name] !== 'undefined' && Object.keys(editor.drawflow.drawflow).length >= 2)
+					window.parent.postMessage({ module: name }, '*');
 			});
 
 			editor.on('connectionCreated', function(connection) {
@@ -558,23 +560,32 @@
 				{
 					if (event.data.name == 'config')
 					{
-						const _config = event.data.data;
-						if (Object.keys(_config.actions).length)
-						{
-							editor.module = Object.keys(_config.actions)[0];
-							editor.import({ drawflow: _config.actions });
-							window.drawflow_select();
+						setTimeout(() => {
+							const _config = event.data.data;
+							if (Object.keys(_config.actions).length)
+							{
+								editor.module = Object.keys(_config.actions)[0];
+								editor.import({ drawflow: _config.actions });
+								window.drawflow_select();
 
-							if (typeof(window.drawflow_initializer) === 'function')
-								window.drawflow_initializer(_config.actions);
-						}
-						else
-						{
-							editor.module = 'Default';
-							editor.addModule(editor.module);
-							window.drawflow_save();
-							window.drawflow_select();
-						}
+								if (typeof(window.drawflow_initializer) === 'function')
+									window.drawflow_initializer(_config.actions);
+
+								const module_name = ((_config.settings.module && typeof editor.drawflow.drawflow[_config.settings.module] !== 'undefined') ? _config.settings.module : Object.keys(_config.actions)[0]);
+								if (module_name !== editor.module)
+								{
+									selector.value = module_name;
+									editor.changeModule(module_name);
+								}
+							}
+							else
+							{
+								editor.module = 'Default';
+								editor.addModule(editor.module);
+								window.drawflow_save();
+								window.drawflow_select();
+							}
+						}, 100);
 					}
 					else if (event.data.name == 'receive' && typeof(window.drawflow_receiver) === 'function')
 						window.drawflow_receiver(event.data.data.id, event.data.data.name, event.data.data.data);

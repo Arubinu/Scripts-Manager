@@ -12,6 +12,7 @@ let		win = null,
 				screen:		0,
 				delay:		15,
 				pause:		1,
+				opacity:	80,
 				duration:	400,
 				join:		false,
 				command:	true
@@ -56,6 +57,7 @@ function create_window()
 	win.setMenu(null);
 	win.setIgnoreMouseEvents(true);
 	win.loadFile(path.join(__dirname, 'flash', 'index.html')).then(() => {
+		set_opacity(_config.settings.opacity);
 		set_duration(_config.settings.duration);
 		win.show();
 	});
@@ -72,6 +74,12 @@ function update_interface()
 function save_config()
 {
 	_sender('manager', 'config', _config);
+}
+
+function set_opacity(opacity)
+{
+	opacity = Math.max(0, Math.min(100, opacity));
+	win.webContents.send('opacity', opacity);
 }
 
 function set_duration(duration)
@@ -137,6 +145,7 @@ module.exports = {
 		}
 
 		_config.settings.delay = Math.max(1, _config.settings.delay);
+		_config.settings.opacity = Math.max(0, Math.min(100, _config.settings.opacity));
 		_config.settings.duration = Math.max(100, _config.settings.duration);
 	},
 	initialized: () => {
@@ -187,6 +196,8 @@ module.exports = {
 					next_screen(data.screen);
 					flash_screen(false, true);
 				}
+				else if (name == 'opacity')
+					set_opacity(data.opacity);
 				else if (name == 'duration')
 					set_duration(data.duration);
 			}

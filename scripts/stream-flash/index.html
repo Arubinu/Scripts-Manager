@@ -74,6 +74,19 @@
 
 				<div class="columns">
 					<div class="column">
+						<div class="field opacity">
+							<label class="label has-text-centered">
+								<span class="icon" title="Flash display opacity">
+									<i class="fas fa-solid fa-info-circle"></i>
+								</span>
+								Opacity (%)
+							</label>
+							<div class="control">
+								<input class="input has-text-centered" type="number" min="1" max="100" step="1" />
+							</div>
+						</div>
+					</div>
+					<div class="column">
 						<div class="field duration">
 							<label class="label has-text-centered">
 								<span class="icon" title="Flash display duration">
@@ -150,7 +163,7 @@
 					buttons[i].classList.toggle('is-selected', (i == _config.settings.screen));
 			}
 
-			for (const name of ['duration', 'delay', 'pause'])
+			for (const name of ['opacity', 'duration', 'delay', 'pause'])
 			{
 				const elem = document.querySelector(`.${name} input`);
 				const callback = event => {
@@ -189,7 +202,7 @@
 						for (const name of ['flash', 'viewer', 'subscriber', 'moderator'])
 							document.querySelector(`.info-${name} .title`).innerText = _config.statistics[name];
 
-						for (const name of ['duration', 'delay', 'pause'])
+						for (const name of ['opacity', 'duration', 'delay', 'pause'])
 							document.querySelector(`.${name} input`).value = _config.settings[name];
 
 						for (const name of ['join', 'command'])

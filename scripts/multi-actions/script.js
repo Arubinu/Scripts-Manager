@@ -15,7 +15,8 @@ const	VARIABLE_TYPE = Object.freeze({
 			NEXT: 2
 		});
 
-let		_config = {},
+let		_cmd = '',
+		_config = {},
 		_sender = null,
 		_variables = {
 			globals: {},
@@ -144,8 +145,27 @@ const	actions = {
 		}
 	},
 	'launch-app': (module_name, receive, data, next_data, next) => {
-		child_process.spawn(data.program, [], {
+		if (!_cmd)
+			return;
+
+		child_process.spawn(_cmd, ['/c', 'start', '', data.program], {
 			cwd: path.dirname(data.program),
+		}).on('close', exit_code => {
+			next();
+		}).on('error', error => {
+			console.error('launch-app:', data, error);
+		});
+	},
+	'open-url': (module_name, receive, data, next_data, next) => {
+		if (!_cmd)
+			return;
+
+		let address = data.address;
+		if (address.indexOf('://') < 0)
+			address = 'https://' + address;
+
+		child_process.spawn(_cmd, ['/c', 'explorer', address], {
+			cmd: process.env.USERPROFILE,
 			detached: true
 		}).on('close', exit_code => {
 			next();
@@ -591,10 +611,53 @@ function set_variable(name, value, variable_type, module_name, next_data)
 		_variables.globals[name] = value;
 }
 
+async function preaction(action_data, module_name, receive, data, next_data, next)
+{
+	/*let action_name, getters_data, getters_storage = action_data;
+
+	for (const getter of Object.keys(getters))
+	{
+		for (const data_key of Object.keys(data))
+		{
+			let data_value = data[data_key];
+
+			if (data_value.indexOf(getter))
+			{
+				await (async (getters_storage, _) => {
+					if (getter.length >= 3)
+					{
+						for (const prename of getter[3])
+						{
+							const pregetter = pregetters[prename];
+							getters_storage[`${prename}:${pregetter[1]}`] = await pregetter[0](...arguments);
+						}
+					}
+				})(getters_storage);
+
+				getter[2];
+				data[data_key] = data_value;
+			}
+		}
+	}*/
+
+	actions[action_name](module_name, receive, data, next_data, next);
+}
+
 module.exports = {
 	init: (origin, config, sender) => {
 		_sender = sender;
 		_config = config;
+
+		for (const item of process.env.path.split(';'))
+		{
+			const	program	= path.join(item, 'cmd.exe');
+
+			if (fs.existsSync(program))
+			{
+				_cmd = program;
+				break;
+			}
+		}
 	},
 	receiver: (id, name, data) => {
 		if (id === 'manager')
@@ -614,6 +677,11 @@ module.exports = {
 				{
 					_config.actions = data.save;
 					_sender('manager', 'config:override', _config);
+				}
+				else if (data.module)
+				{
+					_config.settings.module = data.module;
+					_sender('manager', 'config', _config);
 				}
 				else if (data.request)
 				{

@@ -90,9 +90,33 @@
 			for (const name of ['address', 'password'])
 			{
 				const elem = document.querySelector(`.${name} input`);
-				const callback = event => {
+				const callback = function(event) {
 					let data = {};
 					data[name] = elem.value;
+
+					if (name === 'address' && data[name].trim())
+					{
+						const	address	= data[name].trim();
+
+						data[name] = address;
+
+						let split = address.split('://');
+						if (split.length === 1)
+							split = ['ws', split[0]];
+						else if (split.length !== 2)
+							split = ['ws', 'localhost'];
+						else if (!split[0].length)
+							split[0] = 'ws';
+
+						let hostsplit = split[1].split('/');
+						if (hostsplit[0].indexOf(':') < 0)
+							hostsplit[0] += ':4455';
+						split[1] = hostsplit.join('/');
+
+						data[name] = split.join('://');
+						if (data[name] !== address)
+							elem.value = data[name];
+					}
 
 					window.parent.postMessage(data, '*');
 				};

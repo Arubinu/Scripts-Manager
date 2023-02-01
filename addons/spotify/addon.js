@@ -21,6 +21,33 @@ function update_interface()
 	_sender('message', 'config', Object.assign({ authorize: instance.createAuthorizeURL(scopes, '') }, _config));
 }
 
+const	functions = {
+	Search: async track => {
+		const	data	= await _sender('spotify', 'searchTracks', [track]);
+
+		if (typeof data.body === 'object' && typeof data.body.tracks === 'object' && Array.isArray(data.body.tracks.items) && data.body.tracks.items.length)
+			return data.body.tracks.items[0];
+	},
+	GetDevices: async () => {
+		const	data	= await _sender('spotify', 'getMyDevices');
+
+		return data.body.devices;
+	},
+	ActiveDevice: async () => {
+		const	devices	= await functions.GetDevices();
+
+		if (devices.length >= 0)
+		{
+			for (const device of devices)
+			{
+				if (device.is_active)
+					return device;
+			}
+
+			return devices[0];
+		}
+	}
+};
 
 module.exports = {
 	init: (origin, config, sender, vars) => {
@@ -60,6 +87,7 @@ module.exports = {
 				{
 					_config.connection[name] = data[name];
 
+					instance.resetCredentials();
 					instance.setClientId(_config.connection.client_id);
 					instance.setClientSecret(_config.connection.client_secret);
 					instance.setAccessToken(_config.connection.access_token);
@@ -124,7 +152,14 @@ module.exports = {
 			return;
 		}
 
-		if (typeof instance[name] === 'function')
+		if (typeof functions[name] === 'function')
+		{
+			if (Array.isArray(data) && data.length)
+				return await functions[name](...data);
+			else
+				return await functions[name]();
+		}
+		else if (typeof instance[name] === 'function')
 		{
 			if (Array.isArray(data) && data.length)
 				return await instance[name](...data);

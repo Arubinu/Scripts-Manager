@@ -7,9 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			mobile_item_selec = '',
 			mobile_last_move = null;
 
-	function request(id, name, data)
+	function request(source_id, id, name, data)
 	{
-		window.parent.postMessage({request: [id, name, (data || [])]}, '*');
+		window.parent.postMessage({request: [source_id, id, name, (data || [])]}, '*');
 	}
 
 	function drag(event)
@@ -72,8 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			const elem = node_elem.querySelector(`input[name="${data_name}"], select[name="${data_name}"], textarea[name="${data_name}"]`);
 			if (elem)
 			{
-				const is_input = (elem.nodeName.toLowerCase() == 'input');
-				const input_type = (is_input && elem.getAttribute('type').toLowerCase());
+				const	is_input	= (elem.nodeName.toLowerCase() == 'input'),
+						input_type	= (is_input && elem.getAttribute('type').toLowerCase());
 
 				if (is_input && input_type == 'radio')
 				{
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	function add_node(type, pos_x, pos_y, data)
 	{
-		if (editor.editor_mode === 'fixed' || typeof(blocks[type]) === 'undefined')
+		if (editor.editor_mode === 'fixed' || typeof blocks[type] === 'undefined')
 			return false;
 
 		pos_x = (pos_x * (editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom))) - (editor.precanvas.getBoundingClientRect().x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)));
@@ -105,9 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	function init_node(node, first)
 	{
-		const id = node.data.id;
-		const block = blocks[node.data.type];
-		const node_elem = drawflow.querySelector(`#node-${id}`);
+		const	id			= node.data.id,
+				block		= blocks[node.data.type],
+				node_elem	= drawflow.querySelector(`#node-${id}`);
 
 		if (block.width && block.width > 0)
 			node_elem.style.width = `${block.width}px`;
@@ -117,12 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!elem_name)
 				return;
 
-			if (first && block.init)
-				block.init(node.data.id, node_elem, node.data.data, _data => set_data(id, _data));
-
-			const is_input = (elem.nodeName.toLowerCase() == 'input');
-			const input_type = (is_input && elem.getAttribute('type').toLowerCase());
-			const data_exists = (typeof(node.data.data[elem_name]) !== 'undefined');
+			const	is_input	= elem.nodeName.toLowerCase() == 'input',
+					input_type	= is_input && elem.getAttribute('type').toLowerCase(),
+					data_exists	= typeof node.data.data[elem_name] !== 'undefined';
 
 			if (is_input && input_type == 'checkbox')
 			{
@@ -150,10 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
 					node.data.data[elem_name] = elem.value;
 			}
 
-			set_data(id, node.data.data);
-			if (block.update)
-				block.update(node.data.id, node_elem, node.data.data, _data => set_data(id, _data));
-
 			const update = event => {
 				node.data.data[elem_name] = ((is_input && (input_type == 'radio' || input_type == 'checkbox')) ? elem.checked : elem.value);
 
@@ -165,6 +158,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			//elem.addEventListener('input', update, false);
 			elem.addEventListener('change', update, false);
 		});
+
+		if (block.init)
+			block.init(node.data.id, node_elem, node.data.data, _data => set_data(id, _data), first);
+
+		set_data(id, node.data.data);
+		if (block.update)
+			block.update(node.data.id, node_elem, node.data.data, _data => set_data(id, _data));
 	}
 
 	const bodys = {
@@ -179,13 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
 				name = title.toLowerCase().replace(/\s/g, '-');
 
 			let attrs = '';
-			if (typeof(value) === 'number')
+			if (typeof value === 'number')
 				attrs += ` value="${value}"`;
-			if (typeof(step) === 'number')
+			if (typeof step === 'number')
 				attrs += ` step="${step}"`;
-			if (typeof(min) === 'number')
+			if (typeof min === 'number')
 				attrs += ` min="${min}"`;
-			if (typeof(max) === 'number')
+			if (typeof max === 'number')
 				attrs += ` max="${max}"`;
 
 			return `<p>${title}</p><input name="${name}" type="number"${attrs} class="has-text-centered" />`;
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			{
 				for (const option of options)
 				{
-					if (typeof(option) === 'object')
+					if (typeof option === 'object')
 						list += `<option value="${option.value}"` + ((option.value == select) ? ' selected' : '') + `>${option.name}</option>`;
 					else
 						list += '<option' + ((option == select) ? ' selected' : '') + `>${option}</option>`;
@@ -228,12 +228,12 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
 	const functions = {
-		trim: (id, elem, data, set_data, receive) => {
+		trim: (id, elem, data, set_data, receive, receive_data) => {
 			let trim = false;
 			for (const key in data)
 			{
 				const value = data[key];
-				if (typeof(value) === 'string' && value != value.trim())
+				if (typeof value === 'string' && value != value.trim())
 				{
 					trim = true;
 					data[key] = value.trim();
@@ -243,108 +243,234 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (trim)
 				set_data(data);
 		},
-		number: (id, elem, data, set_data, receive, arg, min, max) => {
-			if (typeof(min) === 'number' && data[arg] < min)
+		number: (id, elem, data, set_data, receive, receive_data, arg, min, max) => {
+			if (typeof min === 'number' && data[arg] < min)
 			{
 				data[arg] = min;
 				set_data(data);
 			}
-			else if (typeof(max) === 'number' && data[arg] < max)
+			else if (typeof max === 'number' && data[arg] < max)
 			{
 				data[arg] = max;
 				set_data(data);
 			}
 		},
-		scene_source: (id, elem, data, set_data, receive) => {
+		scene_source: (id, elem, data, set_data, receive, receive_data) => {
 			const selects = elem.querySelectorAll('select');
-			if (!selects[0].children.length)
+			if (receive || global_datas.scene_source)
 			{
-				if (receive || global_datas.scenes)
+				if (receive)
 				{
-					if (receive)
-						global_datas.scenes = receive;
+					global_datas.scene_source = receive_data;
 
-					// source
-					const scenes_changed = () => {
-						const value = selects[0].value;
-						if (value && selects.length > 1)
-						{
-							const selected = (selects[1].value || data.source);
+					global_datas.scene_source.sort((a, b) => {
+						if (a.sceneName < b.sceneName)
+							return -1;
+						else if (a.sceneName > b.sceneName)
+							return 1;
+						return 0;
+					});
 
-							selects[1].innerHTML = '';
-							selects[1].appendChild(document.createElement('option'));
-
-							for (const scene of global_datas.scenes)
-							{
-								if (scene.sceneName === value)
-								{
-									for (const source of scene.sources)
-									{
-										const option = document.createElement('option');
-										option.value = source.sourceName;
-										option.innerText = source.sourceName;
-										selects[1].appendChild(option);
-									}
-								}
-							}
-
-							selects[1].value = selected;
-						}
-					};
-
-					if (selects.length > 1)
+					for (const scene of global_datas.scene_source)
 					{
-						if (!elem.classList.contains('block-init'))
-						{
-							elem.classList.add('block-init');
-							selects[0].addEventListener('change', scenes_changed, false);
-						}
+						scene.sources.sort((a, b) => {
+							if (a.sourceName < b.sourceName)
+								return -1;
+							else if (a.sourceName > b.sourceName)
+								return 1;
+							return 0;
+						});
 					}
-
-					// scene
-					const selected = (selects[0].value || data.scene);
-
-					selects[0].innerHTML = '';
-					selects[0].appendChild(document.createElement('option'));
-
-					for (const scene of global_datas.scenes)
-					{
-						const option = document.createElement('option');
-						option.value = scene.sceneName;
-						option.innerText = scene.sceneName;
-						selects[0].appendChild(option);
-					}
-
-					selects[0].value = selected;
-					scenes_changed();
 				}
-				else if (typeof(receive) === 'undefined')
-				{
-					request('obs-studio', 'GetScenes', [ true ]);
 
-					if (data.scene)
+				// source
+				const scenes_changed = () => {
+					const value = selects[0].value;
+					if (value && selects.length > 1)
 					{
-						const option = document.createElement('option');
-						option.value = data.scene;
-						option.innerText = data.scene;
-
-						selects[0].innerHTML = '';
-						selects[0].appendChild(option);
-					}
-
-					if (data.source)
-					{
-						const option = document.createElement('option');
-						option.value = data.source;
-						option.innerText = data.source;
+						const selected = (selects[1].value || data.source);
 
 						selects[1].innerHTML = '';
-						selects[1].appendChild(option);
+						selects[1].appendChild(document.createElement('option'));
+
+						for (const scene of global_datas.scene_source)
+						{
+							if (scene.sceneName === value)
+							{
+								for (const source of scene.sources)
+								{
+									const option = document.createElement('option');
+									option.value = source.sourceName;
+									option.innerText = source.sourceName;
+									selects[1].appendChild(option);
+								}
+							}
+						}
+
+						selects[1].value = selected;
+					}
+				};
+
+				if (selects.length > 1)
+				{
+					if (!elem.classList.contains('block-init'))
+					{
+						elem.classList.add('block-init');
+						selects[0].addEventListener('change', scenes_changed, false);
 					}
 				}
+
+				// scene
+				const selected = (selects[0].value || data.scene);
+
+				selects[0].innerHTML = '';
+				selects[0].appendChild(document.createElement('option'));
+
+				for (const scene of global_datas.scene_source)
+				{
+					const option = document.createElement('option');
+					option.value = scene.sceneName;
+					option.innerText = scene.sceneName;
+					selects[0].appendChild(option);
+				}
+
+				selects[0].value = selected;
+				scenes_changed();
+			}
+			else if (!receive)
+			{
+				if (data.scene)
+				{
+					const option = document.createElement('option');
+					option.value = data.scene;
+					option.innerText = data.scene;
+
+					selects[0].innerHTML = '';
+					selects[0].appendChild(option);
+				}
+
+				if (data.source)
+				{
+					const option = document.createElement('option');
+					option.value = data.source;
+					option.innerText = data.source;
+
+					selects[1].innerHTML = '';
+					selects[1].appendChild(option);
+				}
+
+				request(id, 'obs-studio', 'GetScenes', [true]);
 			}
 		},
-		state: (id, elem, data, set_data, receive, arg, callback) => {
+		source_filter: (id, elem, data, set_data, receive, receive_data) => {
+			const selects = elem.querySelectorAll('select');
+			if (receive || global_datas.source_filter)
+			{
+				if (receive)
+				{
+					global_datas.source_filter = receive_data;
+
+					global_datas.source_filter.sort((a, b) => {
+						if (a.sourceName < b.sourceName)
+							return -1;
+						else if (a.sourceName > b.sourceName)
+							return 1;
+						return 0;
+					});
+
+					for (const source of global_datas.source_filter)
+					{
+						source.filters.sort((a, b) => {
+							if (a.filterName < b.filterName)
+								return -1;
+							else if (a.filterName > b.filterName)
+								return 1;
+							return 0;
+						});
+					}
+				}
+
+				// filter
+				const source_changed = () => {
+					const value = selects[0].value;
+					if (value && selects.length > 1)
+					{
+						const selected = (selects[1].value || data.filter);
+
+						selects[1].innerHTML = '';
+						selects[1].appendChild(document.createElement('option'));
+
+						for (const source of global_datas.source_filter)
+						{
+
+							if (source.sourceName === value)
+							{
+								for (const filter of source.filters)
+								{
+									const option = document.createElement('option');
+									option.value = filter.filterName;
+									option.innerText = filter.filterName;
+									selects[1].appendChild(option);
+								}
+							}
+						}
+
+						selects[1].value = selected;
+					}
+				};
+
+				if (selects.length > 1)
+				{
+					if (!elem.classList.contains('block-init'))
+					{
+						elem.classList.add('block-init');
+						selects[0].addEventListener('change', source_changed, false);
+					}
+				}
+
+				// source
+				const selected = (selects[0].value || data.source);
+
+				selects[0].innerHTML = '';
+				selects[0].appendChild(document.createElement('option'));
+
+				for (const source of global_datas.source_filter)
+				{
+					const option = document.createElement('option');
+					option.value = source.sourceName;
+					option.innerText = source.sourceName;
+					selects[0].appendChild(option);
+				}
+
+				selects[0].value = selected;
+				source_changed();
+			}
+			else if (!receive)
+			{
+				if (data.source)
+				{
+					const option = document.createElement('option');
+					option.value = data.source;
+					option.innerText = data.source;
+
+					selects[0].innerHTML = '';
+					selects[0].appendChild(option);
+				}
+
+				if (data.filter)
+				{
+					const option = document.createElement('option');
+					option.value = data.filter;
+					option.innerText = data.filter;
+
+					selects[1].innerHTML = '';
+					selects[1].appendChild(option);
+				}
+
+				request(id, 'obs-studio', 'GetSources', ['', true]);
+			}
+		},
+		state: (id, elem, data, set_data, receive, receive_data, arg, callback) => {
 			arg = (arg || 'state');
 
 			const selector = `input[name="${arg}"]`;
@@ -481,13 +607,16 @@ document.addEventListener('DOMContentLoaded', () => {
 			body: bodys.text('Variable name', 'variable') + bodys.number('Time in seconds', 'seconds', 10, 1),
 			data: {},
 			register: [],
-			init: (id, elem, data, set_data) => {
-				data.variable = Date.now().toString();
-				set_data(data);
+			init: (id, elem, data, set_data, first) => {
+				if (!data.variable)
+				{
+					data.variable = Date.now().toString();
+					set_data(data);
+				}
 			},
-			update: (id, elem, data, set_data, receive) => {
-				functions.trim(id, elem, data, set_data, receive);
-				functions.number(id, elem, data, set_data, receive, 'seconds', 1);
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.trim(id, elem, data, set_data, receive, receive_data);
+				functions.number(id, elem, data, set_data, receive, receive_data, 'seconds', 1);
 			}
 		},
 		'http-request': {
@@ -504,9 +633,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 1,
 			body: bodys.text('IPv4', 'host') + bodys.number('Port', false, 3000, 1, 1) + bodys.text('Data'),
-			update: (id, elem, data, set_data, receive) => {
-				functions.trim(id, elem, data, set_data, receive);
-				functions.number(id, elem, data, set_data, receive, 'port', 1);
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.trim(id, elem, data, set_data, receive, receive_data);
+				functions.number(id, elem, data, set_data, receive, receive_data, 'port', 1);
 			}
 		},
 		'websocket-request': {
@@ -523,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 1,
 			body: '<p>Application</p><div class="is-browse launch-app"><input name="program" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div>',
-			update: (id, elem, data, set_data, receive) => {
+			update: (id, elem, data, set_data, receive, receive_data) => {
 				if (!elem.classList.contains('block-init'))
 				{
 					elem.classList.add('block-init');
@@ -545,15 +674,15 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 1,
 			body: bodys.number('Time in milliseconds', 'millis', 1000, 100),
-			update: (id, elem, data, set_data, receive) => functions.number(id, elem, data, set_data, receive, 'millis', 1)
+			update: (id, elem, data, set_data, receive, receive_data) => functions.number(id, elem, data, set_data, receive, receive_data, 'millis', 1)
 		},
 		'variable-setter': {
 			title: 'Variable Setter',
 			icon: 'variable-setter',
 			inputs: 1,
 			outputs: 1,
-			body: bodys.text('Variable name', 'variable') + bodys.text('Value', 'string') + bodys.number('Value', 'number', 0) + bodys.select('Value', 'boolean', ['false', 'true']) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number') + bodys.state_toggle('Scope', false, 'Global', 'Next', 'Local'), //  + bodys.type
-			update: (id, elem, data, set_data, receive) => {
+			body: bodys.text('Variable name', 'variable') + bodys.text('Value', 'string') + bodys.number('Value', 'number', 0) + bodys.select('Value', 'boolean', ['false', 'true']) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number') + bodys.state_toggle('Scope', false, 'Global', 'Next', 'Local'), // + bodys.type
+			update: (id, elem, data, set_data, receive, receive_data) => {
 				const change_state = state => {
 					const names = { on: 'string', toggle: 'number', off: 'boolean' };
 					state = names[state];
@@ -569,9 +698,9 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				};
 
-				functions.trim(id, elem, data, set_data, receive);
-				functions.state(id, elem, data, set_data, receive, 'type', change_state);
-				functions.state(id, elem, data, set_data, receive, 'scope');
+				functions.trim(id, elem, data, set_data, receive, receive_data);
+				functions.state(id, elem, data, set_data, receive, receive_data, 'type', change_state);
+				functions.state(id, elem, data, set_data, receive, receive_data, 'scope');
 			}
 		},
 		'variable-remove': {
@@ -581,6 +710,340 @@ document.addEventListener('DOMContentLoaded', () => {
 			outputs: 1,
 			body: bodys.text('Variable name', 'variable'),
 			update: functions.trim
+		},
+		'trigger-discord-webhook': {
+			type: 'discord',
+			title: 'Webhook',
+			tooltip: 'Discord - Webhook',
+			icon: 'webhook',
+			width: 500,
+			inputs: 1,
+			outputs: 0,
+			body: '<p>Webhook <i class="fas fa-solid fa-circle-info is-pulled-right"></i></p><input name="webhook" type="url" class="has-text-centered" /><div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL</p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div></div><p>Inline 1</p><div class="columns"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2</p><div class="columns"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.trim(id, elem, data, set_data, receive, receive_data);
+
+				if (!elem.classList.contains('block-init'))
+				{
+					elem.classList.add('block-init');
+
+					browse_fas(id, 'file', elem.querySelector('.discord-thumbnail button'), 'thumbnail');
+					browse_fas(id, 'file', elem.querySelector('.discord-big-image button'), 'big-image');
+
+					elem.querySelector('.fa-circle-info').addEventListener('click', () => {
+						display_image('guide.png', 'Discord Publication - Guide');
+					}, false);
+				}
+			}
+		},
+		/*'event-obs-studio-authentification': {
+			type: 'obs-studio',
+			title: 'Authentification',
+			tooltip: 'OBS Studio - Authentification',
+			icon: 'authentification',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(false, false, 'Success', 'Failure'),
+			update: functions.state
+		},*/
+		'event-obs-studio-connection': {
+			type: 'obs-studio',
+			title: 'Connection',
+			tooltip: 'OBS Studio - Connection',
+			icon: 'connection',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(false, false, 'Opened', 'Closed'),
+			update: functions.state
+		},
+		'event-obs-studio-exit': {
+			type: 'obs-studio',
+			title: 'Exit',
+			tooltip: 'OBS Studio - Exit',
+			icon: 'exit',
+			inputs: 0,
+			outputs: 1
+		},
+		'event-obs-studio-recording': {
+			type: 'obs-studio',
+			title: 'Recording',
+			tooltip: 'OBS Studio - Recording',
+			icon: 'recording',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(),
+			update: functions.state
+		},
+		'trigger-obs-studio-recording': {
+			type: 'obs-studio',
+			title: 'Recording',
+			tooltip: 'OBS Studio - Recording',
+			icon: 'recording',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state_toggle(false),
+			update: functions.state
+		},
+		'event-obs-studio-replay': {
+			type: 'obs-studio',
+			title: 'Replay',
+			tooltip: 'OBS Studio - Replay',
+			icon: 'replay',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(),
+			update: functions.state
+		},
+		'trigger-obs-studio-replay': {
+			type: 'obs-studio',
+			title: 'Replay',
+			tooltip: 'OBS Studio - Replay',
+			icon: 'replay',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state_toggle(false),
+			update: functions.state
+		},
+		'event-obs-studio-save-replay': {
+			type: 'obs-studio',
+			title: 'Save Replay',
+			tooltip: 'OBS Studio - Save Replay',
+			icon: 'replay',
+			inputs: 0,
+			outputs: 1
+		},
+		'trigger-obs-studio-save-replay': {
+			type: 'obs-studio',
+			title: 'Save Replay',
+			tooltip: 'OBS Studio - Save Replay',
+			icon: 'replay',
+			inputs: 1,
+			outputs: 0,
+		},
+		'event-obs-studio-streaming': {
+			type: 'obs-studio',
+			title: 'Streaming',
+			tooltip: 'OBS Studio - Streaming',
+			icon: 'streaming',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(),
+			update: functions.state
+		},
+		'trigger-obs-studio-streaming': {
+			type: 'obs-studio',
+			title: 'Streaming',
+			tooltip: 'OBS Studio - Streaming',
+			icon: 'streaming',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state_toggle(false),
+			update: functions.state
+		},
+		/*'event-obs-studio-studio-mode': {
+			type: 'obs-studio',
+			title: 'Studio Mode',
+			tooltip: 'OBS Studio - Studio Mode',
+			icon: 'studio',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(false, false, 'On', 'Off'),
+			update: functions.state
+		},
+		'trigger-obs-studio-studio-mode': {
+			type: 'obs-studio',
+			title: 'Studio Mode',
+			tooltip: 'OBS Studio - Studio Mode',
+			icon: 'studio',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
+			update: functions.state
+		},*/
+		'event-obs-studio-switch-scene': {
+			type: 'obs-studio',
+			title: 'Switch Scene',
+			tooltip: 'OBS Studio - Switch Scene',
+			icon: 'switch-scene',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.select('Scene name', 'scene'),
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+			update: functions.scene_source
+		},
+		'trigger-obs-studio-switch-scene': {
+			type: 'obs-studio',
+			title: 'Switch Scene',
+			tooltip: 'OBS Studio - Switch Scene',
+			icon: 'switch-scene',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.select('Scene name', 'scene'),
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+			update: functions.scene_source
+		},
+		'event-obs-studio-source-selected': {
+			type: 'obs-studio',
+			title: 'Source Selected',
+			tooltip: 'OBS Studio - Source Selected',
+			icon: 'selected',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source'),
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+			update: functions.scene_source
+		},
+		'event-obs-studio-lock-source': {
+			type: 'obs-studio',
+			title: 'Lock Source',
+			tooltip: 'OBS Studio - Lock Source',
+			icon: 'locked',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state(false, false, 'On', 'Off'),
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.scene_source(id, elem, data, set_data, receive, receive_data);
+				if (!receive)
+					functions.state(id, elem, data, set_data, receive, receive_data);
+			}
+		},
+		'trigger-obs-studio-lock-source': {
+			type: 'obs-studio',
+			title: 'Lock Source',
+			tooltip: 'OBS Studio - Lock Source',
+			icon: 'locked',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.scene_source(id, elem, data, set_data, receive, receive_data);
+				if (!receive)
+					functions.state(id, elem, data, set_data, receive, receive_data);
+			}
+		},
+		'event-obs-studio-toggle-source': {
+			type: 'obs-studio',
+			title: 'Toggle Source',
+			tooltip: 'OBS Studio - Toggle Source',
+			icon: 'toggle-source',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state(false, false, 'Show', 'Hide'),
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.scene_source(id, elem, data, set_data, receive, receive_data);
+				if (!receive)
+					functions.state(id, elem, data, set_data, receive, receive_data);
+			}
+		},
+		'trigger-obs-studio-toggle-source': {
+			type: 'obs-studio',
+			title: 'Toggle Source',
+			tooltip: 'OBS Studio - Toggle Source',
+			icon: 'toggle-source',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'Show', 'Hide'),
+			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.scene_source(id, elem, data, set_data, receive, receive_data);
+				if (!receive)
+					functions.state(id, elem, data, set_data, receive, receive_data);
+			}
+		},
+		'event-obs-studio-toggle-filter': {
+			type: 'obs-studio',
+			title: 'Toggle Filter',
+			tooltip: 'OBS Studio - Toggle Filter',
+			icon: 'toggle-source',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.select('Source name', 'source') + bodys.select('Filter name', 'filter') + bodys.state(false, false, 'Show', 'Hide'),
+			register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.source_filter(id, elem, data, set_data, receive, receive_data);
+				if (!receive)
+					functions.state(id, elem, data, set_data, receive, receive_data);
+			}
+		},
+		'trigger-obs-studio-toggle-filter': {
+			type: 'obs-studio',
+			title: 'Toggle Filter',
+			tooltip: 'OBS Studio - Toggle Filter',
+			icon: 'toggle-source',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.select('Source name', 'source') + bodys.select('Filter name', 'filter') + bodys.state_toggle(false, false, 'Show', 'Hide'),
+			register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.source_filter(id, elem, data, set_data, receive, receive_data);
+				if (!receive)
+					functions.state(id, elem, data, set_data, receive, receive_data);
+			}
+		},
+		'event-obs-studio-virtualcam': {
+			type: 'obs-studio',
+			title: 'Virtual Camera',
+			tooltip: 'OBS Studio - Virtual Camera',
+			icon: 'virtual-camera',
+			inputs: 0,
+			outputs: 1,
+			body: bodys.state(),
+			update: functions.state
+		},
+		'trigger-obs-studio-virtualcam': {
+			type: 'obs-studio',
+			title: 'Virtual Camera',
+			tooltip: 'OBS Studio - Virtual Camera',
+			icon: 'virtual-camera',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state_toggle(false),
+			update: functions.state
+		},
+		'trigger-spotify-play-pause': {
+			type: 'spotify',
+			title: 'Play/Pause',
+			tooltip: 'Spotify - Play/Pause',
+			icon: 'play',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.text('Track') + bodys.state_toggle(false, false, 'Play', 'Pause', 'Toggle'),
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.trim(id, elem, data, set_data, receive, receive_data);
+				functions.state(id, elem, data, set_data, receive, receive_data);
+			}
+		},
+		'trigger-spotify-prev-next': {
+			type: 'spotify',
+			title: 'Prev/Next',
+			tooltip: 'Spotify - Prev/Next',
+			icon: 'next',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state(false, false, 'Previous', 'Next'),
+			update: functions.state
+		},
+		'trigger-spotify-shuffle': {
+			type: 'spotify',
+			title: 'Shuffle',
+			tooltip: 'Spotify - Shuffle',
+			icon: 'shuffle',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
+			update: functions.state
+		},
+		'trigger-spotify-volume': {
+			type: 'spotify',
+			title: 'Volume',
+			tooltip: 'Spotify - Volume',
+			icon: 'shuffle',
+			inputs: 1,
+			outputs: 0,
+			body: bodys.number('Volume', false, 100, 1, 0, 100)
 		},
 		'event-twitch-action': {
 			type: 'twitch',
@@ -889,14 +1352,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			outputs: 1,
 			body: bodys.select('Reward'),
 			register: [['twitch', 'getAllRewards']],
-			update: (id, elem, data, set_data, receive) => {
+			update: (id, elem, data, set_data, receive, receive_data) => {
 				const select = elem.querySelector('select');
 				if (!select.children.length)
 				{
 					if (receive || global_datas.rewards)
 					{
-						if (Array.isArray(receive) && receive.length)
-							global_datas.rewards = receive;
+						if (Array.isArray(receive_data) && receive_data.length)
+							global_datas.rewards = receive_data;
 
 						const selected = (select.value || data.reward);
 
@@ -913,8 +1376,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 						select.value = selected;
 					}
-					else if (typeof(receive) === 'undefined')
-						request('twitch', 'getAllRewards', { type: 'Methods:convert', args: [ false, false ] });
+					else if (!receive)
+						request(id, 'twitch', 'getAllRewards', { type: 'Methods:convert', args: [ false, false ] });
 				}
 			}
 		},
@@ -1030,9 +1493,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			inputs: 1,
 			outputs: 0,
 			body: bodys.text('User') + bodys.number('Duration', false, 300, 10) + bodys.text('Reason'),
-			update: (id, elem, data, set_data, receive) => {
-				functions.trim(id, elem, data, set_data, receive);
-				functions.number(id, elem, data, set_data, receive, 'duration', 1);
+			update: (id, elem, data, set_data, receive, receive_data) => {
+				functions.trim(id, elem, data, set_data, receive, receive_data);
+				functions.number(id, elem, data, set_data, receive, receive_data, 'duration', 1);
 			}
 		},
 		'event-twitch-unhost': {
@@ -1091,132 +1554,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			body: bodys.text('User') + bodys.text('Message'),
 			update: functions.trim
 		},
-		'event-obs-studio-recording': {
-			type: 'obs-studio',
-			title: 'Recording',
-			tooltip: 'OBS Studio - Recording',
-			icon: 'recording',
-			inputs: 0,
-			outputs: 1,
-			body: bodys.state(),
-			update: functions.state
-		},
-		'trigger-obs-studio-recording': {
-			type: 'obs-studio',
-			title: 'Recording',
-			tooltip: 'OBS Studio - Recording',
-			icon: 'recording',
-			inputs: 1,
-			outputs: 0,
-			body: bodys.state_toggle(false),
-			update: functions.state
-		},
-		'event-obs-studio-replay': {
-			type: 'obs-studio',
-			title: 'Replay',
-			tooltip: 'OBS Studio - Replay',
-			icon: 'replay',
-			inputs: 0,
-			outputs: 1,
-			body: bodys.state(),
-			update: functions.state
-		},
-		'trigger-obs-studio-replay': {
-			type: 'obs-studio',
-			title: 'Replay',
-			tooltip: 'OBS Studio - Replay',
-			icon: 'replay',
-			inputs: 1,
-			outputs: 0,
-			body: bodys.state_toggle(false),
-			update: functions.state
-		},
-		'event-obs-studio-streaming': {
-			type: 'obs-studio',
-			title: 'Streaming',
-			tooltip: 'OBS Studio - Streaming',
-			icon: 'streaming',
-			inputs: 0,
-			outputs: 1,
-			body: bodys.state(),
-			update: functions.state
-		},
-		'trigger-obs-studio-streaming': {
-			type: 'obs-studio',
-			title: 'Streaming',
-			tooltip: 'OBS Studio - Streaming',
-			icon: 'streaming',
-			inputs: 1,
-			outputs: 0,
-			body: bodys.state_toggle(false),
-			update: functions.state
-		},
-		'event-obs-studio-switch-scene': {
-			type: 'obs-studio',
-			title: 'Switch Scene',
-			tooltip: 'OBS Studio - Switch Scene',
-			icon: 'switch-scene',
-			inputs: 0,
-			outputs: 1,
-			body: bodys.select('Scene name', 'scene'),
-			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-			update: functions.scene_source
-		},
-		'trigger-obs-studio-switch-scene': {
-			type: 'obs-studio',
-			title: 'Switch Scene',
-			tooltip: 'OBS Studio - Switch Scene',
-			icon: 'switch-scene',
-			inputs: 1,
-			outputs: 0,
-			body: bodys.select('Scene name', 'scene'),
-			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-			update: functions.scene_source
-		},
-		'trigger-discord-webhook': {
-			type: 'discord',
-			title: 'Webhook',
-			tooltip: 'Discord - Webhook',
-			icon: 'webhook',
-			width: 500,
-			inputs: 1,
-			outputs: 0,
-			body: '<p>Webhook <i class="fas fa-solid fa-circle-info is-pulled-right"></i></p><input name="webhook" type="url" class="has-text-centered" /><div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL</p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-solid fa-ellipsis"></i></button></div></div></div><p>Inline 1</p><div class="columns"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2</p><div class="columns"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
-			update: (id, elem, data, set_data, receive) => {
-				functions.trim(id, elem, data, set_data, receive);
-
-				if (!elem.classList.contains('block-init'))
-				{
-					elem.classList.add('block-init');
-
-					browse_fas(id, 'file', elem.querySelector('.discord-thumbnail button'), 'thumbnail');
-					browse_fas(id, 'file', elem.querySelector('.discord-big-image button'), 'big-image');
-
-					elem.querySelector('.fa-circle-info').addEventListener('click', () => {
-						display_image('guide.png', 'Discord Publication - Guide');
-					}, false);
-				}
-			}
-		},
-		'trigger-obs-studio-toggle-source': {
-			type: 'obs-studio',
-			title: 'Toggle Source',
-			tooltip: 'OBS Studio - Toggle Source',
-			icon: 'toggle-source',
-			inputs: 1,
-			outputs: 0,
-			body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'Show', 'Hide'),
-			register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-			update: (id, elem, data, set_data, receive) => {
-				functions.scene_source(id, elem, data, set_data, receive);
-				if (!receive)
-					functions.state(id, elem, data, set_data, receive);
-			}
-		},
 	};
 
 	window.drawflow_initializer = actions => {
-		if (typeof(actions[editor.module]) === 'object')
+		if (typeof actions[editor.module] === 'object')
 		{
 			const nodes = actions[editor.module].data;
 			for (const id in nodes)
@@ -1224,26 +1565,30 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	}
 
-	window.drawflow_receiver = (id, name, data) => {
+	window.drawflow_receiver = (source, id, name, data) => {
 		try
 		{
 			let node;
 			for (const i in editor.drawflow.drawflow[editor.module].data)
 			{
-				node = editor.getNodeFromId(i);
-				const block = blocks[node.data.type];
+				const	node	= editor.getNodeFromId(i);
 
-				if (Array.isArray(block.register))
+				if (node.data.id === source && typeof blocks[node.data.type] !== 'undefined')
 				{
-					let check = false;
-					for (const item of block.register)
-						check = (check || (item[0] == id && item[1] == name));
+					const	block	= blocks[node.data.type];
 
-					if (check)
+					if (Array.isArray(block.register))
 					{
-						const node_elem = drawflow.querySelector(`#node-${node.data.id}`);
-						if (block.update)
-							block.update(node.data.id, node_elem, node.data.data, _data => set_data(node.data.id, _data), data);
+						let check = false;
+						for (const item of block.register)
+							check = (check || (item[0] == id && item[1] == name));
+
+						if (check)
+						{
+							const node_elem = drawflow.querySelector(`#node-${node.data.id}`);
+							if (block.update)
+								block.update(node.data.id, node_elem, node.data.data, _data => set_data(node.data.id, _data), true, data);
+						}
 					}
 				}
 			}
@@ -1315,6 +1660,11 @@ document.addEventListener('DOMContentLoaded', () => {
 	document.addEventListener('touchmove', drag_event, false);
 	document.addEventListener('touchstart', drag_event, false);
 
+	document.addEventListener('mousedown', event => {
+		if (event.target.closest('[id^="node-"] input'))
+			event.stopPropagation();
+	}, true);
+
 	let double_click = 0;
 	let node_selected = -1;
 	const reset_selection = () => {
@@ -1332,7 +1682,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				duplicate	= (dbclick && node_selected >= 0);
 
 		double_click = Date.now();
-		console.log('dbclick:', dbclick);
 		if (duplicate)
 		{
 			const	node	= editor.drawflow.drawflow[editor.module].data[node_selected],

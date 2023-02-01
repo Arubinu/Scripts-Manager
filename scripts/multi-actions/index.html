@@ -345,13 +345,18 @@
 						</div>
 					</div>
 					<div class="mx-5 content">
-						<div blocks-type="twitch">
-							<h6 class="has-text-left mt-4">Twitch</h6>
+						<div blocks-type="obs-studio">
+							<h6 class="has-text-left">OBS Studio</h6>
 						</div>
 					</div>
 					<div class="mx-5 content">
-						<div blocks-type="obs-studio">
-							<h6 class="has-text-left">OBS Studio</h6>
+						<div blocks-type="spotify">
+							<h6 class="has-text-left">Spotify</h6>
+						</div>
+					</div>
+					<div class="mx-5 content">
+						<div blocks-type="twitch">
+							<h6 class="has-text-left mt-4">Twitch</h6>
 						</div>
 					</div>
 				</div>
@@ -588,7 +593,7 @@
 						}, 100);
 					}
 					else if (event.data.name == 'receive' && typeof(window.drawflow_receiver) === 'function')
-						window.drawflow_receiver(event.data.data.id, event.data.data.name, event.data.data.data);
+						window.drawflow_receiver(event.data.data.source, event.data.data.id, event.data.data.name, event.data.data.data);
 				}
 			}, false);
 		</script>

@@ -11,20 +11,20 @@ let		_logs = [],
 		_connected = false;
 
 const	functions = {
-	GetScenes: async withSources => {
+	GetScenes: async (withSources, withFilters) => {
 		let scenes = [];
 		for (let scene of (await obs.call('GetSceneList')).scenes)
 		{
-			if (withSources)
-				scene.sources = await functions.GetSources(scene.sceneName);
+			if (scene.sceneName.length && withSources)
+				scene.sources = await functions.GetSources(scene.sceneName, withFilters);
 
 			scenes.push(scene);
 		}
 
 		return scenes;
 	},
-	GetScene: async (sceneName, withSources) => {
-		for (const scene of await functions.GetScenes(withSources))
+	GetScene: async (sceneName, withSources, withFilters) => {
+		for (const scene of await functions.GetScenes(withSources, withFilters))
 		{
 			if (sceneName.toLowerCase() == scene.sceneName.toLowerCase())
 				return scene;
@@ -32,29 +32,104 @@ const	functions = {
 
 		return false;
 	},
-	GetSources: async sceneName => {
-		return (await obs.call('GetSceneItemList', { sceneName })).sceneItems;
+	GetSources: async (sceneName, withFilters) => {
+		if (typeof sceneName !== 'string' || !sceneName.length)
+		{
+			let checked = [];
+			let sources = [];
+			for (const scene of await functions.GetScenes(true, withFilters))
+			{
+				for (const source of scene.sources)
+				{
+					if (source.sourceName && checked.indexOf(source.sourceName) < 0)
+					{
+						checked.push(source.sourceName);
+						sources.push(source);
+					}
+				}
+			}
+
+			return sources;
+		}
+
+		let sources = (await obs.call('GetSceneItemList', { sceneName })).sceneItems;
+		if (withFilters)
+		{
+			for (let source of sources)
+			{
+				if (source.sourceName.length)
+					source.filters = await functions.GetFilters(source.sourceName);
+			}
+		}
+
+		return sources;
 	},
-	GetSource: async (source_name, sceneName) => {
+	GetSource: async (sourceName, sceneName) => {
 		for (const source of await functions.GetSources(sceneName))
 		{
-			if (source_name.toLowerCase() == source.sourceName.toLowerCase())
+			if (sourceName.toLowerCase() == source.sourceName.toLowerCase())
 				return source;
 		}
 
 		return false;
 	},
+	GetFilters: async sourceName => {
+		if (typeof sourceName !== 'string' || !sourceName.length)
+		{
+			let checked = [];
+			let filters = [];
+			for (const scene of await functions.GetScenes(true))
+			{
+				for (const source of scene.sources)
+				{
+					if (source.sourceName && checked.indexOf(source.sourceName) < 0)
+					{
+						checked.push(source.sourceName);
+						filters = filters.concat(await functions.GetFilters(source.sourceName));
+					}
+				}
+			}
+
+			return filters;
+		}
+
+		return (await obs.call('GetSourceFilterList', { sourceName })).filters;
+	},
+	GetFilter: async (filterName, sourceName) => {
+		let filter = await obs.call('GetSourceFilter', { sourceName, filterName });
+		filter.filterName = filterName;
+
+		return filter;
+	},
 	SetCurrentScene: async sceneName => {
 		return await obs.call('SetCurrentProgramScene', { sceneName });
 	},
-	ToggleSource: async (source, sceneName, sceneItemEnabled) => {
-		if (typeof source === 'string' || typeof source === 'object')
-			source = await functions.GetSource(((typeof source === 'string') ? source : source.sourceName), sceneName);
+	LockSource: async (source, sceneName, sceneItemLocked) => {
+		source = await functions.GetSource(((typeof source === 'string') ? source : source.sourceName), sceneName);
+		if (typeof sceneItemLocked === 'undefined')
+			sceneItemLocked = !source.sceneItemLocked;
 
+		return await obs.call('SetSceneItemLocked', { sceneName, sceneItemId: source.sceneItemId, sceneItemLocked });
+	},
+	ToggleSource: async (source, sceneName, sceneItemEnabled) => {
+		source = await functions.GetSource(((typeof source === 'string') ? source : source.sourceName), sceneName);
 		if (typeof sceneItemEnabled === 'undefined')
 			sceneItemEnabled = !source.sceneItemEnabled;
 
 		return await obs.call('SetSceneItemEnabled', { sceneName, sceneItemId: source.sceneItemId, sceneItemEnabled });
+	},
+	ToggleFilter: async (filter, sourceName, filterEnabled) => {
+		filter = await functions.GetFilter(((typeof filter === 'string') ? filter : filter.filterName), sourceName);
+		if (typeof filterEnabled === 'undefined')
+			filterEnabled = !filter.filterEnabled;
+
+		return await obs.call('SetSourceFilterEnabled', { sourceName, filterName: filter.filterName, filterEnabled });
+	},
+	ToggleStudioMode: async studioModeEnabled => {
+		if (typeof studioModeEnabled === 'undefined')
+			studioModeEnabled = !(await obs.call('GetStudioModeEnabled')).studioModeEnabled;
+
+		return await obs.call('SetStudioModeEnabled', { studioModeEnabled });
 	}
 }
 
@@ -273,21 +348,18 @@ module.exports = {
 
 		let check = false;
 		if ((name == 'disconnect' || name == 'reconnect') && (check = true))
-			disconnect();
+			return disconnect();
 		if ((name == 'connect' || name == 'reconnect') && (check = true))
-			connect();
+			return connect();
 
-		if (!check)
+		if (typeof functions[name] === 'function')
 		{
-			if (typeof functions[name] === 'function')
-			{
-				if (Array.isArray(data) && data.length)
-					return await functions[name](...data);
-				else
-					return await functions[name]();
-			}
+			if (Array.isArray(data) && data.length)
+				return await functions[name](...data);
 			else
-				return await obs.call(name, data);
+				return await functions[name]();
 		}
+		else
+			return await obs.call(name, data);
 	}
 }

@@ -45,6 +45,8 @@ const	functions = {
 
 				check = (!msg_compare || (data.contains && msg_receive.indexOf(msg_compare) >= 0) || (!data.contains && msg_compare == msg_receive));
 			}
+			else if (name.toLowerCase() === 'command')
+				check = !force_receive.indexOf(data[arg]);
 
 			if (check)
 			{
@@ -60,7 +62,26 @@ const	functions = {
 				check = (check || (data.viewer && viewer));
 
 				if (check)
+				{
+					set_variable('username', receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+					set_variable('displayname', receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+					if (name.toLowerCase() === 'command')
+					{
+						const	command		= data[arg],
+								arguments	= force_receive.substr(command.length).trim(),
+								split		= arguments.split(' ');
+
+						set_variable('command', command, VARIABLE_TYPE.NEXT, module_name, next_data);
+						set_variable('arguments', arguments, VARIABLE_TYPE.NEXT, module_name, next_data);
+						for (let i = 0; i < split.length; ++i)
+							set_variable(`argument[${i}]`, split[i], VARIABLE_TYPE.NEXT, module_name, next_data);
+					}
+					else if (name.toLowerCase() === 'message')
+						set_variable('message', force_receive.toString(), VARIABLE_TYPE.NEXT, module_name, next_data);
+
 					next();
+				}
 			}
 		}
 	}
@@ -276,6 +297,203 @@ const	actions = {
 				next();
 		}
 	},
+	'event-obs-studio-authentification': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && ((receive.name === 'AuthenticationSuccess' && data.state) || (receive.name === 'AuthenticationFailure' && !data.state)))
+			next();
+	},
+	'event-obs-studio-connection': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && ((receive.name === 'ConnectionOpened' && data.state) || (receive.name === 'ConnectionClosed' && !data.state)))
+			next();
+	},
+	'event-obs-studio-exit': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'ExitStarted')
+			next();
+	},
+	'event-obs-studio-recording': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'RecordStateChanged')
+		{
+			let state = null;
+			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
+			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
+			if (data.state === state)
+				next();
+		}
+	},
+	'trigger-obs-studio-recording': (module_name, receive, data, next_data) => {
+		let state = 'ToggleRecord';
+		state = ((data.state === 'on') ? 'StartRecord' : state);
+		state = ((data.state === 'off') ? 'StopRecord' : state);
+
+		_sender('obs-studio', state);
+	},
+	'event-obs-studio-replay': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'ReplayBufferStateChanged')
+		{
+			let state = null;
+			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
+			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
+			if (data.state === state)
+				next();
+		}
+	},
+	'trigger-obs-studio-replay': (module_name, receive, data, next_data) => {
+		let state = 'ToggleReplayBuffer';
+		state = ((data.state === 'on') ? 'StartReplayBuffer' : state);
+		state = ((data.state === 'off') ? 'StopReplayBuffer' : state);
+
+		_sender('obs-studio', state);
+	},
+	'event-obs-studio-save-replay': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'ReplayBufferSaved')
+			next();
+	},
+	'trigger-obs-studio-save-replay': (module_name, receive, data, next_data) => {
+		_sender('obs-studio', 'SaveReplayBuffer');
+	},
+	'event-obs-studio-streaming': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'StreamStateChanged')
+		{
+			let state = null;
+			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
+			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
+
+			if (data.state === state)
+				next();
+		}
+	},
+	'trigger-obs-studio-streaming': (module_name, receive, data, next_data) => {
+		let state = 'ToggleStream';
+		state = ((data.state === 'on') ? 'StartStream' : state);
+		state = ((data.state === 'off') ? 'StopStream' : state);
+
+		_sender('obs-studio', state);
+	},
+	'event-obs-studio-studio-mode': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'StudioModeStateChanged' && data.state === receive.data.studioModeEnabled)
+			next();
+	},
+	'trigger-obs-studio-studio-mode': (module_name, receive, data, next_data) => {
+		let state = undefined;
+		state = ((data.state === 'on') ? true : state);
+		state = ((data.state === 'off') ? false : state);
+
+		_sender('obs-studio', 'ToggleStudioMode', [state]);
+	},
+	'event-obs-studio-switch-scene': (module_name, receive, data, next_data, next) => {
+		if (data.scene && receive.id === 'obs-studio' && receive.name === 'SwitchScenes' && receive.data.sceneName.toLowerCase() == data.scene.toLowerCase())
+			next();
+	},
+	'trigger-obs-studio-switch-scene': (module_name, receive, data, next_data) => {
+		if (data.scene)
+			_sender('obs-studio', 'SetCurrentScene', [data.scene]);
+	},
+	'event-obs-studio-source-selected': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'SceneItemSelected')
+		{
+			_sender('obs-studio', 'GetSceneItemId', { sceneName: data.scene, sourceName: data.source }).then(_data => {
+				if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId)
+					next();
+			}).catch(error => {});
+		}
+	},
+	'event-obs-studio-lock-source': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'SceneItemLockStateChanged')
+		{
+			_sender('obs-studio', 'GetSceneItemId', { sceneName: data.scene, sourceName: data.source }).then(_data => {
+				if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId && data.state === receive.data.sceneItemLocked)
+					next();
+			}).catch(error => {});
+		}
+	},
+	'trigger-obs-studio-lock-source': (module_name, receive, data, next_data) => {
+		if (data.scene && data.source)
+		{
+			let state = undefined;
+			state = ((data.state === 'on') ? true : state);
+			state = ((data.state === 'off') ? false : state);
+
+			_sender('obs-studio', 'LockSource', [data.source, data.scene, state]);
+		}
+	},
+	'event-obs-studio-toggle-source': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'SceneItemEnableStateChanged')
+		{
+			_sender('obs-studio', 'GetSceneItemId', { sceneName: data.scene, sourceName: data.source }).then(_data => {
+				if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId && data.state === receive.data.sceneItemEnabled)
+					next();
+			}).catch(error => {});
+		}
+	},
+	'trigger-obs-studio-toggle-source': (module_name, receive, data, next_data) => {
+		if (data.scene && data.source)
+		{
+			let state = undefined;
+			state = ((data.state === 'on') ? true : state);
+			state = ((data.state === 'off') ? false : state);
+
+			_sender('obs-studio', 'ToggleSource', [data.source, data.scene, state]);
+		}
+	},
+	'event-obs-studio-toggle-filter': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'SourceFilterEnableStateChanged')
+		{
+			if (data.source === receive.data.sourceName && data.filter === receive.data.filterName && data.state === receive.data.filterEnabled)
+				next();
+		}
+	},
+	'trigger-obs-studio-toggle-filter': (module_name, receive, data, next_data) => {
+		if (data.source && data.filter)
+		{
+			let state = undefined;
+			state = ((data.state === 'on') ? true : state);
+			state = ((data.state === 'off') ? false : state);
+
+			_sender('obs-studio', 'ToggleFilter', [data.filter, data.source, state]);
+		}
+	},
+	'event-obs-studio-virtualcam': (module_name, receive, data, next_data, next) => {
+		if (receive.id === 'obs-studio' && receive.name === 'VirtualcamStateChanged')
+		{
+			let state = null;
+			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
+			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
+
+			if (data.state === state)
+				next();
+		}
+	},
+	'trigger-obs-studio-virtualcam': (module_name, receive, data, next_data) => {
+		let state = 'ToggleVirtualCam';
+		state = ((data.state === 'on') ? 'StartVirtualCam' : state);
+		state = ((data.state === 'off') ? 'StopVirtualCam' : state);
+
+		_sender('obs-studio', state);
+	},
+	'trigger-spotify-play-pause': (module_name, receive, data, next_data, next) => {
+		if (data.state === 'on')
+			instance.setShuffle(true).then(() => {});
+		else if (data.state === 'off')
+			instance.setShuffle(false).then(() => {});
+		else
+			instance.getMyCurrentPlaybackState().then(data => { instance[(data.body && data.body.is_playing) ? 'pause' : 'play']().then(() => {}); });
+	},
+	'trigger-spotify-prev-next': (module_name, receive, data, next_data, next) => {
+		if (data.state)
+			instance.skipToPrevious().then(() => {});
+		else
+			instance.skipToNext().then(() => {});
+	},
+	'trigger-spotify-shuffle': (module_name, receive, data, next_data, next) => {
+		if (data.state === 'on')
+			instance.setShuffle(true).then(() => {});
+		else if (data.state === 'off')
+			instance.setShuffle(false).then(() => {});
+		else
+			instance.setShuffle(true).then(() => {}, err => { instance.setShuffle(false).then(() => {}); });
+	},
+	'trigger-spotify-volume': (module_name, receive, data, next_data, next) => {
+		instance.setVolume(data.volume).then(() => {});
+	},
 	'event-twitch-action': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
 	'trigger-twitch-action': (module_name, receive, data, next_data) => {
 		if (data.message)
@@ -341,24 +559,24 @@ const	actions = {
 	'event-twitch-emote-only': (module_name, receive, data, next_data, next) => {
 		if (receive.id === 'twitch' && receive.name === 'EmoteOnly')
 		{
-			if (data.state == 'toggle' || receive.data.emote_only.enabled == (data.state == 'on'))
+			if (data.state == 'toggle' || receive.data.emote_only.enabled == (data.state === 'on'))
 				next();
 		}
 	},
 	'trigger-twitch-emote-only': (module_name, receive, data, next_data) => {
-		const method = ((data.state == 'on') ? 'enableEmoteOnly' : 'disableEmoteOnly');
+		const method = ((data.state === 'on') ? 'enableEmoteOnly' : 'disableEmoteOnly');
 		_sender('twitch', method, { type: 'Chat', args: [] });
 	},
 	'event-twitch-followers-only': (module_name, receive, data, next_data, next) => {
 		if (receive.id === 'twitch' && receive.name === 'FollowersOnly')
 		{
-			if (data.state == 'toggle' || receive.data.follower_only.enabled == (data.state == 'on'))
+			if (data.state == 'toggle' || receive.data.follower_only.enabled == (data.state === 'on'))
 				next();
 		}
 	},
 	'trigger-twitch-followers-only': (module_name, receive, data, next_data) => {
 		const min = 0; // The time (in minutes) a user needs to be following before being able to send messages.
-		const method = ((data.state == 'on') ? 'enableFollowersOnly' : 'disableFollowersOnly');
+		const method = ((data.state === 'on') ? 'enableFollowersOnly' : 'disableFollowersOnly');
 		_sender('twitch', method, { type: 'Chat', args: [min] });
 	},
 	'event-twitch-gift-paid-upgrade': (module_name, receive, data, next_data, next) => {
@@ -385,7 +603,17 @@ const	actions = {
 	'event-twitch-message': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
 	'trigger-twitch-message': (module_name, receive, data, next_data) => {
 		if (data.message)
-			_sender('twitch', 'Say', { type: 'Chat', args: [data.message] });
+		{
+			let message = data.message;
+			if (typeof _variables.locals[module_name] === 'object')
+			{
+				for (const name in _variables.locals[module_name])
+					message = message.replaceAll(`\$\{${name}\}`, _variables.locals[module_name][name].toString());
+			}
+
+			if (message.length)
+				_sender('twitch', 'Say', { type: 'Chat', args: [message] });
+		}
 	},
 	'event-twitch-message-remove': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
 	'event-twitch-prime-community-gift': (module_name, receive, data, next_data, next) => {
@@ -427,13 +655,13 @@ const	actions = {
 	'event-twitch-slow': (module_name, receive, data, next_data, next) => {
 		if (receive.id === 'twitch' && receive.name === 'Slow')
 		{
-			if (data.state == 'toggle' || receive.data.slow.enabled == (data.state == 'on'))
+			if (data.state == 'toggle' || receive.data.slow.enabled == (data.state === 'on'))
 				next();
 		}
 	},
 	'trigger-twitch-slow': (module_name, receive, data, next_data) => {
 		const min = 0; // The time (in seconds) a user needs to wait between messages.
-		const method = ((data.state == 'on') ? 'enableSlow' : 'disableSlow');
+		const method = ((data.state === 'on') ? 'enableSlow' : 'disableSlow');
 		_sender('twitch', method, { type: 'Chat', args: [min] });
 	},
 	'event-twitch-standard-pay-forward': (module_name, receive, data, next_data, next) => {
@@ -455,11 +683,11 @@ const	actions = {
 	'event-twitch-subs-only': (module_name, receive, data, next_data, next) => {
 		if (receive.id === 'twitch' && receive.name === 'SubsOnly')
 		{
-			if (data.state == 'toggle' || receive.data.subscribe_only.enabled == (data.state == 'on'))
+			if (data.state == 'toggle' || receive.data.subscribe_only.enabled == (data.state === 'on'))
 				next();
 		}},
 	'trigger-twitch-subs-only': (module_name, receive, data, next_data) => {
-		const method = ((data.state == 'on') ? 'enableSubsOnly' : 'disableSubsOnly');
+		const method = ((data.state === 'on') ? 'enableSubsOnly' : 'disableSubsOnly');
 		_sender('twitch', method, { type: 'Chat', args: [] });
 	},
 	'event-twitch-timeout': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Timeout', 'user', true, () => receive.data.timeout.user),
@@ -477,12 +705,12 @@ const	actions = {
 	'event-twitch-unique-message': (module_name, receive, data, next_data, next) => {
 		if (receive.id === 'twitch' && (receive.name === 'R9k' || receive.name === 'UniqueChat'))
 		{
-			if (data.state == 'toggle' || receive.data.r9k.enabled == (data.state == 'on'))
+			if (data.state == 'toggle' || receive.data.r9k.enabled == (data.state === 'on'))
 				next();
 		}
 	},
 	'trigger-twitch-unique-message': (module_name, receive, data, next_data) => {
-		const method = ((data.state == 'on') ? 'enableUniqueChat' : 'disableUniqueChat');
+		const method = ((data.state === 'on') ? 'enableUniqueChat' : 'disableUniqueChat');
 		_sender('twitch', method, { type: 'Chat', args: [] });
 	},
 	'event-twitch-whisper': (module_name, receive, data, next_data, next) => { // todo: to modify functions.twitch_compare
@@ -498,76 +726,6 @@ const	actions = {
 		if (data.user && data.message)
 			_sender('twitch', 'Whisper', { type: 'Chat', args: [data.user, data.message] });
 	},
-	'event-obs-studio-recording': (module_name, receive, data, next_data, next) => {
-		if (receive.id === 'obs-studio' && receive.name === 'RecordStateChanged')
-		{
-			let state = null;
-			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
-			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
-			if (data.state === state)
-				next();
-		}
-	},
-	'trigger-obs-studio-recording': (module_name, receive, data, next_data) => {
-		let state = 'StartStopRecording';
-		state = ((data.state == 'on') ? 'StartRecord' : state);
-		state = ((data.state == 'off') ? 'StopRecord' : state);
-
-		_sender('obs-studio', state);
-	},
-	'event-obs-studio-replay': (module_name, receive, data, next_data, next) => {
-		if (receive.id === 'obs-studio' && receive.name === 'ReplayBufferStateChanged')
-		{
-			let state = null;
-			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
-			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
-			if (data.state === state)
-				next();
-		}
-	},
-	'trigger-obs-studio-replay': (module_name, receive, data, next_data) => {
-		let state = 'StartStopReplayBuffer';
-		state = ((data.state == 'on') ? 'StartReplayBuffer' : state);
-		state = ((data.state == 'off') ? 'StopReplayBuffer' : state);
-
-		_sender('obs-studio', state);
-	},
-	'event-obs-studio-streaming': (module_name, receive, data, next_data, next) => {
-		if (receive.id === 'obs-studio' && receive.name === 'StreamStateChanged')
-		{
-			let state = null;
-			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
-			state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
-
-			if (data.state === state)
-				next();
-		}
-	},
-	'trigger-obs-studio-streaming': (module_name, receive, data, next_data) => {
-		let state = 'StartStopStreaming';
-		state = ((data.state == 'on') ? 'StartStream' : state);
-		state = ((data.state == 'off') ? 'StopStream' : state);
-
-		_sender('obs-studio', state);
-	},
-	'event-obs-studio-switch-scene': (module_name, receive, data, next_data, next) => {
-		if (data.scene && receive.id === 'obs-studio' && receive.name === 'SwitchScenes' && receive.data.sceneName.toLowerCase() == data.scene.toLowerCase())
-			next();
-	},
-	'trigger-obs-studio-switch-scene': (module_name, receive, data, next_data) => {
-		if (data.scene)
-			_sender('obs-studio', 'SetCurrentScene', [data.scene]);
-	},
-	'trigger-obs-studio-toggle-source': (module_name, receive, data, next_data) => {
-		if (data.scene && data.source)
-		{
-			let state = undefined;
-			state = ((data.state == 'on') ? true : state);
-			state = ((data.state == 'off') ? false : state);
-
-			_sender('obs-studio', 'ToggleSource', [data.source, data.scene, state]);
-		}
-	}
 };
 
 function scope(data)
@@ -609,38 +767,6 @@ function set_variable(name, value, variable_type, module_name, next_data)
 		next_data[name] = value;
 	else
 		_variables.globals[name] = value;
-}
-
-async function preaction(action_data, module_name, receive, data, next_data, next)
-{
-	/*let action_name, getters_data, getters_storage = action_data;
-
-	for (const getter of Object.keys(getters))
-	{
-		for (const data_key of Object.keys(data))
-		{
-			let data_value = data[data_key];
-
-			if (data_value.indexOf(getter))
-			{
-				await (async (getters_storage, _) => {
-					if (getter.length >= 3)
-					{
-						for (const prename of getter[3])
-						{
-							const pregetter = pregetters[prename];
-							getters_storage[`${prename}:${pregetter[1]}`] = await pregetter[0](...arguments);
-						}
-					}
-				})(getters_storage);
-
-				getter[2];
-				data[data_key] = data_value;
-			}
-		}
-	}*/
-
-	actions[action_name](module_name, receive, data, next_data, next);
 }
 
 module.exports = {
@@ -685,8 +811,8 @@ module.exports = {
 				}
 				else if (data.request)
 				{
-					_sender(...data.request).then(_data => {
-						_sender('message', 'receive', { id: data.request[0], name: data.request[1], data: _data });
+					_sender(...data.request.slice(1)).then(_data => {
+						_sender('message', 'receive', { source: data.request[0], id: data.request[1], name: data.request[2], data: _data });
 					}).catch(error => {});
 				}
 			}
@@ -697,8 +823,6 @@ module.exports = {
 		if (_config.default.enabled)
 		{
 			const receive = { id, name, data };
-			_sender('message', 'receive', receive);
-
 			for (const module_name in _config.actions)
 			{
 				const action = _config.actions[module_name];

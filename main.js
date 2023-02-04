@@ -31,14 +31,13 @@ function create_server()
 		res.writeHead(200);
 		res.end('success');
 	});
-
 	server.on('error', err => console.error(err));
 	server.listen(port, () => console.log('Https running on port', port));
 
 	wss = new ws.Server({server});
 	wss.on('connection', client => {
 		client.on('message', async data => {
-			if (typeof(data) === 'object')
+			if (typeof data === 'object')
 				data = String.fromCharCode.apply(null, new Uint16Array(data));
 
 			try
@@ -78,9 +77,9 @@ function create_window()
 				let id = 'manager';
 
 				let obj = false;
-				if (data.type == 'addons' && typeof(addons[data.id]) === 'object')
+				if (data.type == 'addons' && typeof addons[data.id] === 'object')
 					obj = addons[data.id];
-				else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object')
+				else if (data.type == 'scripts' && typeof scripts[data.id] === 'object')
 					obj = scripts[data.id];
 
 				if (data.name == 'enabled')
@@ -100,7 +99,7 @@ function create_window()
 				}
 				else if (data.name == 'bluetooth:connect')
 				{
-					if (typeof(bluetooth_callback) === 'function')
+					if (typeof bluetooth_callback === 'function')
 						bluetooth_callback(data.data);
 					return;
 				}
@@ -111,8 +110,10 @@ function create_window()
 				}
 				else if (data.name == 'browse:file' || data.name == 'browse:files')
 				{
-					dialog.showOpenDialog({
-						properties: [(data.name == 'browse:files') ? 'openFiles' : 'openFile']
+					dialog[data.data.name ? 'showSaveDialog' : 'showOpenDialog']({
+						properties: [(data.name == 'browse:files') ? 'openFiles' : 'openFile'],
+						defaultPath: data.data.name ? `${data.data.name}.${data.data.ext}` : undefined,
+						filters: [{ name: 'all', extensions: [data.data.ext ? data.data.ext : '*'] }],
 					}).then(result => {
 						if (!result.canceled)
 						{
@@ -151,30 +152,30 @@ function create_window()
 						win.webContents.send('manager', data);
 					}
 				}
-				else if (obj && typeof(obj.include.receiver) === 'function')
+				else if (obj && typeof obj.include.receiver === 'function')
 					obj.include.receiver(id, data.name, data.data);
 			});
 
 			ipcMain.handle('message', (event, data) => {
 				let obj = false;
-				if (data.type == 'addons' && typeof(addons[data.id]) === 'object')
+				if (data.type == 'addons' && typeof addons[data.id] === 'object')
 					obj = addons[data.id];
-				else if (data.type == 'scripts' && typeof(scripts[data.id]) === 'object')
+				else if (data.type == 'scripts' && typeof scripts[data.id] === 'object')
 					obj = scripts[data.id];
 
 				if (data.type == 'general')
 					;
-				else if (obj && typeof(obj.include.receiver) === 'function')
+				else if (obj && typeof obj.include.receiver === 'function')
 					obj.include.receiver('message', data.name, data.data);
 			});
 
 			win.webContents.on('select-bluetooth-device', (event, device_list, callback) => {
 				event.preventDefault(); // important, otherwise first available device will be selected
 
-				if (typeof(bluetooth_callback) !== 'function')
+				if (typeof bluetooth_callback !== 'function')
 				{
 					const timeout = setTimeout(() => {
-						if (typeof(bluetooth_callback) === 'function')
+						if (typeof bluetooth_callback === 'function')
 							bluetooth_callback('');
 					}, 30000);
 
@@ -185,7 +186,7 @@ function create_window()
 						all_methods('bluetooth', { devices: false });
 
 						clearTimeout(timeout);
-						callback((typeof(device) === 'object' && typeof(device.deviceId) === 'string') ? device.deviceId : device);
+						callback((typeof device === 'object' && typeof device.deviceId === 'string') ? device.deviceId : device);
 					};
 				}
 
@@ -240,7 +241,7 @@ function load_manager_config()
 	try
 	{
 		const tmp = store.get('manager');
-		if (typeof(tmp) === 'object')
+		if (typeof tmp === 'object')
 			manager = tmp;
 	}
 	catch (e) {}
@@ -268,13 +269,13 @@ async function save_config(type, id, data, override)
 	else
 		return false;
 
-	if (typeof(data) === 'object')
+	if (typeof data === 'object')
 	{
 		for (const section in data)
 		{
-			if (['default', 'menu'].indexOf(section) < 0 && typeof(data[section]) === 'object')
+			if (['default', 'menu'].indexOf(section) < 0 && typeof data[section] === 'object')
 			{
-				if (typeof(obj[section]) !== 'object')
+				if (typeof obj[section] !== 'object')
 					obj[section] = {};
 
 				if (!override)
@@ -291,9 +292,9 @@ async function save_config(type, id, data, override)
 	let config_path = path.join(__dirname, type, id);
 	if (!fs.existsSync(config_path))
 	{
-		if (typeof(manager) === 'object' && typeof(manager.default) === 'object')
+		if (typeof manager === 'object' && typeof manager.default === 'object')
 		{
-			if (typeof(manager.default.all) === 'string')
+			if (typeof manager.default.all === 'string')
 				config_path = path.join(manager.default.all, type, id);
 		}
 	}
@@ -320,7 +321,7 @@ function load_addons(dir, is_global)
 			};
 
 			files.forEach(file => {
-				if (typeof(addons[file]) !== 'undefined')
+				if (typeof addons[file] !== 'undefined')
 					return;
 
 				let addon_path = path.join(dir, file);
@@ -331,7 +332,7 @@ function load_addons(dir, is_global)
 					try
 					{
 						let config = JSON.parse(JSON.stringify(inifile.read.sync(config_file)));
-						if (typeof(config.default.name) === 'string')
+						if (typeof config.default.name === 'string')
 						{
 							if (is_global)
 							{
@@ -341,9 +342,9 @@ function load_addons(dir, is_global)
 									for (const key in tmp)
 									{
 										if (key == 'general')
-											config[key].enabled = ((typeof(tmp[key].enabled) === 'boolean') ? tmp[key].enabled : false);
+											config[key].enabled = (typeof tmp[key].enabled === 'boolean') ? tmp[key].enabled : false;
 										else
-											config[key] = Object.assign(((typeof(config[key]) === 'object') ? config[key] : {}), tmp[key]);
+											config[key] = Object.assign(((typeof config[key] === 'object') ? config[key] : {}), tmp[key]);
 									}
 								}
 								catch (e) {}
@@ -391,7 +392,7 @@ function load_scripts(dir, is_global)
 			};
 
 			files.forEach(file => {
-				if (typeof(scripts[file]) !== 'undefined')
+				if (typeof scripts[file] !== 'undefined')
 					return;
 
 				let script_path = path.join(dir, file);
@@ -402,10 +403,10 @@ function load_scripts(dir, is_global)
 					try
 					{
 						let config = JSON.parse(JSON.stringify(inifile.read.sync(config_file)));
-						if (typeof(config.default.name) === 'string' && typeof(config.default.version) === 'string' && typeof(config.default.author) === 'string')
+						if (typeof config.default.name === 'string' && typeof config.default.version === 'string' && typeof config.default.author === 'string')
 						{
 							menus[file] = [];
-							if (typeof(config.menu) === 'object')
+							if (typeof config.menu === 'object')
 							{
 								for (let id in config.menu)
 								{
@@ -421,10 +422,10 @@ function load_scripts(dir, is_global)
 									const tmp = store.get(`scripts-${file}`);
 									for (const key in tmp)
 									{
-										if (key == 'general')
-											config[key].enabled = ((typeof(tmp[key].enabled) === 'boolean') ? tmp[key].enabled : false);
+										if (key === 'default')
+											config[key].enabled = (typeof tmp[key].enabled === 'boolean') ? tmp[key].enabled : false;
 										else
-											config[key] = Object.assign(((typeof(config[key]) === 'object') ? config[key] : {}), tmp[key]);
+											config[key] = Object.assign(((typeof config[key] === 'object') ? config[key] : {}), tmp[key]);
 									}
 								}
 								catch (e) {}
@@ -464,7 +465,7 @@ async function all_methods(type, data)
 {
 	for (const id in addons)
 	{
-		if (typeof(addons[id].config.default.methods) === 'string' && addons[id].config.default.methods.split(',').indexOf(type) >= 0)
+		if (typeof addons[id].config.default.methods === 'string' && addons[id].config.default.methods.split(',').indexOf(type) >= 0)
 		{
 			if (await (addons[id].include.receiver('methods', type, data)))
 				return true;
@@ -473,7 +474,7 @@ async function all_methods(type, data)
 
 	for (const id in scripts)
 	{
-		if (typeof(scripts[id].config.default.methods) === 'string' && scripts[id].config.default.methods.split(',').indexOf(type) >= 0)
+		if (typeof scripts[id].config.default.methods === 'string' && scripts[id].config.default.methods.split(',').indexOf(type) >= 0)
 		{
 			if (await (scripts[id].include.receiver('methods', type, data)))
 				return true;
@@ -485,11 +486,11 @@ async function all_methods(type, data)
 
 async function all_sender(type, id, target, name, data)
 {
-	if (target == 'manager')
+	if (target === 'manager')
 	{
 		const names = name.split(':');
 
-		if (names[0] == 'websocket')
+		if (names[0] === 'websocket')
 		{
 			data = JSON.stringify(data);
 			for (const client of wss.clients)
@@ -497,28 +498,28 @@ async function all_sender(type, id, target, name, data)
 
 			return;
 		}
-		else if (names[0] == 'bluetooth' && names.length > 1)
+		else if (names[0] === 'bluetooth' && names.length > 1)
 		{
-			if (names[1] == 'scan' || names[1] == 'disconnect')
+			if (names[1] === 'scan' || names[1] === 'disconnect')
 				win.webContents.send('manager', { type, id, name, data });
-			else if (names[1] == 'list')
+			else if (names[1] === 'list')
 				all_methods('bluetooth', data);
-			else if (names[1] == 'connect' && typeof(bluetooth_callback) === 'function')
+			else if (names[1] === 'connect' && typeof bluetooth_callback === 'function')
 				win.webContents.send('manager', { type, id, name, data });
 
 			return;
 		}
 	}
 
-	if (type == 'addons')
+	if (type === 'addons')
 	{
-		if (target == 'manager')
+		if (target === 'manager')
 		{
 			const split = name.split(':');
-			if (split[0] == 'config')
-				save_config(type, id, data, (split.length == 2 && split[1] == 'override'));
+			if (split[0] === 'config')
+				save_config(type, id, data, (split.length === 2 && split[1] === 'override'));
 		}
-		else if (target == 'message')
+		else if (target === 'message')
 		{
 			if (!win)
 				return false;
@@ -526,33 +527,33 @@ async function all_sender(type, id, target, name, data)
 			win.webContents.send('message', { type, id, name, data });
 			return true;
 		}
-		else if (target == 'broadcast')
+		else if (target === 'broadcast')
 		{
 			for (const sid in scripts)
 			{
-				if (typeof(scripts[sid].config.default.addons) === 'string' && scripts[sid].config.default.addons.split(',').indexOf(id) >= 0)
+				if (typeof scripts[sid].config.default.addons === 'string' && scripts[sid].config.default.addons.split(',').indexOf(id) >= 0)
 					scripts[sid].include.receiver(id, name, data);
 			}
 		}
 	}
-	else if (type == 'scripts')
+	else if (type === 'scripts')
 	{
-		if (target == 'manager')
+		if (target === 'manager')
 		{
 			const split = name.split(':');
-			if (name == 'menu')
+			if (name === 'menu')
 			{
 				scripts[id].menu = data;
 				generate_menu();
 			}
-			else if (split[0] == 'config')
-				save_config(type, id, data, (split.length == 2 && split[1] == 'override'));
+			else if (split[0] === 'config')
+				save_config(type, id, data, (split.length === 2 && split[1] === 'override'));
 			else
-				return 'feature not found'; // retourner une exception
+				return 'feature not found';
 
 			return true;
 		}
-		else if (target == 'message')
+		else if (target === 'message')
 		{
 			if (!win)
 				return false;
@@ -561,11 +562,11 @@ async function all_sender(type, id, target, name, data)
 			return true;
 		}
 
-		if (typeof(addons[target]) !== 'object')
+		if (typeof addons[target] !== 'object')
 			return 'addon not found';
-		else if (typeof(scripts[id].config.default.addons) !== 'string' || scripts[id].config.default.addons.split(',').indexOf(target) < 0)
+		else if (typeof scripts[id].config.default.addons !== 'string' || scripts[id].config.default.addons.split(',').indexOf(target) < 0)
 			return 'unregistered addon';
-		else if (typeof(scripts[id].include.receiver) !== 'function')
+		else if (typeof scripts[id].include.receiver !== 'function')
 			return 'addon receiver not found';
 
 		return await addons[target].include.receiver(id, name, data);
@@ -644,7 +645,7 @@ app.whenReady().then(() => {
 					});
 				};
 
-				if (typeof(manager.default) === 'object' && typeof(manager.default.all) === 'string')
+				if (typeof manager.default === 'object' && typeof manager.default.all === 'string')
 				{
 					const scripts_path = path.join(manager.default.all, 'scripts');
 					if (fs.existsSync(scripts_path))
@@ -658,7 +659,7 @@ app.whenReady().then(() => {
 			};
 
 			load_manager_config();
-			if (typeof(manager.default) === 'object' && typeof(manager.default.all) === 'string')
+			if (typeof manager.default === 'object' && typeof manager.default.all === 'string')
 			{
 				const addons_path = path.join(manager.default.all, 'addons');
 				if (fs.existsSync(addons_path))

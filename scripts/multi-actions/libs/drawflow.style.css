@@ -116,6 +116,11 @@
 	margin-top: 5px;
 	margin-bottom: 5px;
 }
+.drawflow-node .box p > .fas {
+	float: right;
+	line-height: 1.4rem;
+	cursor: pointer;
+}
 .drawflow-node.welcome {
 	width: 250px;
 }

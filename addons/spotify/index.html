@@ -27,32 +27,6 @@
 			<div class="m-5">
 				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
 					<div class="field-label is-normal">
-						<label class="label">Client ID:</label>
-					</div>
-					<div class="field-body">
-						<div class="field client_id">
-							<div class="control ml-6 pl-6">
-								<input class="input has-text-centered" type="text" />
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Client Secret:</label>
-					</div>
-					<div class="field-body">
-						<div class="field client_secret">
-							<div class="control ml-6 pl-6">
-								<input class="input has-text-centered" type="text" />
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
 						<label class="label">Access Token:</label>
 					</div>
 					<div class="field-body">
@@ -81,13 +55,44 @@
 						</div>
 					</div>
 				</div>
+
+				<div class="has-text-centered is-italic">
+					<div>The information below is optional.</div>
+					<div>Enter "<span class="is-underlined is-clickable redirect_url" title="click to copy"></span>" as the "Redirect URL" on your Spotify developer app.</div>
+				</div>
+
+				<div class="field is-horizontal is-narrow mt-5 mb-5 p-2">
+					<div class="field-label is-normal">
+						<label class="label">Client ID:</label>
+					</div>
+					<div class="field-body">
+						<div class="field client_id">
+							<div class="control ml-6 pl-6">
+								<input class="input has-text-centered" type="text" />
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+					<div class="field-label is-normal">
+						<label class="label">Client Secret:</label>
+					</div>
+					<div class="field-body">
+						<div class="field client_secret">
+							<div class="control ml-6 pl-6">
+								<input class="input has-text-centered" type="text" />
+							</div>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 
 		<script type="text/javascript">
 			let timeout = 0;
 
-			for (const name of ['client_id', 'client_secret', 'access_token', 'refresh_token'])
+			for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret'])
 			{
 				const elem = document.querySelector(`.${name} input`);
 				const callback = event => {
@@ -106,6 +111,24 @@
 				});
 			}
 
+			document.querySelector('.redirect_url').addEventListener('mouseup', event => {
+				var selectedText = '';
+
+				if (window.getSelection)
+				{
+					const	selection	= window.getSelection(),
+							range		= document.createRange();
+
+					range.selectNodeContents(event.target);
+					selection.removeAllRanges();
+					selection.addRange(range);
+				}
+				else
+					return;
+
+				document.execCommand('copy');
+			});
+
 			window.addEventListener('message', event => {
 				if (event.origin !== 'null')
 				{
@@ -113,10 +136,11 @@
 					{
 						const _config = event.data.data;
 
-						for (const name of ['client_id', 'client_secret', 'access_token', 'refresh_token'])
+						for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret'])
 							document.querySelector(`.${name} input`).value = _config.connection[name];
 
 						document.querySelector('.access_token .button').setAttribute('external-link', _config.authorize);
+						document.querySelector('.redirect_url').innerText = _config.redirect_url;
 					}
 				}
 			}, false);

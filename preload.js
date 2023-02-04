@@ -499,8 +499,8 @@ ipcRenderer.on('init', (event, data) => {
 			}
 			else if (!data.name.indexOf('browse:'))
 			{
-				let elem = iframe_doc.querySelector(data.data);
-				elem.value = data.result.filePaths[0];
+				let elem = iframe_doc.querySelector(data.data.elem);
+				elem.value = data.result.filePath || data.result.filePaths[0];
 				elem.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
 			}
 		}
@@ -595,7 +595,11 @@ ipcRenderer.on('init', (event, data) => {
 					const type = (elem.hasAttribute('browse-file') ? 'file' : 'files');
 					let target = get_target();
 					target.name = `browse:${type}`;
-					target.data = elem.getAttribute(`browse-${type}`);
+					target.data = {
+						elem: elem.getAttribute(`browse-${type}`),
+						name: elem.getAttribute(`browse-file-name`),
+						ext: elem.getAttribute(`browse-file-ext`)
+					};
 
 					ipcRenderer.invoke('manager', target);
 				}
@@ -603,7 +607,9 @@ ipcRenderer.on('init', (event, data) => {
 				{
 					let target = get_target();
 					target.name = 'browse:folder';
-					target.data = elem.getAttribute('browse-folder');
+					target.data = {
+						elem: elem.getAttribute('browse-folder')
+					};
 
 					ipcRenderer.invoke('manager', target);
 				}

@@ -12,42 +12,40 @@ let		_logs = [],
 
 function update_interface()
 {
-	const url = 'https://id.twitch.tv/oauth2/authorize?';
-	const scope = [
-		'bits:read',
-		'chat:read',
-		'chat:edit',
-		'channel:read:goals',
-		'channel:read:polls',
-		'channel:read:charity',
-		'channel:read:hype_train',
-		'channel:read:predictions',
-		'channel:read:redemptions',
-		'channel:read:subscriptions',
-		'channel:edit:commercial',
-		'channel:manage:polls',
-		'channel:manage:raids',
-		'channel:manage:predictions',
-		'channel:manage:redemptions',
-		'channel:moderate',
-		'moderation:read',
-		'moderator:read:chat_settings',
-		'moderator:manage:automod',
-		'moderator:manage:banned_users',
-		'moderator:manage:blocked_terms',
-		'moderator:manage:chat_settings',
-		'whispers:read',
-		'whispers:edit',
-		'user:read:follows',
-	];
-
-	const token_data = {
-		client_id:		CLIENT_ID,
-		redirect_uri:	'http://localhost:5042/twitch/authorize',
-		scope:			scope.join('+'),
-		response_type:	'token'
-	};
-	const authorize = (url + querystring.stringify(token_data));
+	const	scope		= [
+				'bits:read',
+				'chat:read',
+				'chat:edit',
+				'channel:read:goals',
+				'channel:read:polls',
+				'channel:read:charity',
+				'channel:read:hype_train',
+				'channel:read:predictions',
+				'channel:read:redemptions',
+				'channel:read:subscriptions',
+				'channel:edit:commercial',
+				'channel:manage:polls',
+				'channel:manage:raids',
+				'channel:manage:predictions',
+				'channel:manage:redemptions',
+				'channel:moderate',
+				'moderation:read',
+				'moderator:read:chat_settings',
+				'moderator:manage:automod',
+				'moderator:manage:banned_users',
+				'moderator:manage:blocked_terms',
+				'moderator:manage:chat_settings',
+				'whispers:read',
+				'whispers:edit',
+				'user:read:follows',
+			],
+			token_data	= {
+				client_id:		CLIENT_ID,
+				redirect_uri:	`${_vars.http}/twitch/authorize`,
+				scope:			scope.join('+'),
+				response_type:	'token'
+			},
+			authorize	= 'https://id.twitch.tv/oauth2/authorize?' + querystring.stringify(token_data);
 
 	_sender('message', 'config', Object.assign({ authorize: authorize.replace(/%2B/g, '+') }, _config));
 }

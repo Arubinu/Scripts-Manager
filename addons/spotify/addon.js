@@ -1,12 +1,15 @@
 const	spotify = require('spotify-web-api-node'),
 		querystring = require('node:querystring');
 
+const	{
+			client_id: CLIENT_ID,
+			client_secret: CLIENT_SECRET,
+		} = require('./auth.json');
+
 let		_vars = {},
 		_config = {},
 		_sender = null,
 		instance = new spotify();
-
-const	redirect_uri = '/spotify/authorize';
 
 function update_interface()
 {
@@ -18,22 +21,25 @@ function update_interface()
 		'playlist-modify-private',
 	];
 
-	_sender('message', 'config', Object.assign({ authorize: instance.createAuthorizeURL(scopes, '') }, _config));
+	_sender('message', 'config', Object.assign({
+		authorize: instance.createAuthorizeURL(scopes, ''),
+		redirect_url: `${_vars.http}/spotify/authorize`
+	}, _config));
 }
 
 const	functions = {
 	Search: async track => {
-		const	data	= await _sender('spotify', 'searchTracks', [track]);
+		const	data	= await instance.searchTracks(track);
 
 		if (typeof data.body === 'object' && typeof data.body.tracks === 'object' && Array.isArray(data.body.tracks.items) && data.body.tracks.items.length)
 			return data.body.tracks.items[0];
 	},
 	GetDevices: async () => {
-		const	data	= await _sender('spotify', 'getMyDevices');
+		const	data	= await instance.getMyDevices();
 
 		return data.body.devices;
 	},
-	ActiveDevice: async () => {
+	GetActiveDevice: async () => {
 		const	devices	= await functions.GetDevices();
 
 		if (devices.length >= 0)
@@ -54,30 +60,28 @@ module.exports = {
 		_vars = vars;
 		_sender = sender;
 		_config = config;
+
+		instance.setRedirectURI(`${_vars.http}/spotify/authorize`);
 	},
 	initialized: () => {
-		if (_config.connection.client_id)
-			instance.setClientId(_config.connection.client_id);
-		if (_config.connection.client_secret)
-			instance.setClientSecret(_config.connection.client_secret);
+		instance.setClientId(_config.connection.client_id || CLIENT_ID);
+		instance.setClientSecret(_config.connection.client_secret || CLIENT_SECRET);
 		if (_config.connection.access_token)
 			instance.setAccessToken(_config.connection.access_token);
 		if (_config.connection.refresh_token)
 			instance.setRefreshToken(_config.connection.refresh_token);
-
-		instance.setRedirectURI(_vars.http + redirect_uri);
 	},
 	receiver: async (id, name, data) => {
-		if (id == 'manager')
+		if (id === 'manager')
 		{
-			if (name == 'show')
+			if (name === 'show')
 				update_interface();
-			else if (name == 'enabled')
+			else if (name === 'enabled')
 				_config.default.enabled = data;
 
 			return;
 		}
-		else if (id == 'message')
+		else if (id === 'message')
 		{
 			if (typeof(data) === 'object')
 			{
@@ -87,9 +91,8 @@ module.exports = {
 				{
 					_config.connection[name] = data[name];
 
-					instance.resetCredentials();
-					instance.setClientId(_config.connection.client_id);
-					instance.setClientSecret(_config.connection.client_secret);
+					instance.setClientId(_config.connection.client_id || CLIENT_ID);
+					instance.setClientSecret(_config.connection.client_secret || CLIENT_SECRET);
 					instance.setAccessToken(_config.connection.access_token);
 					instance.setRefreshToken(_config.connection.refresh_token);
 
@@ -100,53 +103,35 @@ module.exports = {
 
 			return;
 		}
-		else if (id == 'methods')
+		else if (id === 'methods')
 		{
-			if (name == 'http' && data.req && data.req.url.split('?')[0] == redirect_uri)
+			const url = '/spotify/authorize';
+
+			if (name === 'http' && data.req && data.req.url.split('?')[0] === url)
 			{
+				const search = querystring.parse(data.req.url.split('?')[1]);
+
 				data.res.writeHead(200);
-				data.res.end(`<script type="text/javascript">
-					const socket = new WebSocket('${_vars.websocket}');
+				data.res.end(`<h1 style="font-family: sans-serif;">You can now close this page ...</h1>`);
 
-					socket.onopen = event => {
-						socket.send(JSON.stringify({ url: '${redirect_uri}', data: document.location.search }));
-						document.body.innerHTML = '<h1 style="font-family: sans-serif;">You can now close this page ...</h1>';
-						document.head.innerHTML = '';
-					};
+				if (typeof search.code === 'string')
+				{
+					instance.authorizationCodeGrant(search.code).then(data => {
+						_config.connection.access_token = data.body.access_token;
+						_config.connection.refresh_token = data.body.refresh_token;
 
-					socket.onerror = error => console.error(error);
-				</script>`);
+						instance.setAccessToken(_config.connection.access_token);
+						instance.setRefreshToken(_config.connection.refresh_token);
+
+						_sender('manager', 'config', _config);
+
+						update_interface();
+					}, err => {
+						console.log('Spotify: Something went wrong!', err);
+					});
+				}
 
 				return true;
-			}
-			else if (name == 'websocket')
-			{
-				if (typeof(data) === 'object')
-				{
-					if (data.url == redirect_uri && !data.data.indexOf('?'))
-					{
-						const search = querystring.parse(data.data.substr(1));
-
-						if (typeof search.code === 'string')
-						{
-							instance.authorizationCodeGrant(search.code).then(data => {
-								_config.connection.access_token = data.body.access_token;
-								_config.connection.refresh_token = data.body.refresh_token;
-
-								instance.setAccessToken(_config.connection.access_token);
-								instance.setRefreshToken(_config.connection.refresh_token);
-
-								_sender('manager', 'config', _config);
-
-								update_interface();
-							}, err => {
-								console.log('Spotify: Something went wrong!', err);
-							});
-						}
-
-						return true;
-					}
-				}
 			}
 
 			return;

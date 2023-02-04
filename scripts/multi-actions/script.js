@@ -51,7 +51,7 @@ const	functions = {
 			if (check)
 			{
 				const	flags	= receive.data.flags,
-						viewer	= (!flags.broadcaster && !flags.moderator && !flags.vip && !flags.founder && !flags.subscriber);
+						viewer	= (!flags.broadcaster && !flags.moderator && !flags.vip && !flags.founder && !flags.subscriber && !flags.follower);
 
 				let check = false;
 				check = (check || (data.broadcaster && flags.broadcaster));
@@ -59,6 +59,7 @@ const	functions = {
 				check = (check || (data.vip && flags.vip));
 				check = (check || (data.founder && flags.founder));
 				check = (check || (data.subscriber && flags.subscriber));
+				check = (check || (data.follower && flags.follower));
 				check = (check || (data.viewer && viewer));
 
 				if (check)
@@ -108,8 +109,14 @@ const	actions = {
 			if (typeof value !== 'number')
 				value = 0;
 
+			let time = data.seconds;
+			if (data.number_unit === 'seconds')
+				time *= 1000;
+			else if (data.number_unit === 'minutes')
+				time *= 60000;
+
 			const now = Date.now();
-			if (!value || (value + (data.seconds * 1000)) < now)
+			if (!value || (value + time) < now)
 			{
 				set_variable(data.variable, now, VARIABLE_TYPE.NEXT, module_name, next_data);
 				next();
@@ -196,7 +203,15 @@ const	actions = {
 	},
 	'self-timer': (module_name, receive, data, next_data, next) => {
 		if (data.millis > 0)
-			setTimeout(next, data.millis);
+		{
+			let time = data.millis;
+			if (data.number_unit === 'seconds')
+				time *= 1000;
+			else if (data.number_unit === 'minutes')
+				time *= 60000;
+
+			setTimeout(next, time);
+		}
 	},
 	'variable-setter': (module_name, receive, data, next_data, next) => {
 		let value = '';
@@ -208,7 +223,7 @@ const	actions = {
 		}
 
 		set_variable(data.variable, now, scope(data), module_name, next_data);
-		_variables[data.variable] = value;
+		_variables[data.variable] = apply_variables(value, module_name, next_data);
 
 		next();
 	},
@@ -251,7 +266,11 @@ const	actions = {
 				//embed.setDescription('');
 				//embed.setFooter('', 'https://cdn.discordapp.com/embed/avatars/0.png');
 
-				webhook.send({ content: '@everyone', embeds: [embed], files: images, allowed_mentions: { parse: ['everyone'] } });
+				let parse = [];
+				if (data.message && data.message.indexOf('@everyone') >= 0)
+					parse.push('everyone');
+
+				webhook.send({ content: (data.message || ''), embeds: [embed], files: images, allowed_mentions: { parse: ['everyone'] } });
 			};
 
 			let texts = {};
@@ -471,28 +490,43 @@ const	actions = {
 	},
 	'trigger-spotify-play-pause': (module_name, receive, data, next_data, next) => {
 		if (data.state === 'on')
-			instance.setShuffle(true).then(() => {});
+			_sender('spotify', 'play');
 		else if (data.state === 'off')
-			instance.setShuffle(false).then(() => {});
+			_sender('spotify', 'pause');
 		else
-			instance.getMyCurrentPlaybackState().then(data => { instance[(data.body && data.body.is_playing) ? 'pause' : 'play']().then(() => {}); });
+		{
+			_sender('spotify', 'getMyCurrentPlaybackState', [true]).then(_data => {
+				_sender('spotify', ((_data.body && _data.body.is_playing) ? 'pause' : 'play'));
+			});
+		}
 	},
 	'trigger-spotify-prev-next': (module_name, receive, data, next_data, next) => {
 		if (data.state)
-			instance.skipToPrevious().then(() => {});
+			_sender('spotify', 'skipToPrevious');
 		else
-			instance.skipToNext().then(() => {});
+			_sender('spotify', 'skipToNext');
+	},
+	'trigger-spotify-repeat': (module_name, receive, data, next_data, next) => {
+		let state = 'track';
+		state = ((data.state === 'on') ? 'off' : state);
+		state = ((data.state === 'off') ? 'context' : state);
+
+		_sender('spotify', 'setRepeat', [state]);
 	},
 	'trigger-spotify-shuffle': (module_name, receive, data, next_data, next) => {
 		if (data.state === 'on')
-			instance.setShuffle(true).then(() => {});
+			_sender('spotify', 'setShuffle', [true]);
 		else if (data.state === 'off')
-			instance.setShuffle(false).then(() => {});
+			_sender('spotify', 'setShuffle', [false]);
 		else
-			instance.setShuffle(true).then(() => {}, err => { instance.setShuffle(false).then(() => {}); });
+		{
+			_sender('spotify', 'setShuffle', [true]).then(_data => {
+				_sender('spotify', 'setShuffle', [false]);
+			});
+		}
 	},
 	'trigger-spotify-volume': (module_name, receive, data, next_data, next) => {
-		instance.setVolume(data.volume).then(() => {});
+		_sender('spotify', 'setVolume', [data.volume]);
 	},
 	'event-twitch-action': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
 	'trigger-twitch-action': (module_name, receive, data, next_data) => {
@@ -604,13 +638,7 @@ const	actions = {
 	'trigger-twitch-message': (module_name, receive, data, next_data) => {
 		if (data.message)
 		{
-			let message = data.message;
-			if (typeof _variables.locals[module_name] === 'object')
-			{
-				for (const name in _variables.locals[module_name])
-					message = message.replaceAll(`\$\{${name}\}`, _variables.locals[module_name][name].toString());
-			}
-
+			let message = apply_variables(data.message, module_name, next_data);
 			if (message.length)
 				_sender('twitch', 'Say', { type: 'Chat', args: [message] });
 		}
@@ -769,6 +797,51 @@ function set_variable(name, value, variable_type, module_name, next_data)
 		_variables.globals[name] = value;
 }
 
+function apply_variables(text, module_name, next_data)
+{
+	if (typeof next_data !== 'undefined')
+	{
+		for (const name in next_data)
+			text = text.replaceAll(`\$\{${name}\}`, next_data[name].toString());
+	}
+
+	if (typeof module_name !== 'undefined' && typeof _variables.locals[module_name] === 'object')
+	{
+		for (const name in _variables.locals[module_name])
+			text = text.replaceAll(`\$\{${name}\}`, _variables.locals[module_name][name].toString());
+	}
+
+	for (const name in _variables.globals)
+		text = text.replaceAll(`\$\{${name}\}`, _variables.globals[name]);
+
+	return text;
+}
+
+function process_block(module_name, node, next_data, receive, force)
+{
+	receive = receive || {};
+	next_data = next_data || {};
+
+	if ((force || !Object.keys(node.inputs).length) && typeof actions[node.data.type] !== 'undefined')
+	{
+		const next = node => {
+			for (const output_index in node.outputs)
+			{
+				const output = node.outputs[output_index].connections;
+				for (const connection of node.outputs[output_index].connections)
+				{
+					const node = _config.actions[module_name].data[connection.node];
+					if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled))
+						actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
+				}
+			}
+		};
+
+		if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled))
+			actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
+	}
+}
+
 module.exports = {
 	init: (origin, config, sender) => {
 		_sender = sender;
@@ -815,6 +888,16 @@ module.exports = {
 						_sender('message', 'receive', { source: data.request[0], id: data.request[1], name: data.request[2], data: _data });
 					}).catch(error => {});
 				}
+				else if (data.test)
+				{
+					const	action	= _config.actions[data.test[0]];
+
+					process_block(data.test[0], action.data[data.test[1]], false, false, true);
+				}
+				else if (data.import)
+					_sender('message', 'import', fs.readFileSync(data.import, 'utf-8'));
+				else if (data.export)
+					fs.writeFileSync(...data.export);
 			}
 
 			return;
@@ -822,35 +905,14 @@ module.exports = {
 
 		if (_config.default.enabled)
 		{
-			const receive = { id, name, data };
 			for (const module_name in _config.actions)
 			{
-				const action = _config.actions[module_name];
+				const	action	= _config.actions[module_name],
+						receive	= { id, name, data };
+
 				let next_data = {};
-				let getters_data = {};
-				let getters_storage = {};
-
 				for (const node_index in action.data)
-				{
-					const node = action.data[node_index];
-					if (!Object.keys(node.inputs).length && typeof actions[node.data.type] !== 'undefined')
-					{
-						const next = node => {
-							for (const output_index in node.outputs)
-							{
-								const output = node.outputs[output_index].connections;
-								for (const connection of node.outputs[output_index].connections)
-								{
-									const node = action.data[connection.node];
-									if (typeof actions[node.data.type] !== 'undefined')
-										actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
-								}
-							}
-						};
-
-						actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
-					}
-				}
+					process_block(module_name, action.data[node_index], next_data, receive);
 			}
 		}
 	}

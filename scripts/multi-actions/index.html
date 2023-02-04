@@ -49,9 +49,11 @@
 			.hero {
 				z-index: 1 !important;
 			}
-			button.show-blocks {
+			button.show-blocks,
+			button.import-blocks {
 				margin-top: -5px;
 				margin-bottom: -5px;
+				margin-left: 5px;
 			}
 
 			.drag-drawflow {
@@ -95,6 +97,52 @@
 				outline: 2px dashed rgba(255, 255, 255, .65);
 			}
 
+			.drawflow-node .title-box {
+				position: relative;
+				padding-right: 2rem !important;
+			}
+			.drawflow-node .title-box > .icons {
+				position: absolute;
+				top: 0;
+				right: 0;
+			}
+			.drawflow-node .title-box > .icons .fas {
+				margin-right: .9rem;
+				cursor: pointer;
+			}
+			.drawflow-options {
+				display: none;
+				position: fixed;
+				top: 3rem;
+				left: 3rem;
+				min-width: 8rem;
+				background-color: rgb(34, 34, 34);
+				border: 1px solid var(--border-color);
+				border-radius: 4px;
+			}
+			.drawflow-options > li {
+				padding: .2rem 1rem;
+				cursor: pointer;
+			}
+			.drawflow-options > li.separator {
+				border-top: 1px solid var(--border-color);
+			}
+			.drawflow-options > li:hover {
+				background-color: rgba(255, 255, 255, .08);
+			}
+			.drawflow-options > li:first-child {
+				padding-top: .5rem;
+			}
+			.drawflow-options > li:last-child {
+				padding-bottom: .5rem;
+			}
+			.drawflow-options > li > .far,
+			.drawflow-options > li > .fas {
+				float: right;
+				line-height: 1.5rem;
+				margin-left: 1rem;
+			}
+
 			.drag-drawflow.is-outputs,
 			.drawflow-node .is-outputs .title-box {
 				position: relative;
@@ -134,8 +182,14 @@
 			.drawflow-node .columns {
 				margin-bottom: 0px;
 			}
-			.drawflow-node .column {
+			.drawflow-node .columns > .column {
 				padding-bottom: 0px;
+			}
+			.drawflow-node .columns.clear {
+				clear: both;
+			}
+			.drawflow-node .columns.clear > .column {
+				padding-top: .15rem;
 			}
 			.drawflow-node .column:first-child .is-browse button {
 				right: -10px;
@@ -269,10 +323,22 @@
 			<div class="block-drawflow">
 				<div class="title-box">
 					<img src="" />
-					<span>Streaming</span>
+					<span></span>
+					<div class="icons">
+						<i class="fas fa-caret-down" title="Options"></i>
+					</div>
 				</div>
 				<div class="box"></div>
 			</div>
+
+			<ul class="drawflow-options">
+				<li class="toggle-action">Enable<i class="fas fa-square-check"></i>
+				<li class="test-action">Test<i class="fas fa-rocket"></i></li>
+				<li class="export-action separator" browse-file=".container .drawflow-options .export-action input" browse-file-name="nodes" browse-file-ext="smma">
+					Export<i class="fas fa-download"></i>
+					<input type="text" class="is-hidden" />
+				</li>
+			</ul>
 		</div>
 
 		<div class="modal add-module">
@@ -323,12 +389,14 @@
 				<div class="hero-body">
 					<div class="subtitle is-size-6 has-text-white-ter">
 						Program all kinds of actions related to addons.
-						<i class="fas fa-solid fa-gear is-pulled-right ml-2 edit-module" title="Edit"></i>
-						<i class="fas fa-solid fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
+						<i class="fas fa-gear is-pulled-right ml-2 edit-module" title="Edit"></i>
+						<i class="fas fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
 						<div class="select is-small is-pulled-right ml-2">
 							<select class="modules"></select>
 						</div>
 						<button class="button is-small is-pulled-right show-blocks">Toggle Blocks</button>
+						<button class="button is-small is-pulled-right import-blocks" browse-file=".container .hero-body input" browse-file-ext="smma">Import Blocks</button>
+						<input type="text" class="is-hidden" />
 					</div>
 				</div>
 			</section>
@@ -411,28 +479,20 @@
 			}
 
 			// Events!
-			editor.on('nodeCreated', function(id) {
-				console.log("Node created " + id);
+			editor.on('nodeCreated', id => {
 				window.drawflow_save();
 			});
 
-			editor.on('nodeRemoved', function(id) {
-				console.log("Node removed " + id);
+			editor.on('nodeRemoved', id => {
 				window.drawflow_save();
 			});
 
-			editor.on('nodeSelected', function(id) {
-				console.log("Node selected " + id);
-			});
-
-			editor.on('moduleCreated', function(name) {
-				console.log("Module Created " + name);
+			editor.on('moduleCreated', name => {
 				window.drawflow_save();
 				window.drawflow_select();
 			});
 
-			editor.on('moduleChanged', function(name) {
-				console.log("Module Changed " + name);
+			editor.on('moduleChanged', name => {
 				const init = () => {
 					setTimeout(() => {
 						if (!window.drawflow_initializer)
@@ -447,41 +507,15 @@
 					window.parent.postMessage({ module: name }, '*');
 			});
 
-			editor.on('connectionCreated', function(connection) {
-				console.log('Connection created');
-				console.log(connection);
+			editor.on('connectionCreated', connection => {
 				window.drawflow_save();
 			});
 
-			editor.on('connectionRemoved', function(connection) {
-				console.log('Connection removed');
-				console.log(connection);
+			editor.on('connectionRemoved', connection => {
 				window.drawflow_save();
 			});
-
-			editor.on('mouseMove', function(position) {
-				//console.log('Position mouse x:' + position.x + ' y:'+ position.y);
-			});
-
-			editor.on('nodeMoved', function(id) {
-				console.log("Node moved " + id);
+			editor.on('nodeMoved', id => {
 				window.drawflow_save();
-			});
-
-			editor.on('zoom', function(zoom) {
-				console.log('Zoom level ' + zoom);
-			});
-
-			editor.on('translate', function(position) {
-				//console.log('Translate x:' + position.x + ' y:'+ position.y);
-			});
-
-			editor.on('addReroute', function(id) {
-				console.log("Reroute added " + id);
-			});
-
-			editor.on('removeReroute', function(id) {
-				console.log("Reroute removed " + id);
 			});
 
 			editor.start();
@@ -594,6 +628,8 @@
 					}
 					else if (event.data.name == 'receive' && typeof(window.drawflow_receiver) === 'function')
 						window.drawflow_receiver(event.data.data.source, event.data.data.id, event.data.data.name, event.data.data.data);
+					else if (event.data.name == 'import')
+						window.import_node(JSON.parse(event.data.data));
 				}
 			}, false);
 		</script>

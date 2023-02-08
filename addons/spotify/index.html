@@ -1,150 +1,150 @@
 <!DOCTYPE html>
 <html>
 
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
 
-		<title>Spotify</title>
+    <title>Spotify</title>
 
-		<link id="config_stylesheet" rel="stylesheet" />
-		<style type="text/css">
-			.has-addons .button {
-				border-color: #444;
-			}
-		</style>
-	</head>
+    <link id="config_stylesheet" rel="stylesheet" />
+    <style type="text/css">
+      .has-addons .button {
+        border-color: #444;
+      }
+    </style>
+  </head>
 
-	<body>
-		<div class="container">
-			<section class="hero is-small has-background-grey-dark">
-				<div class="hero-body">
-					<p class="subtitle is-size-6 has-text-white-ter">Links with Spotify for scripts requiring its functionality.</p>
-				</div>
-			</section>
+  <body>
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <p class="subtitle is-size-6 has-text-white-ter">Links with Spotify for scripts requiring its functionality.</p>
+        </div>
+      </section>
 
-			<div class="m-5">
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Access Token:</label>
-					</div>
-					<div class="field-body">
-						<div class="field has-addons access_token">
-							<div class="control ml-6 pl-6 is-expanded">
-								<input class="input has-text-centered is-two-thirds" type="password" />
-							</div>
-							<div class="control">
-								<a class="button is-dark">
-									Generate
-								</a>
-							</div>
-						</div>
-					</div>
-				</div>
+      <div class="m-5">
+        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Access Token:</label>
+          </div>
+          <div class="field-body">
+            <div class="field has-addons access_token">
+              <div class="control ml-6 pl-6 is-expanded">
+                <input class="input has-text-centered is-two-thirds" type="password" />
+              </div>
+              <div class="control">
+                <a class="button is-dark">
+                  Generate
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
 
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Refresh Token:</label>
-					</div>
-					<div class="field-body">
-						<div class="field refresh_token">
-							<div class="control ml-6 pl-6">
-								<input class="input has-text-centered" type="password" />
-							</div>
-						</div>
-					</div>
-				</div>
+        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Refresh Token:</label>
+          </div>
+          <div class="field-body">
+            <div class="field refresh_token">
+              <div class="control ml-6 pl-6">
+                <input class="input has-text-centered" type="password" />
+              </div>
+            </div>
+          </div>
+        </div>
 
-				<div class="has-text-centered is-italic">
-					<div>The information below is optional.</div>
-					<div>Enter "<span class="is-underlined is-clickable redirect_url" title="click to copy"></span>" as the "Redirect URL" on your Spotify developer app.</div>
-				</div>
+        <div class="has-text-centered is-italic">
+          <div>The information below is optional.</div>
+          <div>Enter "<span class="is-underlined is-clickable redirect_url" title="click to copy"></span>" as the "Redirect URL" on your Spotify developer app.</div>
+        </div>
 
-				<div class="field is-horizontal is-narrow mt-5 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Client ID:</label>
-					</div>
-					<div class="field-body">
-						<div class="field client_id">
-							<div class="control ml-6 pl-6">
-								<input class="input has-text-centered" type="text" />
-							</div>
-						</div>
-					</div>
-				</div>
+        <div class="field is-horizontal is-narrow mt-5 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Client ID:</label>
+          </div>
+          <div class="field-body">
+            <div class="field client_id">
+              <div class="control ml-6 pl-6">
+                <input class="input has-text-centered" type="text" />
+              </div>
+            </div>
+          </div>
+        </div>
 
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Client Secret:</label>
-					</div>
-					<div class="field-body">
-						<div class="field client_secret">
-							<div class="control ml-6 pl-6">
-								<input class="input has-text-centered" type="text" />
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Client Secret:</label>
+          </div>
+          <div class="field-body">
+            <div class="field client_secret">
+              <div class="control ml-6 pl-6">
+                <input class="input has-text-centered" type="text" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-		<script type="text/javascript">
-			let timeout = 0;
+    <script type="text/javascript">
+      let timeout = 0;
 
-			for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret'])
-			{
-				const elem = document.querySelector(`.${name} input`);
-				const callback = event => {
-					let data = {};
-					data[name] = elem.value;
+      for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret'])
+      {
+        const elem = document.querySelector(`.${name} input`);
+        const callback = event => {
+          let data = {};
+          data[name] = elem.value;
 
-					window.parent.postMessage(data, '*');
-				};
+          window.parent.postMessage(data, '*');
+        };
 
-				elem.addEventListener('blur', callback);
-				elem.addEventListener('input', event => {
-					clearTimeout(timeout);
-					timeout = setTimeout(() => {
-						window.parent.postMessage({refresh: true}, '*');
-					}, 5000);
-				});
-			}
+        elem.addEventListener('blur', callback);
+        elem.addEventListener('input', event => {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            window.parent.postMessage({refresh: true}, '*');
+          }, 5000);
+        });
+      }
 
-			document.querySelector('.redirect_url').addEventListener('mouseup', event => {
-				var selectedText = '';
+      document.querySelector('.redirect_url').addEventListener('mouseup', event => {
+        var selectedText = '';
 
-				if (window.getSelection)
-				{
-					const	selection	= window.getSelection(),
-							range		= document.createRange();
+        if (window.getSelection)
+        {
+          const selection = window.getSelection(),
+            range = document.createRange();
 
-					range.selectNodeContents(event.target);
-					selection.removeAllRanges();
-					selection.addRange(range);
-				}
-				else
-					return;
+          range.selectNodeContents(event.target);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        else
+          return;
 
-				document.execCommand('copy');
-			});
+        document.execCommand('copy');
+      });
 
-			window.addEventListener('message', event => {
-				if (event.origin !== 'null')
-				{
-					if (event.data.name == 'config')
-					{
-						const _config = event.data.data;
+      window.addEventListener('message', event => {
+        if (event.origin !== 'null')
+        {
+          if (event.data.name == 'config')
+          {
+            const _config = event.data.data;
 
-						for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret'])
-							document.querySelector(`.${name} input`).value = _config.connection[name];
+            for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret'])
+              document.querySelector(`.${name} input`).value = _config.connection[name];
 
-						document.querySelector('.access_token .button').setAttribute('external-link', _config.authorize);
-						document.querySelector('.redirect_url').innerText = _config.redirect_url;
-					}
-				}
-			}, false);
-		</script>
-	</body>
+            document.querySelector('.access_token .button').setAttribute('external-link', _config.authorize);
+            document.querySelector('.redirect_url').innerText = _config.redirect_url;
+          }
+        }
+      }, false);
+    </script>
+  </body>
 
 </html>

@@ -1,192 +1,192 @@
 <!DOCTYPE html>
 <html>
 
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
 
-		<title>OBS Studio</title>
+    <title>OBS Studio</title>
 
-		<link id="config_stylesheet" rel="stylesheet" />
-		<style type="text/css">
-			.has-cursor-pointer {
-				pointer-events: initial;
-				cursor: pointer !important;
-				z-index: 10;
-			}
-			.has-addons .button {
-				border-color: #444;
-			}
-			.table {
-				background-color: transparent;
-			}
-			.table:not(.show) {
-				display: none;
-			}
-			.table > tbody,
-			.table.is-striped tbody tr:not(.is-selected):nth-child(even) {
-				background-color: rgba(0, 0, 0, .2);
-			}
-			.table > thead > tr > th:first-child {
-				width: 175px;
-			}
-		</style>
-	</head>
+    <link id="config_stylesheet" rel="stylesheet" />
+    <style type="text/css">
+      .has-cursor-pointer {
+        pointer-events: initial;
+        cursor: pointer !important;
+        z-index: 10;
+      }
+      .has-addons .button {
+        border-color: #444;
+      }
+      .table {
+        background-color: transparent;
+      }
+      .table:not(.show) {
+        display: none;
+      }
+      .table > tbody,
+      .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+        background-color: rgba(0, 0, 0, .2);
+      }
+      .table > thead > tr > th:first-child {
+        width: 175px;
+      }
+    </style>
+  </head>
 
-	<body>
-		<div class="container">
-			<section class="hero is-small has-background-grey-dark">
-				<div class="hero-body">
-					<p class="subtitle is-size-6 has-text-white-ter">Links to OBS Studio for scripts that require this feature.</p>
-				</div>
-			</section>
+  <body>
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <p class="subtitle is-size-6 has-text-white-ter">Links to OBS Studio for scripts that require this feature.</p>
+        </div>
+      </section>
 
-			<div class="m-5">
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Address:</label>
-					</div>
-					<div class="field-body">
-						<div class="field address">
-							<div class="control ml-6 pl-6">
-								<input class="input has-text-centered" type="text" />
-							</div>
-						</div>
-					</div>
-				</div>
+      <div class="m-5">
+        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Address:</label>
+          </div>
+          <div class="field-body">
+            <div class="field address">
+              <div class="control ml-6 pl-6">
+                <input class="input has-text-centered" type="text" />
+              </div>
+            </div>
+          </div>
+        </div>
 
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Password:</label>
-					</div>
-					<div class="field-body">
-						<div class="field password">
-							<div class="control ml-6 pl-6 has-icons-right">
-								<input class="input has-text-centered is-two-thirds" type="password" />
-								<span class="icon is-small is-right">
-									<i class="fas fa-solid fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
-								</span>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
+        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Password:</label>
+          </div>
+          <div class="field-body">
+            <div class="field password">
+              <div class="control ml-6 pl-6 has-icons-right">
+                <input class="input has-text-centered is-two-thirds" type="password" />
+                <span class="icon is-small is-right">
+                  <i class="fas fa-solid fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-			<table class="table is-fullwidth is-narrow is-striped mb-5">
-				<thead>
-					<tr>
-						<th>Date</th>
-						<th>Type</th>
-					</tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-		</div>
+      <table class="table is-fullwidth is-narrow is-striped mb-5">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-		<script type="text/javascript">
-			let timeout = 0;
+    <script type="text/javascript">
+      let timeout = 0;
 
-			for (const name of ['address', 'password'])
-			{
-				const elem = document.querySelector(`.${name} input`);
-				const callback = function(event) {
-					let data = {};
-					data[name] = elem.value;
+      for (const name of ['address', 'password'])
+      {
+        const elem = document.querySelector(`.${name} input`);
+        const callback = function(event) {
+          let data = {};
+          data[name] = elem.value;
 
-					if (name === 'address' && data[name].trim())
-					{
-						const	address	= data[name].trim();
+          if (name === 'address' && data[name].trim())
+          {
+            const address = data[name].trim();
 
-						data[name] = address;
+            data[name] = address;
 
-						let split = address.split('://');
-						if (split.length === 1)
-							split = ['ws', split[0]];
-						else if (split.length !== 2)
-							split = ['ws', 'localhost'];
-						else if (!split[0].length)
-							split[0] = 'ws';
+            let split = address.split('://');
+            if (split.length === 1)
+              split = ['ws', split[0]];
+            else if (split.length !== 2)
+              split = ['ws', 'localhost'];
+            else if (!split[0].length)
+              split[0] = 'ws';
 
-						let hostsplit = split[1].split('/');
-						if (hostsplit[0].indexOf(':') < 0)
-							hostsplit[0] += ':4455';
-						split[1] = hostsplit.join('/');
+            let hostsplit = split[1].split('/');
+            if (hostsplit[0].indexOf(':') < 0)
+              hostsplit[0] += ':4455';
+            split[1] = hostsplit.join('/');
 
-						data[name] = split.join('://');
-						if (data[name] !== address)
-							elem.value = data[name];
-					}
+            data[name] = split.join('://');
+            if (data[name] !== address)
+              elem.value = data[name];
+          }
 
-					window.parent.postMessage(data, '*');
-				};
+          window.parent.postMessage(data, '*');
+        };
 
-				elem.addEventListener('blur', callback);
-				elem.addEventListener('input', event => {
-					clearTimeout(timeout);
-					timeout = setTimeout(() => {
-						window.parent.postMessage({refresh: true}, '*');
-					}, 5000);
-				});
-			}
+        elem.addEventListener('blur', callback);
+        elem.addEventListener('input', event => {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            window.parent.postMessage({refresh: true}, '*');
+          }, 5000);
+        });
+      }
 
-			document.querySelector('.fa-eye, .fa-eye-slash').addEventListener('click', event => {
-				let slash = event.target.matches('.fa-eye-slash');
+      document.querySelector('.fa-eye, .fa-eye-slash').addEventListener('click', event => {
+        let slash = event.target.matches('.fa-eye-slash');
 
-				event.target.classList.remove(slash ? 'fa-eye-slash' : 'fa-eye');
-				event.target.classList.add(slash ? 'fa-eye' : 'fa-eye-slash');
+        event.target.classList.remove(slash ? 'fa-eye-slash' : 'fa-eye');
+        event.target.classList.add(slash ? 'fa-eye' : 'fa-eye-slash');
 
-				document.querySelector('.password input').setAttribute('type', (slash ? 'text' : 'password'));
-			});
+        document.querySelector('.password input').setAttribute('type', (slash ? 'text' : 'password'));
+      });
 
-			window.addEventListener('message', event => {
-				if (event.origin !== 'null')
-				{
-					if (event.data.name == 'config')
-					{
-						const _config = event.data.data;
+      window.addEventListener('message', event => {
+        if (event.origin !== 'null')
+        {
+          if (event.data.name == 'config')
+          {
+            const _config = event.data.data;
 
-						for (const name of ['address', 'password'])
-							document.querySelector(`.${name} input`).value = _config.connection[name];
-					}
-					else if (event.data.name == 'logs')
-					{
-						if (event.data.data)
-						{
-							const table = document.querySelector('.table > tbody');
-							const update = !Array.isArray(event.data.data);
+            for (const name of ['address', 'password'])
+              document.querySelector(`.${name} input`).value = _config.connection[name];
+          }
+          else if (event.data.name == 'logs')
+          {
+            if (event.data.data)
+            {
+              const table = document.querySelector('.table > tbody');
+              const update = !Array.isArray(event.data.data);
 
-							if (update || event.data.data.length)
-								table.parentElement.classList.add('show');
+              if (update || event.data.data.length)
+                table.parentElement.classList.add('show');
 
-							for (const row of (update ? [event.data.data] : event.data.data))
-							{
-								const tr = document.createElement('tr');
-								const date = document.createElement('td');
-								const type = document.createElement('td');
+              for (const row of (update ? [event.data.data] : event.data.data))
+              {
+                const tr = document.createElement('tr');
+                const date = document.createElement('td');
+                const type = document.createElement('td');
 
-								const cross = document.createElement('i');
-								cross.classList.add('fas', 'fa-xmark');
+                const cross = document.createElement('i');
+                cross.classList.add('fas', 'fa-xmark');
 
-								const columns = [date, type];
-								if (row.type.toLowerCase() == 'connectionopened')
-									columns.forEach(column => column.classList.add('is-info'));
-								else if (row.type.toLowerCase() == 'connectionclosed')
-									columns.forEach(column => column.classList.add('is-danger'));
+                const columns = [date, type];
+                if (row.type.toLowerCase() == 'connectionopened')
+                  columns.forEach(column => column.classList.add('is-info'));
+                else if (row.type.toLowerCase() == 'connectionclosed')
+                  columns.forEach(column => column.classList.add('is-danger'));
 
-								date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
-								type.innerText = row.type;
+                date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
+                type.innerText = row.type;
 
-								tr.appendChild(date);
-								tr.appendChild(type);
+                tr.appendChild(date);
+                tr.appendChild(type);
 
-								table[update ? 'prepend' : 'appendChild'](tr);
-							}
-						}
-					}
-				}
-			}, false);
-		</script>
-	</body>
+                table[update ? 'prepend' : 'appendChild'](tr);
+              }
+            }
+          }
+        }
+      }, false);
+    </script>
+  </body>
 
 </html>

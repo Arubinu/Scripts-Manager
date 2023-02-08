@@ -1,180 +1,184 @@
 :root {
-	--border-color: rgb(63, 68, 71);
-	--background-color: rgb(24, 26, 27);
+  --border-color: rgb(63, 68, 71);
+  --background-color: rgb(24, 26, 27);
 
-	--background-box-title: rgb(54, 59, 61);
+  --background-box-title: rgb(54, 59, 61);
 }
 
 .drawflow .drawflow-node {
-	background: var(--background-color);
-	border: 1px solid var(--border-color);
-	-webkit-box-shadow: 0 2px 5px 2px rgba(0, 0, 0, .3);
-	box-shadow: 0 2px 5px 2px rgba(0, 0, 0, .3);
-	padding: 0px;
-	width: 200px;
-	color: rgb(200, 200, 200);
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  -webkit-box-shadow: 0 2px 5px 2px rgba(0, 0, 0, .3);
+  box-shadow: 0 2px 5px 2px rgba(0, 0, 0, .3);
+  padding: 0px;
+  width: 200px;
+  color: rgb(200, 200, 200);
 }
 
 .drawflow .drawflow-node .no-box .title-box {
-	border-bottom: none;
+  border-bottom: none;
 }
 .drawflow .drawflow-node .no-box .title-box::before {
-	height: calc(100% + 1px);
-	border-bottom-left-radius: 4px;
+  height: calc(100% + 1px);
+  border-bottom-left-radius: 4px;
 }
 
 .drawflow .drawflow-node.selected  {
-	background: transparent;
-	border: 1px solid rgba(149, 165, 166, .5);
-	-webkit-box-shadow: 0 2px 20px 2px rgba(149, 165, 166, .5);
-	box-shadow: 0 2px 20px 2px rgba(149, 165, 166, .5);
+  background: transparent;
+  border: 1px solid rgba(149, 165, 166, .5);
+  -webkit-box-shadow: 0 2px 20px 2px rgba(149, 165, 166, .5);
+  box-shadow: 0 2px 20px 2px rgba(149, 165, 166, .5);
+  z-index: 5;
 }
 
 .drawflow .drawflow-node.selected .title-box {
-	/*color: #22598c;*/
-	border-bottom: 1px solid #4ea9ff;
+  /*color: #22598c;*/
+  border-bottom: 1px solid #4ea9ff;
 }
 
 .drawflow .connection .main-path {
-	stroke: #4ea9ff;
-	stroke-width: 3px;
+  stroke: #4ea9ff;
+  stroke-width: 3px;
 }
 
 .drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
-	margin: 0px !important;
-	padding: 0.38em !important;
-	height: 15px;
-	width: 15px;
-	background: rgb(150, 150, 150);
-	border: 2px solid var(--border-color);
+  margin: 0px !important;
+  padding: 0.38em !important;
+  height: 15px;
+  width: 15px;
+  background: rgb(150, 150, 150);
+  border: 2px solid var(--border-color);
 }
 
 .drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover {
-	background: #4ea9ff;
+  background: #4ea9ff;
 }
 
 .drawflow .drawflow-node .output {
-	right: 7px;
+  right: 7px;
 }
 
 .drawflow .drawflow-node .input {
-	left: -9px;
+  left: -9px;
 }
 
 .drawflow > .drawflow-delete {
-	color: rgb(50, 50, 50);
-	font-family: inherit;
-	font-size: 22px;
-	line-height: 21px;
-	background: rgb(192, 57, 43);
-	border: 2px solid rgb(192, 57, 43);
-	box-shadow: none;
+  color: rgb(50, 50, 50);
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 21px;
+  background: rgb(192, 57, 43);
+  border: 2px solid rgb(192, 57, 43);
+  box-shadow: none;
 }
 
 .drawflow-delete {
-	color: rgb(50, 50, 50);
-	font-family: inherit;
-	font-size: 22px;
-	line-height: 21px;
-	background: #4ea9ff;
-	border: 2px solid #4ea9ff;
-	box-shadow: none;
+  color: rgb(50, 50, 50);
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 21px;
+  background: #4ea9ff;
+  border: 2px solid #4ea9ff;
+  box-shadow: none;
 }
 
 .drawflow-node .title-box {
-	overflow: hidden;
-	padding-right: 10px;
-	height: 50px;
-	text-overflow: ellipsis;
-	line-height: 50px;
-	word-break: break-all;
-	white-space: nowrap;
-	background: var(--background-box-title);
-	border-bottom: 1px solid rgb(54, 59, 61);
-	border-radius: 4px 4px 0px 0px;
-	padding-left: 16px;
+  overflow: hidden;
+  padding-right: 10px;
+  height: 50px;
+  text-overflow: ellipsis;
+  line-height: 50px;
+  word-break: break-all;
+  white-space: nowrap;
+  background: var(--background-box-title);
+  border-bottom: 1px solid rgb(54, 59, 61);
+  border-radius: 4px 4px 0px 0px;
+  padding-left: 16px;
+}
+.drawflow-node.disabled .title-box {
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, .15), rgba(0, 0, 0, .15) 5px, transparent 5px, transparent 10px);
 }
 .drawflow-node .title-box img {
-	margin-left: 5px;
-	margin-right: 10px;
-	height: 1.5em;
-	vertical-align: -6px;
-	filter: invert(.8) drop-shadow(2px 2px 6px rgba(0, 0, 0, .6));
+  margin-left: 5px;
+  margin-right: 10px;
+  height: 1.5em;
+  vertical-align: -6px;
+  filter: invert(.8) drop-shadow(2px 2px 6px rgba(0, 0, 0, .6));
 }
 .drawflow .title-box svg {
-	position: initial;
+  position: initial;
 }
 .drawflow-node .box {
-	padding: 10px 20px;
-	font-size: 14px;
-	color: rgba(255, 255, 255, .5);
-	border-top-left-radius: 0;
-	border-top-right-radius: 0;
-	box-shadow: none !important;
+  padding: 10px 20px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, .5);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  box-shadow: none !important;
 }
 .drawflow-node .box p {
-	margin-top: 5px;
-	margin-bottom: 5px;
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 .drawflow-node .box p > .fas {
-	float: right;
-	line-height: 1.4rem;
-	cursor: pointer;
+  float: right;
+  line-height: 1.4rem;
+  cursor: pointer;
 }
 .drawflow-node.welcome {
-	width: 250px;
+  width: 250px;
 }
 
 .drawflow-node.slack .title-box {
-	border-radius: 4px;
+  border-radius: 4px;
 }
 
 .drawflow-node input, .drawflow-node select, .drawflow-node textarea {
-	margin: 0px -20px;
-	padding: 0px 6px;
-	width: calc(100% + (2 * 20px));
-	height: 30px;
-	color: rgba(255, 255, 255, .4);
-	font-size: 16px;
-	line-height: 30px;
-	background-color: rgba(0, 0, 0, .2);
-	border: 1px solid #252525;
-	border-left: none;
-	border-right: none;
-	border-radius: none;
+  margin: 0px -20px;
+  padding: 0px 6px;
+  width: calc(100% + (2 * 20px));
+  height: 30px;
+  color: rgba(255, 255, 255, .4);
+  font-size: 16px;
+  line-height: 30px;
+  background-color: rgba(0, 0, 0, .2);
+  border: 1px solid #252525;
+  border-left: none;
+  border-right: none;
+  border-radius: none;
 }
 .drawflow-node input:focus, .drawflow-node select:focus, .drawflow-node textarea:focus {
-	outline: none;
+  outline: none;
 }
 
 .drawflow-node textarea {
-	height: 100px;
+  height: 100px;
 }
 
 .drawflow-node.personalized {
-	background: red;
-	height: 200px;
-	text-align: center;
-	color: white;
+  background: red;
+  height: 200px;
+  text-align: center;
+  color: white;
 }
 .drawflow-node.personalized .input {
-	background: yellow;
+  background: yellow;
 }
 .drawflow-node.personalized .output {
-	background: green;
+  background: green;
 }
 
 .drawflow-node.personalized.selected {
-	background: blue;
+  background: blue;
 }
 
 .drawflow .connection .point {
-	stroke: var(--border-color);
-	stroke-width: 2;
-	fill: white;
+  stroke: var(--border-color);
+  stroke-width: 2;
+  fill: white;
 
 }
 
 .drawflow .connection .point.selected, .drawflow .connection .point:hover {
-	fill: #4ea9ff;
+  fill: #4ea9ff;
 }

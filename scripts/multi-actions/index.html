@@ -1,638 +1,659 @@
 <!DOCTYPE html>
 <html>
 
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
 
-		<title>Multi Actions</title>
+    <title>Multi Actions</title>
 
-		<link id="config_stylesheet" rel="stylesheet" />
-		<style type="text/css">
-			body {
-				overflow: hidden;
-				background-color: #262626;
-			}
+    <link id="config_stylesheet" rel="stylesheet" />
+    <style type="text/css">
+      body {
+        overflow: hidden;
+        background-color: #262626;
+      }
 
-			hr {
-				margin: 6px 0px 15px calc(-40px / 2);
-				width: calc(100% + 40px);
-				height: 1px;
-				background-color: #2a2a2a;
-			}
+      hr {
+        margin: 6px 0px 15px calc(-40px / 2);
+        width: calc(100% + 40px);
+        height: 1px;
+        background-color: #2a2a2a;
+      }
 
-			label.radio,
-			label.checkbox {
-				display: block;
-				position: relative;
-				margin: .6em 1em !important;
-				padding-left: 1em;
-			}
-			label.radio span,
-			label.checkbox span {
-				padding-left: 2em;
-				vertical-align: 1px;
-			}
-			input[type="radio"],
-			input[type="checkbox"] {
-				position: relative;
-				width: 2em !important;
-				height: initial !important;
-				filter: invert(.83);
-			}
+      label.radio,
+      label.checkbox {
+        display: block;
+        position: relative;
+        margin: .6em 1em !important;
+        padding-left: 1em;
+      }
+      label.radio span,
+      label.checkbox span {
+        padding-left: 2em;
+        vertical-align: 1px;
+      }
+      input[type="radio"],
+      input[type="checkbox"] {
+        position: relative;
+        width: 2em !important;
+        height: initial !important;
+        filter: invert(.83);
+      }
 
-			#template {
-				display: none;
-			}
+      #template {
+        display: none;
+      }
 
-			.hero {
-				z-index: 1 !important;
-			}
-			button.show-blocks,
-			button.import-blocks {
-				margin-top: -5px;
-				margin-bottom: -5px;
-				margin-left: 5px;
-			}
+      .hero {
+        z-index: 1 !important;
+      }
+      button.show-blocks,
+      button.import-blocks {
+        margin-top: -5px;
+        margin-bottom: -5px;
+        margin-left: 5px;
+      }
 
-			.drag-drawflow {
-				position: relative;
-				display: inline-block;
-				margin: 0.25rem !important;
-				padding: 10px 10px 10px 12px;
-				width: 8em;
-				height: 8em;
-				font-size: 1rem;
-				color: #dbdbdb;
-				text-align: center;
-				vertical-align: top;
-				line-height: 1.5;
-				white-space: nowrap;
-				background-color: #2a2a2a;
-				border: 1px solid #444;
-				border-radius: 5px;
-				cursor: pointer;
-			}
-			.drag-drawflow .icon {
-				width: 100%;
-				height: auto;
-				margin-top: 0.6em;
-			}
-			.drag-drawflow .icon img {
-				max-width: 60%;
-				filter: invert(.8) drop-shadow(2px 2px 6px rgba(0, 0, 0, .6));
-			}
-			.drag-drawflow .name {
-				overflow: hidden;
-				position: absolute;
-				bottom: 6px;
-				width: calc(100% - (2 * .5em));
-				text-overflow: ellipsis;
-				white-space: nowrap;
-			}
+      input[type="checkbox"]:disabled + span {
+        text-decoration: line-through;
+      }
 
-			.drawflow {
-				background-color: #363636;
-				outline: 2px dashed rgba(255, 255, 255, .65);
-			}
+      .drag-drawflow {
+        position: relative;
+        display: inline-block;
+        margin: 0.25rem !important;
+        padding: 10px 10px 10px 12px;
+        width: 8em;
+        height: 8em;
+        font-size: 1rem;
+        color: #dbdbdb;
+        text-align: center;
+        vertical-align: top;
+        line-height: 1.5;
+        white-space: nowrap;
+        background-color: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .drag-drawflow .icon {
+        width: 100%;
+        height: auto;
+        margin-top: 0.6em;
+      }
+      .drag-drawflow .icon img {
+        max-width: 60%;
+        filter: invert(.8) drop-shadow(2px 2px 6px rgba(0, 0, 0, .6));
+      }
+      .drag-drawflow .name {
+        overflow: hidden;
+        position: absolute;
+        bottom: 6px;
+        width: calc(100% - (2 * .5em));
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
-			.drawflow-node .title-box {
-				position: relative;
-				padding-right: 2rem !important;
-			}
-			.drawflow-node .title-box > .icons {
-				position: absolute;
-				top: 0;
-				right: 0;
-			}
-			.drawflow-node .title-box > .icons .fas {
-				margin-right: .9rem;
-				cursor: pointer;
-			}
-			.drawflow-options {
-				display: none;
-				position: fixed;
-				top: 3rem;
-				left: 3rem;
-				min-width: 8rem;
-				background-color: rgb(34, 34, 34);
-				border: 1px solid var(--border-color);
-				border-radius: 4px;
-			}
-			.drawflow-options > li {
-				padding: .2rem 1rem;
-				cursor: pointer;
-			}
-			.drawflow-options > li.separator {
-				border-top: 1px solid var(--border-color);
-			}
-			.drawflow-options > li:hover {
-				background-color: rgba(255, 255, 255, .08);
-			}
-			.drawflow-options > li:first-child {
-				padding-top: .5rem;
-			}
-			.drawflow-options > li:last-child {
-				padding-bottom: .5rem;
-			}
-			.drawflow-options > li > .far,
-			.drawflow-options > li > .fas {
-				float: right;
-				line-height: 1.5rem;
-				margin-left: 1rem;
-			}
+      .drawflow {
+        background-color: #363636;
+        outline: 2px dashed rgba(255, 255, 255, .65);
+      }
 
-			.drag-drawflow.is-outputs,
-			.drawflow-node .is-outputs .title-box {
-				position: relative;
-			}
-			.drag-drawflow.is-inputs::before,
-			.drag-drawflow.is-outputs::before,
-			.drawflow-node .is-inputs .title-box::before,
-			.drawflow-node .is-outputs .title-box::before {
-				content: '';
-				position: absolute;
-				top: 0px;
-				left: 0px;
-				width: 10px;
-				height: calc(50px - 1px);
-				border-top-left-radius: 4px;
-			}
-			.drag-drawflow.is-inputs::before,
-			.drawflow-node .is-inputs .title-box::before {
-				background-color: rgba(230, 126, 34, .7);
-			}
-			.drag-drawflow.is-outputs::before,
-			.drawflow-node .is-outputs .title-box::before {
-				background-color: rgba(46, 204, 113, .7);
-			}
-			.drag-drawflow.is-inputs.is-outputs::before,
-			.drawflow-node .is-inputs.is-outputs .title-box::before {
-				background-color: rgba(155, 89, 182, .7);
-			}
-			.drawflow-node .column:first-child input {
-				margin: 0px -10px 0px -20px;
-				width: calc(100% + (2 * 15px) + 1px);
-			}
-			.drawflow-node .column:not(:first-child) input {
-				margin: 0px -20px 0 -12px;
-				width: calc(100% + (2 * 15px) + 1px);
-			}
-			.drawflow-node .columns {
-				margin-bottom: 0px;
-			}
-			.drawflow-node .columns > .column {
-				padding-bottom: 0px;
-			}
-			.drawflow-node .columns.clear {
-				clear: both;
-			}
-			.drawflow-node .columns.clear > .column {
-				padding-top: .15rem;
-			}
-			.drawflow-node .column:first-child .is-browse button {
-				right: -10px;
-			}
+      .drawflow-node .title-box {
+        position: relative;
+        padding-right: 2rem !important;
+      }
+      .drawflow-node .title-box > .icons {
+        position: absolute;
+        top: 0;
+        right: 0;
+      }
+      .drawflow-node .title-box > .icons .fas {
+        margin-right: .9rem;
+        cursor: pointer;
+      }
+      .drawflow-options {
+        display: none;
+        position: fixed;
+        top: 3rem;
+        left: 3rem;
+        min-width: 8rem;
+        background-color: rgb(34, 34, 34);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+      }
+      .drawflow-options > li {
+        padding: .2rem 1rem;
+        cursor: pointer;
+      }
+      .drawflow-options > li.separator {
+        border-top: 1px solid var(--border-color);
+      }
+      .drawflow-options > li:hover {
+        background-color: rgba(255, 255, 255, .08);
+      }
+      .drawflow-options > li:first-child {
+        padding-top: .5rem;
+      }
+      .drawflow-options > li:last-child {
+        padding-bottom: .5rem;
+      }
+      .drawflow-options > li > .far,
+      .drawflow-options > li > .fas {
+        float: right;
+        line-height: 1.5rem;
+        margin-left: 1rem;
+      }
 
-			.blocks-drawflow {
-				overflow-x: hidden;
-				overflow-y: auto;
-				position: fixed;
-				top: -100%;
-				right: 0px;
-				bottom: 100%;
-				left: 0px;
-				width: 100%;
-				min-height: calc(100% - 68px);
-				background-color: #555;
-				transition: all 500ms ease-in-out;
-				z-index: -1 !important;
-				transform: translate3d(0,0,0); /* fix */
-			}
-			.drag-drawflow::before {
-				height: 100% !important;
-				border-bottom-left-radius: 4px;
-			}
-			body.show-blocks .blocks-drawflow {
-				top: 68px;
-				bottom: 0px;
-			}
+      .drag-drawflow.is-outputs,
+      .drawflow-node .is-outputs .title-box {
+        position: relative;
+      }
+      .drag-drawflow.is-inputs::before,
+      .drag-drawflow.is-outputs::before,
+      .drawflow-node .is-inputs .title-box::before,
+      .drawflow-node .is-outputs .title-box::before {
+        content: '';
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        width: 10px;
+        height: calc(50px - 1px);
+        border-top-left-radius: 4px;
+      }
+      .drag-drawflow.is-inputs::before,
+      .drawflow-node .is-inputs .title-box::before {
+        background-color: rgba(230, 126, 34, .7);
+      }
+      .drag-drawflow.is-outputs::before,
+      .drawflow-node .is-outputs .title-box::before {
+        background-color: rgba(46, 204, 113, .7);
+      }
+      .drag-drawflow.is-inputs.is-outputs::before,
+      .drawflow-node .is-inputs.is-outputs .title-box::before {
+        background-color: rgba(155, 89, 182, .7);
+      }
+      .drawflow-node .column:first-child input {
+        margin: 0px -10px 0px -20px;
+        width: calc(100% + (2 * 15px) + 1px);
+      }
+      .drawflow-node .column:not(:first-child) input {
+        margin: 0px -20px 0 -12px;
+        width: calc(100% + (2 * 15px) + 1px);
+      }
+      .drawflow-node .columns {
+        margin-bottom: 0px;
+      }
+      .drawflow-node .columns > .column {
+        padding-bottom: 0px;
+      }
+      .drawflow-node .columns.clear {
+        clear: both;
+      }
+      .drawflow-node .columns.clear > .column {
+        padding-top: .15rem;
+      }
+      .drawflow-node .column:first-child .is-browse button {
+        right: -10px;
+      }
 
-			.box-drawflow {
-				position: fixed;
-				top: 68px;
-				right: 0px;
-				bottom: 0px;
-				left: 0px;
-				height: calc(100% - (68px - 6px)) !important;
-				z-index: -2 !important;
-			}
+      .blocks-drawflow {
+        overflow-x: hidden;
+        overflow-y: auto;
+        position: fixed;
+        top: -100%;
+        right: 0px;
+        bottom: 100%;
+        left: 0px;
+        width: 100%;
+        min-height: calc(100% - 68px);
+        background-color: #555;
+        transition: all 500ms ease-in-out;
+        z-index: -1 !important;
+        transform: translate3d(0,0,0); /* fix */
+      }
+      .drag-drawflow::before {
+        height: 100% !important;
+        border-bottom-left-radius: 4px;
+      }
+      body.show-blocks .blocks-drawflow {
+        top: 68px;
+        bottom: 0px;
+      }
 
-			.is-browse,
-			.is-command {
-				position: relative;
-			}
+      .box-drawflow {
+        position: fixed;
+        top: 68px;
+        right: 0px;
+        bottom: 0px;
+        left: 0px;
+        height: calc(100% - (68px - 6px)) !important;
+        z-index: -2 !important;
+      }
 
-			.is-command input {
-				padding-left: calc(6px + 24px) !important;
-			}
-			.is-command::before {
-				content: '!';
-				position: absolute;
-				top: 1px;
-				left: -20px;
-				width: 24px;
-				height: 28px;
-				font-size: 1.3em;
-				text-align: center;
-				background-color: rgba(255, 255, 255, .06);
-			}
+      .is-browse,
+      .is-command {
+        position: relative;
+      }
 
-			.is-browse input {
-				padding-right: calc(6px + 24px) !important;
-			}
-			.is-browse button {
-				position: absolute;
-				top: 1px;
-				right: -20px;
-				padding-top: 8px;
-				padding-bottom: 0px;
-				width: 24px;
-				height: 28px;
-				color: inherit;
-				font-size: 1em;
-				text-align: center;
-				background-color: rgba(255, 255, 255, .06);
-				border: none;
-				cursor: pointer;
-			}
-			.is-browse button .fa-xmark {
-				vertical-align: 4px;
-			}
+      .is-command input {
+        padding-left: calc(6px + 24px) !important;
+      }
+      .is-command::before {
+        content: '!';
+        position: absolute;
+        top: 1px;
+        left: -20px;
+        width: 24px;
+        height: 28px;
+        font-size: 1.3em;
+        text-align: center;
+        background-color: rgba(255, 255, 255, .06);
+      }
 
-			.fa-circle-info {
-				cursor: pointer;
-			}
+      .is-browse input {
+        padding-right: calc(6px + 24px) !important;
+      }
+      .is-browse button {
+        position: absolute;
+        top: 1px;
+        right: -20px;
+        padding-top: 8px;
+        padding-bottom: 0px;
+        width: 24px;
+        height: 28px;
+        color: inherit;
+        font-size: 1em;
+        text-align: center;
+        background-color: rgba(255, 255, 255, .06);
+        border: none;
+        cursor: pointer;
+      }
+      .is-browse button .fa-xmark {
+        vertical-align: 4px;
+      }
 
-			.container-frame {
-				position: fixed;
-				top: 0px;
-				right: 0px;
-				bottom: 0px;
-				left: 0px;
-				background-color: rgba(0, 0, 0, .65);
-				z-index: 4;
-			}
-			.container-frame > div {
-				overflow-x: visible;
-				position: absolute;
-				top: 50%;
-				left: 50%;
-				max-width: 90%;
-				max-height: 90%;
-				transform: translate(-50%, -50%);
-			}
-			.container-frame > div > div {
-				position: absolute;
-				top: -1.5em;
-				left: 50%;
-				font-size: 1.5em;
-				white-space: nowrap;
-				transform: translateX(-50%);
-			}
-			.container-frame > div > img {
-				max-width: 100%;
-				max-height: 100%;
-			}
-		</style>
+      .fa-circle-info {
+        cursor: pointer;
+      }
 
-		<link rel="stylesheet" href="./libs/drawflow.min.css" />
-		<link rel="stylesheet" href="./libs/drawflow.style.css" />
-		<script src="./libs/drawflow.min.js"></script>
-		<script src="./libs/drawflow.blocks.js"></script>
-	</head>
+      .container-frame {
+        position: fixed;
+        top: 0px;
+        right: 0px;
+        bottom: 0px;
+        left: 0px;
+        background-color: rgba(0, 0, 0, .65);
+        z-index: 4;
+      }
+      .container-frame > div {
+        overflow-x: visible;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        max-width: 90%;
+        max-height: 90%;
+        transform: translate(-50%, -50%);
+      }
+      .container-frame > div > div {
+        position: absolute;
+        top: -1.5em;
+        left: 50%;
+        font-size: 1.5em;
+        white-space: nowrap;
+        transform: translateX(-50%);
+      }
+      .container-frame > div > img {
+        max-width: 100%;
+        max-height: 100%;
+      }
+    </style>
 
-	<body>
-		<div id="template">
-			<div class="drag-drawflow" draggable="true">
-				<div class="icon" draggable="false"><img src="" draggable="false" /></div>
-				<div class="name" draggable="false"></div>
-			</div>
+    <link rel="stylesheet" href="./libs/drawflow.min.css" />
+    <link rel="stylesheet" href="./libs/drawflow.style.css" />
+    <script src="./libs/drawflow.min.js"></script>
+    <script src="./libs/drawflow.blocks.js"></script>
+  </head>
 
-			<div class="block-drawflow">
-				<div class="title-box">
-					<img src="" />
-					<span></span>
-					<div class="icons">
-						<i class="fas fa-caret-down" title="Options"></i>
-					</div>
-				</div>
-				<div class="box"></div>
-			</div>
+  <body>
+    <div id="template">
+      <div class="drag-drawflow" draggable="true">
+        <div class="icon" draggable="false"><img src="" draggable="false" /></div>
+        <div class="name" draggable="false"></div>
+      </div>
 
-			<ul class="drawflow-options">
-				<li class="toggle-action">Enable<i class="fas fa-square-check"></i>
-				<li class="test-action">Test<i class="fas fa-rocket"></i></li>
-				<li class="export-action separator" browse-file=".container .drawflow-options .export-action input" browse-file-name="nodes" browse-file-ext="smma">
-					Export<i class="fas fa-download"></i>
-					<input type="text" class="is-hidden" />
-				</li>
-			</ul>
-		</div>
+      <div class="block-drawflow">
+        <div class="title-box">
+          <img src="" />
+          <span></span>
+          <div class="icons">
+            <i class="fas fa-caret-down" title="Options"></i>
+          </div>
+        </div>
+        <div class="box"></div>
+      </div>
 
-		<div class="modal add-module">
-			<div class="modal-background"></div>
-			<div class="modal-card">
-				<header class="modal-card-head">
-					<p class="modal-card-title">Add Module</p>
-					<button class="delete" aria-label="close"></button>
-				</header>
-				<section class="modal-card-body">
-					<div class="content">
-						<h4>Module name :</h4>
-					</div>
-					<input type="text" class="input has-text-centered" />
-				</section>
-				<footer class="modal-card-foot is-justify-content-right">
-					<button class="button is-success">Confirm</button>
-					<button class="button" aria-label="close">Cancel</button>
-				</footer>
-			</div>
-		</div>
+      <ul class="drawflow-options">
+        <li class="toggle-action">Enable<i class="fas fa-square-check"></i>
+        <li class="test-action">Test<i class="fas fa-rocket"></i></li>
+        <li class="export-action separator" browse-file=".container .drawflow-options .export-action input" browse-file-name="nodes" browse-file-ext="smma">
+          Export<i class="fas fa-download"></i>
+          <input type="text" class="is-hidden" />
+        </li>
+      </ul>
+    </div>
 
-		<div class="modal edit-module">
-			<div class="modal-background"></div>
-			<div class="modal-card">
-				<header class="modal-card-head">
-					<p class="modal-card-title">Rename Module</p>
-					<button class="delete" aria-label="close"></button>
-				</header>
-				<section class="modal-card-body">
-					<div class="content">
-						<h4>Module name :</h4>
-					</div>
-					<input type="text" class="input has-text-centered" />
-				</section>
-				<footer class="modal-card-foot is-justify-content-space-between">
-					<button class="button is-danger delete-module" style="justify-content: space-between;">Delete</button>
-					<div>
-						<button class="button is-success">Confirm</button>
-						<button class="button" aria-label="close">Cancel</button>
-					</div>
-				</footer>
-			</div>
-		</div>
+    <div class="modal add-module">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Add Module</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="content">
+            <h4>Module name :</h4>
+          </div>
+          <input type="text" class="input has-text-centered" />
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button is-success">Confirm</button>
+          <button class="button" aria-label="close">Cancel</button>
+        </footer>
+      </div>
+    </div>
 
-		<div class="container">
-			<section class="hero is-small has-background-grey-dark">
-				<div class="hero-body">
-					<div class="subtitle is-size-6 has-text-white-ter">
-						Program all kinds of actions related to addons.
-						<i class="fas fa-gear is-pulled-right ml-2 edit-module" title="Edit"></i>
-						<i class="fas fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
-						<div class="select is-small is-pulled-right ml-2">
-							<select class="modules"></select>
-						</div>
-						<button class="button is-small is-pulled-right show-blocks">Toggle Blocks</button>
-						<button class="button is-small is-pulled-right import-blocks" browse-file=".container .hero-body input" browse-file-ext="smma">Import Blocks</button>
-						<input type="text" class="is-hidden" />
-					</div>
-				</div>
-			</section>
+    <div class="modal edit-module">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Rename Module</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="content">
+            <h4>Module name :</h4>
+          </div>
+          <input type="text" class="input has-text-centered" />
+        </section>
+        <footer class="modal-card-foot is-justify-content-space-between">
+          <button class="button is-danger delete-module" style="justify-content: space-between;">Delete</button>
+          <div>
+            <button class="button is-success">Confirm</button>
+            <button class="button" aria-label="close">Cancel</button>
+          </div>
+        </footer>
+      </div>
+    </div>
 
-			<div class="blocks-drawflow">
-				<div class="my-5">
-					<div class="mx-5 content">
-						<h5>Fonctionnality</h5>
-						<div blocks-type=""></div>
-					</div>
-					<div class="mx-5 content">
-						<div blocks-type="discord">
-							<h6 class="has-text-left mt-4">Discord</h6>
-						</div>
-					</div>
-					<div class="mx-5 content">
-						<div blocks-type="obs-studio">
-							<h6 class="has-text-left">OBS Studio</h6>
-						</div>
-					</div>
-					<div class="mx-5 content">
-						<div blocks-type="spotify">
-							<h6 class="has-text-left">Spotify</h6>
-						</div>
-					</div>
-					<div class="mx-5 content">
-						<div blocks-type="twitch">
-							<h6 class="has-text-left mt-4">Twitch</h6>
-						</div>
-					</div>
-				</div>
-			</div>
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <div class="subtitle is-size-6 has-text-white-ter">
+            Program all kinds of actions related to addons.
+            <i class="fas fa-gear is-pulled-right ml-2 edit-module" title="Edit"></i>
+            <i class="fas fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
+            <div class="select is-small is-pulled-right ml-2">
+              <select class="modules"></select>
+            </div>
+            <button class="button is-small is-pulled-right show-blocks">Toggle Blocks</button>
+            <button class="button is-small is-pulled-right import-blocks" browse-file=".container .hero-body input" browse-file-ext="smma">Import Blocks</button>
+            <input type="text" class="is-hidden" />
+          </div>
+        </div>
+      </section>
 
-			<div class="box-drawflow">
-			</div>
-		</div>
+      <div class="blocks-drawflow">
+        <div class="my-5">
+          <div class="mx-5 content">
+            <h5>Fonctionnality</h5>
+            <div blocks-type=""></div>
+          </div>
+          <div class="mx-5 content">
+            <div blocks-type="discord">
+              <h6 class="has-text-left mt-4">Discord</h6>
+            </div>
+          </div>
+          <div class="mx-5 content">
+            <div blocks-type="obs-studio">
+              <h6 class="has-text-left">OBS Studio</h6>
+            </div>
+          </div>
+          <div class="mx-5 content">
+            <div blocks-type="spotify">
+              <h6 class="has-text-left">Spotify</h6>
+            </div>
+          </div>
+          <div class="mx-5 content">
+            <div blocks-type="twitch">
+              <h6 class="has-text-left mt-4">Twitch</h6>
+            </div>
+          </div>
+        </div>
+      </div>
 
-		<script type="text/javascript">
-			const drawflow = document.querySelector('.box-drawflow');
-			const selector = document.querySelector('.modules');
-			const editor = new Drawflow(drawflow);
+      <div class="box-drawflow">
+      </div>
+    </div>
 
-			window.editor = editor;
+    <script type="text/javascript">
+      const drawflow = document.querySelector('.box-drawflow');
+      const selector = document.querySelector('.modules');
+      const editor = new Drawflow(drawflow);
 
-			window.drawflow_save = () => {
-				window.parent.postMessage({ save: editor.export().drawflow }, '*');
-			};
+      window.editor = editor;
 
-			window.drawflow_select = () => {
-				selector.innerHTML = '';
-				for (const name in editor.drawflow.drawflow)
-				{
-					const option = document.createElement('option');
-					option.value = name;
-					option.innerText = name;
-					selector.appendChild(option);
-				}
+      if (typeof(editor.renameModule) !== 'function')
+      {
+        editor.renameModule = new_name => {
+          const current = editor.module;
+          editor.drawflow.drawflow[new_name] = editor.drawflow.drawflow[current];
+          delete editor.drawflow.drawflow[current];
 
-				const current = editor.module;
-				let module_name = current;
-				if (!current || typeof(editor.drawflow.drawflow[current]) === 'undefined')
-					module_name = Object.keys(editor.drawflow.drawflow)[0];
+          editor.changeModule(new_name);
+          window.drawflow_save();
+          window.drawflow_select();
+        };
+      }
 
-				selector.value = module_name;
-				if (module_name !== current)
-					editor.changeModule(module_name);
-			};
+      // Events!
+      editor.on('nodeCreated', id => {
+        window.drawflow_save();
+      });
 
-			if (typeof(editor.renameModule) !== 'function')
-			{
-				editor.renameModule = new_name => {
-					const current = editor.module;
-					editor.drawflow.drawflow[new_name] = editor.drawflow.drawflow[current];
-					delete editor.drawflow.drawflow[current];
+      editor.on('nodeRemoved', id => {
+        window.drawflow_save();
+      });
 
-					editor.changeModule(new_name);
-					window.drawflow_save();
-					window.drawflow_select();
-				};
-			}
+      editor.on('moduleCreated', name => {
+        window.drawflow_save();
+        window.drawflow_select();
+      });
 
-			// Events!
-			editor.on('nodeCreated', id => {
-				window.drawflow_save();
-			});
+      editor.on('moduleChanged', name => {
+        const init = () => {
+          setTimeout(() => {
+            if (!window.drawflow_initializer)
+              return init();
 
-			editor.on('nodeRemoved', id => {
-				window.drawflow_save();
-			});
+            window.drawflow_initializer(editor.drawflow.drawflow);
+          }, 10);
+        };
 
-			editor.on('moduleCreated', name => {
-				window.drawflow_save();
-				window.drawflow_select();
-			});
+        init();
+        if (typeof editor.drawflow.drawflow[name] !== 'undefined' && Object.keys(editor.drawflow.drawflow).length >= 2)
+          window.parent.postMessage({ module: name }, '*');
+      });
 
-			editor.on('moduleChanged', name => {
-				const init = () => {
-					setTimeout(() => {
-						if (!window.drawflow_initializer)
-							return init();
+      editor.on('connectionCreated', connection => {
+        window.drawflow_save();
+      });
 
-						window.drawflow_initializer(editor.drawflow.drawflow);
-					}, 10);
-				};
+      editor.on('connectionRemoved', connection => {
+        window.drawflow_save();
+      });
+      editor.on('nodeMoved', id => {
+        window.drawflow_save();
+      });
 
-				init();
-				if (typeof editor.drawflow.drawflow[name] !== 'undefined' && Object.keys(editor.drawflow.drawflow).length >= 2)
-					window.parent.postMessage({ module: name }, '*');
-			});
+      editor.start();
+      editor.removeModule('Home');
 
-			editor.on('connectionCreated', connection => {
-				window.drawflow_save();
-			});
+      selector.addEventListener('change', event => {
+        editor.changeModule(selector.value);
+      });
 
-			editor.on('connectionRemoved', connection => {
-				window.drawflow_save();
-			});
-			editor.on('nodeMoved', id => {
-				window.drawflow_save();
-			});
+      document.querySelectorAll('[aria-label="close"]').forEach(elem => {
+        elem.addEventListener('click', () => {
+          const modal = elem.closest('.modal');
+          if (modal)
+            modal.classList.remove('is-active');
+        }, false);
+      });
 
-			editor.start();
-			editor.removeModule('Home');
+      document.querySelector('i.add-module').addEventListener('click', event => {
+        const elem = document.querySelector('div.add-module');
+        const input = elem.querySelector('input');
 
-			selector.addEventListener('change', event => {
-				editor.changeModule(selector.value);
-			});
+        elem.classList.add('is-active');
+        input.value = '';
+        input.focus();
+      });
 
-			document.querySelectorAll('[aria-label="close"]').forEach(elem => {
-				elem.addEventListener('click', () => {
-					const modal = elem.closest('.modal');
-					if (modal)
-						modal.classList.remove('is-active');
-				}, false);
-			});
+      document.querySelector('div.add-module .is-success').addEventListener('click', event => {
+        const modal = event.target.closest('.modal');
+        modal.classList.remove('is-active');
 
-			document.querySelector('i.add-module').addEventListener('click', event => {
-				const elem = document.querySelector('div.add-module');
-				const input = elem.querySelector('input');
+        const current = modal.querySelector('input').value.trim();
+        editor.addModule(current);
+        editor.changeModule(current);
 
-				elem.classList.add('is-active');
-				input.value = '';
-				input.focus();
-			});
+        window.drawflow_save();
+        window.drawflow_select();
+      });
 
-			document.querySelector('div.add-module .is-success').addEventListener('click', event => {
-				const modal = event.target.closest('.modal');
-				modal.classList.remove('is-active');
+      document.querySelector('i.edit-module').addEventListener('click', event => {
+        const elem = document.querySelector('div.edit-module');
+        const input = elem.querySelector('input');
 
-				const current = modal.querySelector('input').value.trim();
-				editor.addModule(current);
-				editor.changeModule(current);
+        elem.classList.add('is-active');
+        input.value = editor.module;
+        input.focus();
+        input.select();
+      });
 
-				window.drawflow_save();
-				window.drawflow_select();
-			});
+      document.querySelector('div.edit-module .is-success').addEventListener('click', event => {
+        const modal = event.target.closest('.modal');
+        modal.classList.remove('is-active');
 
-			document.querySelector('i.edit-module').addEventListener('click', event => {
-				const elem = document.querySelector('div.edit-module');
-				const input = elem.querySelector('input');
+        editor.renameModule(modal.querySelector('input').value.trim());
+      });
 
-				elem.classList.add('is-active');
-				input.value = editor.module;
-				input.focus();
-				input.select();
-			});
+      document.querySelector('div.edit-module .delete-module').addEventListener('click', event => {
+        const modal = event.target.closest('.modal');
+        modal.classList.remove('is-active');
 
-			document.querySelector('div.edit-module .is-success').addEventListener('click', event => {
-				const modal = event.target.closest('.modal');
-				modal.classList.remove('is-active');
+        if (selector.querySelectorAll('option').length > 1)
+        {
+          const to_delete = editor.module;
 
-				editor.renameModule(modal.querySelector('input').value.trim());
-			});
+          // editor.removeModule(to_delete); // not work
+          if (typeof(editor.drawflow.drawflow[to_delete]) !== 'undefined')
+            delete editor.drawflow.drawflow[to_delete];
 
-			document.querySelector('div.edit-module .delete-module').addEventListener('click', event => {
-				const modal = event.target.closest('.modal');
-				modal.classList.remove('is-active');
+          for (const option of selector.querySelectorAll('option'))
+          {
+            if (option.value === to_delete)
+              option.remove();
+          }
 
-				if (selector.querySelectorAll('option').length > 1)
-				{
-					const to_delete = editor.module;
+          window.drawflow_save();
+          window.drawflow_select();
+        }
+      });
 
-					// editor.removeModule(to_delete); // not work
-					if (typeof(editor.drawflow.drawflow[to_delete]) !== 'undefined')
-						delete editor.drawflow.drawflow[to_delete];
+      window.addEventListener('message', event => {
+        if (event.origin !== 'null')
+        {
+          if (event.data.name === 'config')
+          {
+            setTimeout(() => {
+              const _config = event.data.data;
+              if (Object.keys(_config.actions).length)
+              {
+                let actions = {};
+                for (const module_name in _config.actions)
+                {
+                  actions[module_name] = { data: {} };
+                  for (const id in _config.actions[module_name].data)
+                  {
+                    const action = _config.actions[module_name].data[id];
+                    if (window.block_exists(action.html))
+                      actions[module_name].data[id] = action;
+                  }
+                }
 
-					for (const option of selector.querySelectorAll('option'))
-					{
-						if (option.value == to_delete)
-							option.remove();
-					}
+                for (const module_name in actions)
+                {
+                  for (const id in actions[module_name].data)
+                  {
+                    const action = actions[module_name].data[id];
+                    for (const ckey of ['inputs', 'outputs'])
+                    {
+                      for (const cskey of Object.keys(action[ckey]))
+                      {
+                        const connections = action[ckey][cskey].connections;
+                        for (let c = (connections.length - 1); c >= 0; --c)
+                        {
+                          const connection = connections[c];
+                          if (typeof actions[module_name].data[parseInt(connection.node)] === 'undefined')
+                            connections.splice(c, 1);
+                        }
+                      }
+                    }
+                  }
+                }
 
-					window.drawflow_save();
-					window.drawflow_select();
-				}
-			});
+                editor.module = Object.keys(actions)[0];
+                editor.import({ drawflow: actions });
+                window.drawflow_select();
 
-			window.addEventListener('message', event => {
-				if (event.origin !== 'null')
-				{
-					if (event.data.name == 'config')
-					{
-						setTimeout(() => {
-							const _config = event.data.data;
-							if (Object.keys(_config.actions).length)
-							{
-								editor.module = Object.keys(_config.actions)[0];
-								editor.import({ drawflow: _config.actions });
-								window.drawflow_select();
+                if (typeof(window.drawflow_initializer) === 'function')
+                  window.drawflow_initializer(actions);
 
-								if (typeof(window.drawflow_initializer) === 'function')
-									window.drawflow_initializer(_config.actions);
+                const module_name = ((_config.settings.module && typeof editor.drawflow.drawflow[_config.settings.module] !== 'undefined') ? _config.settings.module : Object.keys(actions)[0]);
+                if (module_name !== editor.module)
+                {
+                  selector.value = module_name;
+                  editor.changeModule(module_name); // supprimer les nodes et connexion associées si le block n'existe plus
+                }
+              }
+              else
+              {
+                editor.module = 'Default';
+                editor.addModule(editor.module);
+                window.drawflow_save();
+                window.drawflow_select();
+              }
+            }, 100);
+          }
+          else if (event.data.name === 'receive' && typeof(window.drawflow_receiver) === 'function')
+            window.drawflow_receiver(event.data.data.source, event.data.data.id, event.data.data.name, event.data.data.data);
+          else if (event.data.name === 'import')
+            window.import_node(JSON.parse(event.data.data));
+          else if (event.data.name === 'block-toggle' && typeof editor.drawflow.drawflow[event.data.data.module] !== 'undefined' && typeof editor.drawflow.drawflow[event.data.data.module].data[event.data.data.id] !== 'undefined')
+          {
+            editor.drawflow.drawflow[event.data.data.module].data[event.data.data.id].data.data.enabled = event.data.data.enabled;
 
-								const module_name = ((_config.settings.module && typeof editor.drawflow.drawflow[_config.settings.module] !== 'undefined') ? _config.settings.module : Object.keys(_config.actions)[0]);
-								if (module_name !== editor.module)
-								{
-									selector.value = module_name;
-									editor.changeModule(module_name);
-								}
-							}
-							else
-							{
-								editor.module = 'Default';
-								editor.addModule(editor.module);
-								window.drawflow_save();
-								window.drawflow_select();
-							}
-						}, 100);
-					}
-					else if (event.data.name == 'receive' && typeof(window.drawflow_receiver) === 'function')
-						window.drawflow_receiver(event.data.data.source, event.data.data.id, event.data.data.name, event.data.data.data);
-					else if (event.data.name == 'import')
-						window.import_node(JSON.parse(event.data.data));
-				}
-			}, false);
-		</script>
-	</body>
+            const node = window.get_node(event.data.data.id);
+            if (node)
+              node.elem.classList.toggle('disabled', !event.data.data.enabled);
+          }
+        }
+      }, false);
+    </script>
+  </body>
 
 </html>

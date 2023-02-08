@@ -1,199 +1,199 @@
 <!DOCTYPE html>
 <html>
 
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
 
-		<title>Twitch</title>
+    <title>Twitch</title>
 
-		<link id="config_stylesheet" rel="stylesheet" />
-		<style type="text/css">
-			.has-addons .button {
-				border-color: #444;
-			}
-			.table {
-				background-color: transparent;
-			}
-			.table:not(.show) {
-				display: none;
-			}
-			.table > tbody,
-			.table.is-striped tbody tr:not(.is-selected):nth-child(even) {
-				background-color: rgba(0, 0, 0, .2);
-			}
-			.table > thead > tr > th:first-child {
-				width: 175px;
-			}
-			.table > thead > tr > th:nth-child(4),
-			.table > thead > tr > th:nth-child(5),
-			.table > thead > tr > th:nth-child(6),
-			.table > thead > tr > th:nth-child(7),
-			.table > tbody > tr > td:nth-child(4),
-			.table > tbody > tr > td:nth-child(5),
-			.table > tbody > tr > td:nth-child(6),
-			.table > tbody > tr > td:nth-child(7) {
-				width: 50px;
-				text-align: center;
-			}
-		</style>
-	</head>
+    <link id="config_stylesheet" rel="stylesheet" />
+    <style type="text/css">
+      .has-addons .button {
+        border-color: #444;
+      }
+      .table {
+        background-color: transparent;
+      }
+      .table:not(.show) {
+        display: none;
+      }
+      .table > tbody,
+      .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+        background-color: rgba(0, 0, 0, .2);
+      }
+      .table > thead > tr > th:first-child {
+        width: 175px;
+      }
+      .table > thead > tr > th:nth-child(4),
+      .table > thead > tr > th:nth-child(5),
+      .table > thead > tr > th:nth-child(6),
+      .table > thead > tr > th:nth-child(7),
+      .table > tbody > tr > td:nth-child(4),
+      .table > tbody > tr > td:nth-child(5),
+      .table > tbody > tr > td:nth-child(6),
+      .table > tbody > tr > td:nth-child(7) {
+        width: 50px;
+        text-align: center;
+      }
+    </style>
+  </head>
 
-	<body>
-		<div class="container">
-			<section class="hero is-small has-background-grey-dark">
-				<div class="hero-body">
-					<p class="subtitle is-size-6 has-text-white-ter">Links to Twitch chat for scripts that need this feature.</p>
-				</div>
-			</section>
+  <body>
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <p class="subtitle is-size-6 has-text-white-ter">Links to Twitch chat for scripts that need this feature.</p>
+        </div>
+      </section>
 
-			<div class="m-5">
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Channel:</label>
-					</div>
-					<div class="field-body">
-						<div class="field channel">
-							<div class="control ml-6 pl-6">
-								<input class="input has-text-centered" type="text" />
-							</div>
-						</div>
-					</div>
-				</div>
+      <div class="m-5">
+        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Channel:</label>
+          </div>
+          <div class="field-body">
+            <div class="field channel">
+              <div class="control ml-6 pl-6">
+                <input class="input has-text-centered" type="text" />
+              </div>
+            </div>
+          </div>
+        </div>
 
-				<div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-					<div class="field-label is-normal">
-						<label class="label">Token:</label>
-					</div>
-					<div class="field-body">
-						<div class="field has-addons token">
-							<div class="control ml-6 pl-6 is-expanded">
-								<input class="input has-text-centered is-two-thirds" type="password" />
-							</div>
-							<div class="control">
-								<a class="button is-dark">
-									Generate
-								</a>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
+        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Token:</label>
+          </div>
+          <div class="field-body">
+            <div class="field has-addons token">
+              <div class="control ml-6 pl-6 is-expanded">
+                <input class="input has-text-centered is-two-thirds" type="password" />
+              </div>
+              <div class="control">
+                <a class="button is-dark">
+                  Generate
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-			<table class="table is-fullwidth is-narrow is-striped mb-5">
-				<thead>
-					<tr>
-						<th>Date</th>
-						<th>Type</th>
-						<th>From</th>
-						<th title="Subscriber"><i class="fas fa-solid fa-coins"></i></th>
-						<th title="VIP"><i class="fas fa-solid fa-star"></i></th>
-						<th title="Moderator"><i class="fas fa-solid fa-shield-halved"></i></th>
-						<th title="Broadcaster"><i class="fas fa-solid fa-award"></i></th>
-					</tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-		</div>
+      <table class="table is-fullwidth is-narrow is-striped mb-5">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>From</th>
+            <th title="Subscriber"><i class="fas fa-solid fa-coins"></i></th>
+            <th title="VIP"><i class="fas fa-solid fa-star"></i></th>
+            <th title="Moderator"><i class="fas fa-solid fa-shield-halved"></i></th>
+            <th title="Broadcaster"><i class="fas fa-solid fa-award"></i></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-		<script type="text/javascript">
-			let timeout = 0;
+    <script type="text/javascript">
+      let timeout = 0;
 
-			for (const name of ['channel', 'token'])
-			{
-				const elem = document.querySelector(`.${name} input`);
-				const callback = event => {
-					let data = {};
-					data[name] = elem.value;
+      for (const name of ['channel', 'token'])
+      {
+        const elem = document.querySelector(`.${name} input`);
+        const callback = event => {
+          let data = {};
+          data[name] = elem.value;
 
-					window.parent.postMessage(data, '*');
-				};
+          window.parent.postMessage(data, '*');
+        };
 
-				elem.addEventListener('blur', callback);
-				elem.addEventListener('input', event => {
-					clearTimeout(timeout);
-					timeout = setTimeout(() => {
-						window.parent.postMessage({refresh: true}, '*');
-					}, 5000);
-				});
-			}
+        elem.addEventListener('blur', callback);
+        elem.addEventListener('input', event => {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            window.parent.postMessage({refresh: true}, '*');
+          }, 5000);
+        });
+      }
 
-			window.addEventListener('message', event => {
-				if (event.origin !== 'null')
-				{
-					if (event.data.name == 'config')
-					{
-						const _config = event.data.data;
+      window.addEventListener('message', event => {
+        if (event.origin !== 'null')
+        {
+          if (event.data.name == 'config')
+          {
+            const _config = event.data.data;
 
-						for (const name of ['channel', 'token'])
-							document.querySelector(`.${name} input`).value = _config.connection[name];
+            for (const name of ['channel', 'token'])
+              document.querySelector(`.${name} input`).value = _config.connection[name];
 
-						document.querySelector('.token .button').setAttribute('external-link', _config.authorize);
-					}
-					else if (event.data.name == 'logs')
-					{
-						if (event.data.data)
-						{
-							const table = document.querySelector('.table > tbody');
-							const update = !Array.isArray(event.data.data);
+            document.querySelector('.token .button').setAttribute('external-link', _config.authorize);
+          }
+          else if (event.data.name == 'logs')
+          {
+            if (event.data.data)
+            {
+              const table = document.querySelector('.table > tbody');
+              const update = !Array.isArray(event.data.data);
 
-							if (update || event.data.data.length)
-								table.parentElement.classList.add('show');
+              if (update || event.data.data.length)
+                table.parentElement.classList.add('show');
 
-							for (const row of (update ? [event.data.data] : event.data.data))
-							{
-								const tr = document.createElement('tr');
-								const date = document.createElement('td');
-								const type = document.createElement('td');
-								const from = document.createElement('td');
-								const sub = document.createElement('td');
-								const vip = document.createElement('td');
-								const mod = document.createElement('td');
-								const brd = document.createElement('td');
+              for (const row of (update ? [event.data.data] : event.data.data))
+              {
+                const tr = document.createElement('tr');
+                const date = document.createElement('td');
+                const type = document.createElement('td');
+                const from = document.createElement('td');
+                const sub = document.createElement('td');
+                const vip = document.createElement('td');
+                const mod = document.createElement('td');
+                const brd = document.createElement('td');
 
-								const cross = document.createElement('i');
-								cross.classList.add('fas', 'fa-xmark');
+                const cross = document.createElement('i');
+                cross.classList.add('fas', 'fa-xmark');
 
-								const columns = [date, type, from, sub, vip, mod, brd];
-								if (row.type == 'Register')
-									columns.forEach(column => column.classList.add('is-info'));
-								else if (row.type == 'Reconnect')
-									columns.forEach(column => column.classList.add('is-warning'));
-								else if (row.type == 'Disconnected')
-									columns.forEach(column => column.classList.add('is-danger'));
+                const columns = [date, type, from, sub, vip, mod, brd];
+                if (row.type == 'Register')
+                  columns.forEach(column => column.classList.add('is-info'));
+                else if (row.type == 'Reconnect')
+                  columns.forEach(column => column.classList.add('is-warning'));
+                else if (row.type == 'Disconnected')
+                  columns.forEach(column => column.classList.add('is-danger'));
 
-								date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
-								type.innerText = row.type[0].toUpperCase() + row.type.substr(1);
-								from.innerText = (row.user ? (row.user.name || '') : '');
+                date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
+                type.innerText = row.type[0].toUpperCase() + row.type.substr(1);
+                from.innerText = (row.user ? (row.user.name || '') : '');
 
-								if (row.flags)
-								{
-									if (row.flags.subscriber)
-										sub.appendChild(cross.cloneNode());
-									if (row.flags.vip)
-										vip.appendChild(cross.cloneNode());
-									if (row.flags.moderator)
-										mod.appendChild(cross.cloneNode());
-									if (row.flags.broadcaster)
-										brd.appendChild(cross.cloneNode());
-								}
+                if (row.flags)
+                {
+                  if (row.flags.subscriber)
+                    sub.appendChild(cross.cloneNode());
+                  if (row.flags.vip)
+                    vip.appendChild(cross.cloneNode());
+                  if (row.flags.moderator)
+                    mod.appendChild(cross.cloneNode());
+                  if (row.flags.broadcaster)
+                    brd.appendChild(cross.cloneNode());
+                }
 
-								tr.appendChild(date);
-								tr.appendChild(type);
-								tr.appendChild(from);
-								tr.appendChild(sub);
-								tr.appendChild(vip);
-								tr.appendChild(mod);
-								tr.appendChild(brd);
+                tr.appendChild(date);
+                tr.appendChild(type);
+                tr.appendChild(from);
+                tr.appendChild(sub);
+                tr.appendChild(vip);
+                tr.appendChild(mod);
+                tr.appendChild(brd);
 
-								table[update ? 'prepend' : 'appendChild'](tr);
-							}
-						}
-					}
-				}
-			}, false);
-		</script>
-	</body>
+                table[update ? 'prepend' : 'appendChild'](tr);
+              }
+            }
+          }
+        }
+      }, false);
+    </script>
+  </body>
 
 </html>

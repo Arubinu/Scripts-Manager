@@ -1,241 +1,241 @@
 <!DOCTYPE html>
 <html>
 
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
 
-		<title>Stream Flash</title>
+    <title>Stream Flash</title>
 
-		<link id="config_stylesheet" rel="stylesheet" />
-		<style type="text/css">
-			.is-selected {
-				background-color: rgba(0, 0, 0, .5);
-			}
-			.is-narrow,
-			.is-narrow-top {
-				border-top: 1px solid #555;
-			}
-			.is-narrow,
-			.is-narrow-bottom {
-				border-bottom: 1px solid #555;
-			}
-		</style>
-	</head>
+    <link id="config_stylesheet" rel="stylesheet" />
+    <style type="text/css">
+      .is-selected {
+        background-color: rgba(0, 0, 0, .5);
+      }
+      .is-narrow,
+      .is-narrow-top {
+        border-top: 1px solid #555;
+      }
+      .is-narrow,
+      .is-narrow-bottom {
+        border-bottom: 1px solid #555;
+      }
+    </style>
+  </head>
 
-	<body>
-		<div class="container">
-			<section class="hero is-small has-background-grey-dark">
-				<div class="hero-body">
-					<p class="subtitle is-size-6 has-text-white-ter">Allows you to draw your attention to new messages from your viewers by flashing one of your screens.</p>
-				</div>
-			</section>
+  <body>
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <p class="subtitle is-size-6 has-text-white-ter">Allows you to draw your attention to new messages from your viewers by flashing one of your screens.</p>
+        </div>
+      </section>
 
-			<div class="m-5">
-				<nav class="level">
-					<div class="level-item has-text-centered">
-						<div class="info-flash">
-							<p class="heading">Flashs</p>
-							<p class="title"></p>
-						</div>
-					</div>
-					<div class="level-item has-text-centered">
-						<div class="info-viewer">
-							<p class="heading">Viewers</p>
-							<p class="title"></p>
-						</div>
-					</div>
-					<div class="level-item has-text-centered">
-						<div class="info-subscriber">
-							<p class="heading">Subscribers</p>
-							<p class="title"></p>
-						</div>
-					</div>
-					<div class="level-item has-text-centered">
-						<div class="info-moderator">
-							<p class="heading">Moderators</p>
-							<p class="title"></p>
-						</div>
-					</div>
-				</nav>
+      <div class="m-5">
+        <nav class="level">
+          <div class="level-item has-text-centered">
+            <div class="info-flash">
+              <p class="heading">Flashs</p>
+              <p class="title"></p>
+            </div>
+          </div>
+          <div class="level-item has-text-centered">
+            <div class="info-viewer">
+              <p class="heading">Viewers</p>
+              <p class="title"></p>
+            </div>
+          </div>
+          <div class="level-item has-text-centered">
+            <div class="info-subscriber">
+              <p class="heading">Subscribers</p>
+              <p class="title"></p>
+            </div>
+          </div>
+          <div class="level-item has-text-centered">
+            <div class="info-moderator">
+              <p class="heading">Moderators</p>
+              <p class="title"></p>
+            </div>
+          </div>
+        </nav>
 
-				<div class="columns is-horizontal is-narrow mt-2 mb-5">
-					<div class="column mt-2">
-						<label class="label">Screen to flash:</label>
-					</div>
-					<div class="column has-text-right">
-						<div class="is-inline-block screen">
-							<div class="buttons has-addons"></div>
-						</div>
-						<button class="button reset">Reset statistics</button>
-					</div>
-				</div>
+        <div class="columns is-horizontal is-narrow mt-2 mb-5">
+          <div class="column mt-2">
+            <label class="label">Screen to flash:</label>
+          </div>
+          <div class="column has-text-right">
+            <div class="is-inline-block screen">
+              <div class="buttons has-addons"></div>
+            </div>
+            <button class="button reset">Reset statistics</button>
+          </div>
+        </div>
 
-				<div class="columns">
-					<div class="column">
-						<div class="field opacity">
-							<label class="label has-text-centered">
-								<span class="icon" title="Flash display opacity">
-									<i class="fas fa-solid fa-info-circle"></i>
-								</span>
-								Opacity (%)
-							</label>
-							<div class="control">
-								<input class="input has-text-centered" type="number" min="1" max="100" step="1" />
-							</div>
-						</div>
-					</div>
-					<div class="column">
-						<div class="field duration">
-							<label class="label has-text-centered">
-								<span class="icon" title="Flash display duration">
-									<i class="fas fa-solid fa-info-circle"></i>
-								</span>
-								Duration (ms)
-							</label>
-							<div class="control">
-								<input class="input has-text-centered" type="number" min="100" step="10" />
-							</div>
-						</div>
-					</div>
-					<div class="column">
-						<div class="field delay">
-							<label class="label has-text-centered">
-								<span class="icon" title="Duration to wait before displaying the next flash">
-									<i class="fas fa-solid fa-info-circle"></i>
-								</span>
-								Delay (sec)
-							</label>
-							<div class="control">
-								<input class="input has-text-centered" type="number" min="1" step="1" />
-							</div>
-						</div>
-					</div>
-					<div class="column">
-						<div class="field pause">
-							<label class="label has-text-centered">
-								<span class="icon" title="Sets the time during which there will be no flash (buttons in the system tray)">
-									<i class="fas fa-solid fa-info-circle"></i>
-								</span>
-								Pause (min)
-							</label>
-							<div class="control">
-								<input class="input has-text-centered" type="number" min="1" step="1" />
-							</div>
-						</div>
-					</div>
-				</div>
+        <div class="columns">
+          <div class="column">
+            <div class="field opacity">
+              <label class="label has-text-centered">
+                <span class="icon" title="Flash display opacity">
+                  <i class="fas fa-solid fa-info-circle"></i>
+                </span>
+                Opacity (%)
+              </label>
+              <div class="control">
+                <input class="input has-text-centered" type="number" min="1" max="100" step="1" />
+              </div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field duration">
+              <label class="label has-text-centered">
+                <span class="icon" title="Flash display duration">
+                  <i class="fas fa-solid fa-info-circle"></i>
+                </span>
+                Duration (ms)
+              </label>
+              <div class="control">
+                <input class="input has-text-centered" type="number" min="100" step="10" />
+              </div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field delay">
+              <label class="label has-text-centered">
+                <span class="icon" title="Duration to wait before displaying the next flash">
+                  <i class="fas fa-solid fa-info-circle"></i>
+                </span>
+                Delay (sec)
+              </label>
+              <div class="control">
+                <input class="input has-text-centered" type="number" min="1" step="1" />
+              </div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field pause">
+              <label class="label has-text-centered">
+                <span class="icon" title="Sets the time during which there will be no flash (buttons in the system tray)">
+                  <i class="fas fa-solid fa-info-circle"></i>
+                </span>
+                Pause (min)
+              </label>
+              <div class="control">
+                <input class="input has-text-centered" type="number" min="1" step="1" />
+              </div>
+            </div>
+          </div>
+        </div>
 
-				<div class="columns is-narrow-top mt-2 pt-2">
-					<div class="column">
-						<label class="label">Respond to join:</label>
-					</div>
-					<div class="column has-text-right join">
-						<label for="checkbox_join" class="switch">
-							<input type="checkbox" id="checkbox_join" />
-							<div class="slider round"></div>
-						</label>
-					</div>
-				</div>
+        <div class="columns is-narrow-top mt-2 pt-2">
+          <div class="column">
+            <label class="label">Respond to join:</label>
+          </div>
+          <div class="column has-text-right join">
+            <label for="checkbox_join" class="switch">
+              <input type="checkbox" id="checkbox_join" />
+              <div class="slider round"></div>
+            </label>
+          </div>
+        </div>
 
-				<div class="columns">
-					<div class="column">
-						<label class="label">Respond to command:</label>
-					</div>
-					<div class="column has-text-right command">
-						<label for="checkbox_command" class="switch">
-							<input type="checkbox" id="checkbox_command" />
-							<div class="slider round"></div>
-						</label>
-					</div>
-				</div>
-			</div>
-		</div>
+        <div class="columns">
+          <div class="column">
+            <label class="label">Respond to command:</label>
+          </div>
+          <div class="column has-text-right command">
+            <label for="checkbox_command" class="switch">
+              <input type="checkbox" id="checkbox_command" />
+              <div class="slider round"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
 
-		<script type="text/javascript">
-			let _config = {};
+    <script type="text/javascript">
+      let _config = {};
 
-			function update_buttons()
-			{
-				const buttons = document.querySelectorAll('.screen .buttons .button');
-				for (let i = 0; i < buttons.length; ++i)
-					buttons[i].classList.toggle('is-selected', (i == _config.settings.screen));
-			}
+      function update_buttons()
+      {
+        const buttons = document.querySelectorAll('.screen .buttons .button');
+        for (let i = 0; i < buttons.length; ++i)
+          buttons[i].classList.toggle('is-selected', (i == _config.settings.screen));
+      }
 
-			for (const name of ['opacity', 'duration', 'delay', 'pause'])
-			{
-				const elem = document.querySelector(`.${name} input`);
-				const callback = event => {
-					let data = {};
-					data[name] = parseInt(elem.value);
+      for (const name of ['opacity', 'duration', 'delay', 'pause'])
+      {
+        const elem = document.querySelector(`.${name} input`);
+        const callback = event => {
+          let data = {};
+          data[name] = parseInt(elem.value);
 
-					window.parent.postMessage(data, '*');
-				};
+          window.parent.postMessage(data, '*');
+        };
 
-				elem.addEventListener('input', callback);
-			}
+        elem.addEventListener('input', callback);
+      }
 
-			document.querySelector('.reset.button').addEventListener('click', event => {
-				event.target.blur();
-				window.parent.postMessage('reset', '*');
-			});
+      document.querySelector('.reset.button').addEventListener('click', event => {
+        event.target.blur();
+        window.parent.postMessage('reset', '*');
+      });
 
-			for (const name of ['join', 'command'])
-			{
-				document.querySelector(`.${name} input`).addEventListener('change', event => {
-					let data = {};
-					data[name] = event.target.checked;
+      for (const name of ['join', 'command'])
+      {
+        document.querySelector(`.${name} input`).addEventListener('change', event => {
+          let data = {};
+          data[name] = event.target.checked;
 
-					window.parent.postMessage(data, '*');
-				});
-			}
+          window.parent.postMessage(data, '*');
+        });
+      }
 
-			window.addEventListener('message', event => {
-				if (event.origin !== 'null')
-				{
-					if (event.data.name == 'config')
-					{
-						_config = event.data.data;
-						update_buttons();
+      window.addEventListener('message', event => {
+        if (event.origin !== 'null')
+        {
+          if (event.data.name == 'config')
+          {
+            _config = event.data.data;
+            update_buttons();
 
-						for (const name of ['flash', 'viewer', 'subscriber', 'moderator'])
-							document.querySelector(`.info-${name} .title`).innerText = _config.statistics[name];
+            for (const name of ['flash', 'viewer', 'subscriber', 'moderator'])
+              document.querySelector(`.info-${name} .title`).innerText = _config.statistics[name];
 
-						for (const name of ['opacity', 'duration', 'delay', 'pause'])
-							document.querySelector(`.${name} input`).value = _config.settings[name];
+            for (const name of ['opacity', 'duration', 'delay', 'pause'])
+              document.querySelector(`.${name} input`).value = _config.settings[name];
 
-						for (const name of ['join', 'command'])
-							document.querySelector(`.${name} input`).checked = _config.settings[name];
-					}
-					else if (event.data.name == 'screens')
-					{
-						const buttons = document.querySelector('.screen .buttons');
-						buttons.innerHTML = '';
+            for (const name of ['join', 'command'])
+              document.querySelector(`.${name} input`).checked = _config.settings[name];
+          }
+          else if (event.data.name == 'screens')
+          {
+            const buttons = document.querySelector('.screen .buttons');
+            buttons.innerHTML = '';
 
-						for (let i = 0; i < event.data.data; ++i)
-						{
-							const button = document.createElement('button');
-							button.innerText = (i + 1).toString();
+            for (let i = 0; i < event.data.data; ++i)
+            {
+              const button = document.createElement('button');
+              button.innerText = (i + 1).toString();
 
-							button.classList.add('button');
-							if (i == _config.settings.screen)
-								button.classList.add('is-selected');
+              button.classList.add('button');
+              if (i == _config.settings.screen)
+                button.classList.add('is-selected');
 
-							button.addEventListener('click', event => {
-								_config.settings.screen = Array.prototype.indexOf.call(buttons.children, button);
-								update_buttons();
+              button.addEventListener('click', event => {
+                _config.settings.screen = Array.prototype.indexOf.call(buttons.children, button);
+                update_buttons();
 
-								event.target.blur();
-								window.parent.postMessage({screen: _config.settings.screen}, '*');
-							});
+                event.target.blur();
+                window.parent.postMessage({screen: _config.settings.screen}, '*');
+              });
 
-							buttons.appendChild(button);
-						}
-					}
-				}
-			}, false);
-		</script>
-	</body>
+              buttons.appendChild(button);
+            }
+          }
+        }
+      }, false);
+    </script>
+  </body>
 
 </html>

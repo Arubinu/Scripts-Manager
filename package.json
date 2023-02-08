@@ -1,10 +1,12 @@
 {
   "name": "Scripts-Manager",
-  "version": "2.0.0b4",
+  "version": "2.0.0b5",
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "lint": "eslint --max-warnings=0 .",
+    "lint-fix": "eslint --max-warnings=0 --fix .",
     "build": "electron-builder build --win portable"
   },
   "repository": "https://github.com/electron/electron-quick-start",
@@ -19,7 +21,8 @@
   "author": "GitHub",
   "license": "CC0-1.0",
   "devDependencies": {
-    "electron": "^19.0.6"
+    "electron": "^19.0.6",
+    "eslint": "^8.33.0"
   },
   "dependencies": {
     "@twurple/api": "^5.1.6",
@@ -70,5 +73,8 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": false
     }
+  },
+  "gitHooks": {
+    "pre-push": "npm run lint"
   }
 }

@@ -3,81 +3,81 @@
 @import 'bulma.min.css';
 
 html, body {
-	overflow: hidden;
+  overflow: hidden;
 }
 
 .is-fullheight {
-	height: 100vh;
-	min-height: 100vh;
-	max-height: 100vh;
+  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
 }
 
 .menu-label {
-	color: #2e2e2e;
-	font-size: .8em;
-	font-weight: bold;
+  color: #2e2e2e;
+  font-size: .8em;
+  font-weight: bold;
 }
 
 .lateral-menu {
-	position: fixed;
-	top: 0px;
-	left: 0px;
-	bottom: 0px;
-	width: 300px;
-	border-right: 1px solid #666;
-	outline: 1px solid #333;
-	user-select: none;
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  bottom: 0px;
+  width: 300px;
+  border-right: 1px solid #666;
+  outline: 1px solid #333;
+  user-select: none;
 }
 .lateral-menu hr {
-	height: 1px;
-	margin: 1.5rem 1em;
+  height: 1px;
+  margin: 1.5rem 1em;
 }
 .lateral-menu ul,
 .lateral-menu li {
-	min-width: 100%;
+  min-width: 100%;
 }
 .lateral-menu li {
-	position: relative;
+  position: relative;
 }
 .lateral-menu > section {
-	overflow-y: auto;
-	width: 100%;
-	min-height: 100%;
+  overflow-y: auto;
+  width: 100%;
+  min-height: 100%;
 }
 .lateral-menu > section > .hero-body {
-	flex-direction: column;
-	align-items: inherit !important;
-	padding: 2rem 2em 1.5em;
-	color: #eee;
+  flex-direction: column;
+  align-items: inherit !important;
+  padding: 2rem 2em 1.5em;
+  color: #eee;
 }
 .lateral-menu a:hover {
-	background-color: rgba(255, 255, 255, .2) !important;
+  background-color: rgba(255, 255, 255, .2) !important;
 }
 .lateral-menu a.is-active {
-	background-color: rgba(255, 255, 255, .3) !important;
+  background-color: rgba(255, 255, 255, .3) !important;
 }
 .lateral-menu .switch {
-	position: absolute;
-	top: 6px;
-	right: 6px;
+  position: absolute;
+  top: 6px;
+  right: 6px;
 }
 
 .content {
-	overflow: hidden scroll;
-	position: relative;
-	margin-left: 300px;
-	padding: 0px;
-	width: calc(100% - 300px);
-	color: #eee;
-	background-color: #363636;
+  overflow: hidden scroll;
+  position: relative;
+  margin-left: 300px;
+  padding: 0px;
+  width: calc(100% - 300px);
+  color: #eee;
+  background-color: #363636;
 }
 
 .content > iframe {
-	position: absolute;
-	top: 0px;
-	right: 0px;
-	bottom: 0px;
-	left: 0px;
-	width: 100%;
-	min-height: 100%;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  width: 100%;
+  min-height: 100%;
 }

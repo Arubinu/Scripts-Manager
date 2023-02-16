@@ -78,6 +78,23 @@
         border-radius: 5px;
         cursor: pointer;
       }
+      .inputs-filter:not(.outputs-filter):not(.both-filter) .drag-drawflow.is-outputs,
+      .outputs-filter:not(.inputs-filter):not(.both-filter) .drag-drawflow.is-inputs,
+      .inputs-filter.outputs-filter:not(.both-filter) .drag-drawflow.is-inputs.is-outputs,
+      .inputs-filter.both-filter:not(.outputs-filter) .drag-drawflow.is-outputs:not(.is-inputs),
+      .outputs-filter.both-filter:not(.inputs-filter) .drag-drawflow.is-inputs:not(.is-outputs),
+      .both-filter:not(.inputs-filter):not(.outputs-filter) .drag-drawflow.is-inputs:not(.is-outputs),
+      .both-filter:not(.inputs-filter):not(.outputs-filter) .drag-drawflow.is-outputs:not(.is-inputs) {
+        display: none;
+      }
+      [section-filter] {
+        border-radius: 2px;
+      }
+      .both-filter [section-filter="both"],
+      .inputs-filter [section-filter="inputs"],
+      .outputs-filter [section-filter="outputs"] {
+        outline: 2px solid rgb(50, 50, 50);
+      }
       .drag-drawflow .icon {
         width: 100%;
         height: auto;
@@ -128,8 +145,11 @@
         padding: .2rem 1rem;
         cursor: pointer;
       }
-      .drawflow-options > li.separator {
+      .drawflow-options > li.top-separator {
         border-top: 1px solid var(--border-color);
+      }
+      .drawflow-options > li.bottom-separator {
+        border-bottom: 1px solid var(--border-color);
       }
       .drawflow-options > li:hover {
         background-color: rgba(255, 255, 255, .08);
@@ -163,14 +183,17 @@
         height: calc(50px - 1px);
         border-top-left-radius: 4px;
       }
+      .drawflow-inputs-color,
       .drag-drawflow.is-inputs::before,
       .drawflow-node .is-inputs .title-box::before {
         background-color: rgba(230, 126, 34, .7);
       }
+      .drawflow-outputs-color,
       .drag-drawflow.is-outputs::before,
       .drawflow-node .is-outputs .title-box::before {
         background-color: rgba(46, 204, 113, .7);
       }
+      .drawflow-both-color,
       .drag-drawflow.is-inputs.is-outputs::before,
       .drawflow-node .is-inputs.is-outputs .title-box::before {
         background-color: rgba(155, 89, 182, .7);
@@ -337,11 +360,12 @@
 
       <ul class="drawflow-options">
         <li class="toggle-action">Enable<i class="fas fa-square-check"></i>
-        <li class="test-action">Test<i class="fas fa-rocket"></i></li>
-        <li class="export-action separator" browse-file=".container .drawflow-options .export-action input" browse-file-name="nodes" browse-file-ext="smma">
+        <li class="test-action bottom-separator">Test<i class="fas fa-rocket"></i></li>
+        <li class="export-action" browse-file=".container .drawflow-options .export-action input" browse-file-name="nodes" browse-file-ext="smma">
           Export<i class="fas fa-download"></i>
           <input type="text" class="is-hidden" />
         </li>
+        <li class="delete-action">Delete all<i class="fas fa-trash-can"></i></li>
       </ul>
     </div>
 
@@ -394,43 +418,65 @@
           <div class="subtitle is-size-6 has-text-white-ter">
             Program all kinds of actions related to addons.
             <i class="fas fa-gear is-pulled-right ml-2 edit-module" title="Edit"></i>
+            <i class="fas fa-upload is-pulled-right ml-2 export-blocks" browse-file=".container .hero-body input.export" browse-file-name="module" browse-file-ext="smma" title="Export"></i>
+            <i class="fas fa-download is-pulled-right ml-2 import-blocks" browse-file=".container .hero-body input.import" browse-file-ext="smma" title="Import"></i>
             <i class="fas fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
             <div class="select is-small is-pulled-right ml-2">
               <select class="modules"></select>
             </div>
             <button class="button is-small is-pulled-right show-blocks">Toggle Blocks</button>
-            <button class="button is-small is-pulled-right import-blocks" browse-file=".container .hero-body input" browse-file-ext="smma">Import Blocks</button>
-            <input type="text" class="is-hidden" />
+
+            <input type="text" class="is-hidden export" />
+            <input type="text" class="is-hidden import" />
           </div>
         </div>
       </section>
 
       <div class="blocks-drawflow">
-        <div class="my-5">
-          <div class="mx-5 content">
-            <h5>Fonctionnality</h5>
-            <div blocks-type=""></div>
-          </div>
-          <div class="mx-5 content">
-            <div blocks-type="discord">
-              <h6 class="has-text-left mt-4">Discord</h6>
-            </div>
-          </div>
-          <div class="mx-5 content">
-            <div blocks-type="obs-studio">
-              <h6 class="has-text-left">OBS Studio</h6>
-            </div>
-          </div>
-          <div class="mx-5 content">
-            <div blocks-type="spotify">
-              <h6 class="has-text-left">Spotify</h6>
-            </div>
-          </div>
-          <div class="mx-5 content">
-            <div blocks-type="twitch">
-              <h6 class="has-text-left mt-4">Twitch</h6>
-            </div>
-          </div>
+        <div class="content mb-4">
+          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+            Fonctionnality
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-outputs-color" section-filter="outputs" title="Blocks receiving an event"></div>
+          </h5>
+          <div class="mx-5" blocks-type=""></div>
+        </div>
+        <div class="content mb-4">
+          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+            Discord
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-outputs-color" section-filter="outputs" title="Blocks receiving an event"></div>
+          </h5>
+          <div class="mx-5" blocks-type="discord"></div>
+        </div>
+        <div class="content mb-4">
+          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+            OBS Studio
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-outputs-color" section-filter="outputs" title="Blocks receiving an event"></div>
+          </h5>
+          <div class="mx-5" blocks-type="obs-studio"></div>
+        </div>
+        <div class="content mb-4">
+          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+            Spotify
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-outputs-color" section-filter="outputs" title="Blocks receiving an event"></div>
+          </h5>
+          <div class="mx-5" blocks-type="spotify"></div>
+        </div>
+        <div class="content mb-4">
+          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+            Twitch
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-outputs-color" section-filter="outputs" title="Blocks receiving an event"></div>
+          </h5>
+          <div class="mx-5" blocks-type="twitch"></div>
         </div>
       </div>
 
@@ -445,8 +491,7 @@
 
       window.editor = editor;
 
-      if (typeof(editor.renameModule) !== 'function')
-      {
+      if (typeof(editor.renameModule) !== 'function') {
         editor.renameModule = new_name => {
           const current = editor.module;
           editor.drawflow.drawflow[new_name] = editor.drawflow.drawflow[current];
@@ -475,16 +520,18 @@
       editor.on('moduleChanged', name => {
         const init = () => {
           setTimeout(() => {
-            if (!window.drawflow_initializer)
+            if (!window.drawflow_initializer) {
               return init();
+            }
 
             window.drawflow_initializer(editor.drawflow.drawflow);
           }, 10);
         };
 
         init();
-        if (typeof editor.drawflow.drawflow[name] !== 'undefined' && Object.keys(editor.drawflow.drawflow).length >= 2)
+        if (typeof editor.drawflow.drawflow[name] !== 'undefined' && Object.keys(editor.drawflow.drawflow).length >= 2) {
           window.parent.postMessage({ module: name }, '*');
+        }
       });
 
       editor.on('connectionCreated', connection => {
@@ -508,8 +555,9 @@
       document.querySelectorAll('[aria-label="close"]').forEach(elem => {
         elem.addEventListener('click', () => {
           const modal = elem.closest('.modal');
-          if (modal)
+          if (modal) {
             modal.classList.remove('is-active');
+          }
         }, false);
       });
 
@@ -520,6 +568,12 @@
         elem.classList.add('is-active');
         input.value = '';
         input.focus();
+      });
+
+      document.querySelector('div.add-module .modal-card-body input[type="text"]').addEventListener('keypress', event => {
+        if (event.code === 'Enter') {
+          document.querySelector('div.add-module .is-success').dispatchEvent(new Event('click', { bubbles: true }));
+        }
       });
 
       document.querySelector('div.add-module .is-success').addEventListener('click', event => {
@@ -544,6 +598,12 @@
         input.select();
       });
 
+      document.querySelector('div.edit-module .modal-card-body input[type="text"]').addEventListener('keypress', event => {
+        if (event.code === 'Enter') {
+          document.querySelector('div.edit-module .is-success').dispatchEvent(new Event('click', { bubbles: true }));
+        }
+      });
+
       document.querySelector('div.edit-module .is-success').addEventListener('click', event => {
         const modal = event.target.closest('.modal');
         modal.classList.remove('is-active');
@@ -555,18 +615,18 @@
         const modal = event.target.closest('.modal');
         modal.classList.remove('is-active');
 
-        if (selector.querySelectorAll('option').length > 1)
-        {
+        if (selector.querySelectorAll('option').length > 1) {
           const to_delete = editor.module;
 
           // editor.removeModule(to_delete); // not work
-          if (typeof(editor.drawflow.drawflow[to_delete]) !== 'undefined')
+          if (typeof(editor.drawflow.drawflow[to_delete]) !== 'undefined') {
             delete editor.drawflow.drawflow[to_delete];
+          }
 
-          for (const option of selector.querySelectorAll('option'))
-          {
-            if (option.value === to_delete)
+          for (const option of selector.querySelectorAll('option')) {
+            if (option.value === to_delete) {
               option.remove();
+            }
           }
 
           window.drawflow_save();
@@ -574,82 +634,54 @@
         }
       });
 
+      const section_filter = event => {
+        event.target.closest('.content').classList.toggle(`${event.target.getAttribute('section-filter')}-filter`);
+      };
+      for (const filter of document.querySelectorAll('[section-filter]')) {
+        filter.addEventListener('click', section_filter);
+      }
+
       window.addEventListener('message', event => {
-        if (event.origin !== 'null')
-        {
-          if (event.data.name === 'config')
-          {
+        if (event.origin !== 'null') {
+          if (event.data.name === 'config') {
             setTimeout(() => {
               const _config = event.data.data;
-              if (Object.keys(_config.actions).length)
-              {
-                let actions = {};
-                for (const module_name in _config.actions)
-                {
-                  actions[module_name] = { data: {} };
-                  for (const id in _config.actions[module_name].data)
-                  {
-                    const action = _config.actions[module_name].data[id];
-                    if (window.block_exists(action.html))
-                      actions[module_name].data[id] = action;
-                  }
+              if (Object.keys(_config.actions).length) {
+                for (const module_name in _config.actions) {
+                  _config.actions[module_name].data = window.filter_nodes(_config.actions[module_name].data);
                 }
 
-                for (const module_name in actions)
-                {
-                  for (const id in actions[module_name].data)
-                  {
-                    const action = actions[module_name].data[id];
-                    for (const ckey of ['inputs', 'outputs'])
-                    {
-                      for (const cskey of Object.keys(action[ckey]))
-                      {
-                        const connections = action[ckey][cskey].connections;
-                        for (let c = (connections.length - 1); c >= 0; --c)
-                        {
-                          const connection = connections[c];
-                          if (typeof actions[module_name].data[parseInt(connection.node)] === 'undefined')
-                            connections.splice(c, 1);
-                        }
-                      }
-                    }
-                  }
-                }
-
-                editor.module = Object.keys(actions)[0];
-                editor.import({ drawflow: actions });
+                editor.module = Object.keys(_config.actions)[0];
+                editor.import({ drawflow: _config.actions });
                 window.drawflow_select();
 
-                if (typeof(window.drawflow_initializer) === 'function')
-                  window.drawflow_initializer(actions);
-
-                const module_name = ((_config.settings.module && typeof editor.drawflow.drawflow[_config.settings.module] !== 'undefined') ? _config.settings.module : Object.keys(actions)[0]);
-                if (module_name !== editor.module)
-                {
-                  selector.value = module_name;
-                  editor.changeModule(module_name); // supprimer les nodes et connexion associées si le block n'existe plus
+                if (typeof(window.drawflow_initializer) === 'function') {
+                  window.drawflow_initializer(_config.actions);
                 }
-              }
-              else
-              {
+
+                const module_name = ((_config.settings.module && typeof editor.drawflow.drawflow[_config.settings.module] !== 'undefined') ? _config.settings.module : Object.keys(_config.actions)[0]);
+                if (module_name !== editor.module) {
+                  selector.value = module_name;
+                  editor.changeModule(module_name);
+                }
+              } else {
                 editor.module = 'Default';
                 editor.addModule(editor.module);
                 window.drawflow_save();
                 window.drawflow_select();
               }
             }, 100);
-          }
-          else if (event.data.name === 'receive' && typeof(window.drawflow_receiver) === 'function')
+          } else if (event.data.name === 'receive' && typeof(window.drawflow_receiver) === 'function') {
             window.drawflow_receiver(event.data.data.source, event.data.data.id, event.data.data.name, event.data.data.data);
-          else if (event.data.name === 'import')
-            window.import_node(JSON.parse(event.data.data));
-          else if (event.data.name === 'block-toggle' && typeof editor.drawflow.drawflow[event.data.data.module] !== 'undefined' && typeof editor.drawflow.drawflow[event.data.data.module].data[event.data.data.id] !== 'undefined')
-          {
+          } else if (event.data.name === 'import') {
+            window.import_nodes(window.filter_nodes(event.data.data));
+          } else if (event.data.name === 'toggle-block' && typeof editor.drawflow.drawflow[event.data.data.module] !== 'undefined' && typeof editor.drawflow.drawflow[event.data.data.module].data[event.data.data.id] !== 'undefined') {
             editor.drawflow.drawflow[event.data.data.module].data[event.data.data.id].data.data.enabled = event.data.data.enabled;
 
             const node = window.get_node(event.data.data.id);
-            if (node)
+            if (node) {
               node.elem.classList.toggle('disabled', !event.data.data.enabled);
+            }
           }
         }
       }, false);

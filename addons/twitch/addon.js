@@ -1,5 +1,5 @@
-const twurple = require('./twurple'),
-  querystring = require('node:querystring');
+const querystring = require('node:querystring'),
+  twurple = require('./twurple');
 
 const CLIENT_ID = require('./auth.json').client_id;
 
@@ -10,8 +10,7 @@ let _logs = [],
   _changes = false,
   _connected = false;
 
-function update_interface()
-{
+function update_interface() {
   const scope = [
       'bits:read',
       'chat:read',
@@ -51,22 +50,20 @@ function update_interface()
   _sender('message', 'config', Object.assign({ authorize: authorize.replace(/%2B/g, '+') }, _config));
 }
 
-async function global_send(type, obj)
-{
+async function global_send(type, obj) {
   _sender('broadcast', type, obj);
   _sender('manager', 'websocket', { name: type, target: 'twitch', data: obj });
 }
 
-async function connect()
-{
-  if (_config.connection.channel && _config.connection.token)
-  {
+async function connect() {
+  if (_config.connection.channel && _config.connection.token) {
     global_send('Connection', []);
     _connected = true;
     await twurple.connect(CLIENT_ID, _config.connection.token, _config.connection.channel, obj => {
       _logs.unshift(obj);
-      for (let i = (_logs.length - 1); i >= 20; --i)
+      for (let i = (_logs.length - 1); i >= 20; --i) {
         delete _logs[i];
+      }
 
       _sender('message', 'logs', obj);
       global_send(obj.type, JSON.parse(JSON.stringify(obj)));
@@ -74,16 +71,13 @@ async function connect()
   }
 }
 
-async function reconnect()
-{
+async function reconnect() {
   await disconnect(false);
   await connect();
 }
 
-async function disconnect(broadcast)
-{
-  if (_connected)
-  {
+async function disconnect(broadcast) {
+  if (_connected) {
     _changes = false;
     _connected = false;
     await twurple.disconnect();
@@ -100,8 +94,9 @@ async function disconnect(broadcast)
     _logs.unshift(obj);
     _sender('message', 'logs', obj);
 
-    if (typeof(broadcast) === 'undefined' || broadcast)
+    if (typeof(broadcast) === 'undefined' || broadcast) {
       global_send('Disconnected', []);
+    }
   }
 }
 
@@ -113,52 +108,43 @@ module.exports = {
     _config = config;
   },
   initialized: () => {
-    if (_config.default.enabled)
+    if (_config.default.enabled) {
       connect();
+    }
   },
   receiver: async (id, name, data) => {
-    if (id === 'manager')
-    {
-      if (name === 'show')
-      {
-        if (!data && _changes && _config.default.enabled)
-        {
-          try
-          {
+    if (id === 'manager') {
+      if (name === 'show') {
+        if (!data && _changes && _config.default.enabled) {
+          try {
             reconnect();
-          }
-          catch (e) {}
+          } catch (e) {}
         }
 
         _sender('message', 'logs', _logs);
         update_interface();
-      }
-      else if (name === 'enabled')
-      {
+      } else if (name === 'enabled') {
         _config.default.enabled = data;
-        if (!_config.default.enabled)
+        if (!_config.default.enabled) {
           disconnect();
-        else
+        } else {
           connect();
+        }
       }
 
       return;
-    }
-    else if (id === 'message')
-    {
-      if (typeof(data) === 'object')
-      {
+    } else if (id === 'message') {
+      if (typeof(data) === 'object') {
         const name = Object.keys(data)[0];
-        if (name === 'refresh')
-        {
-          if (_config.default.enabled)
+        if (name === 'refresh') {
+          if (_config.default.enabled) {
             reconnect();
+          }
 
           return;
         }
 
-        if (typeof(data[name]) === typeof(_config.connection[name]))
-        {
+        if (typeof(data[name]) === typeof(_config.connection[name])) {
           _changes = true;
           _config.connection[name] = data[name];
         }
@@ -166,13 +152,10 @@ module.exports = {
       }
 
       return;
-    }
-    else if (id === 'methods')
-    {
+    } else if (id === 'methods') {
       const url = '/twitch/authorize';
 
-      if (name === 'http' && data.req && data.req.url === url)
-      {
+      if (name === 'http' && data.req && data.req.url === url) {
         data.res.writeHead(200);
         data.res.end(`<script type="text/javascript">
           const socket = new WebSocket('${_vars.websocket}');
@@ -187,17 +170,12 @@ module.exports = {
         </script>`);
 
         return true;
-      }
-      else if (name === 'websocket')
-      {
-        if (typeof(data) === 'object')
-        {
-          if (data.url === url && !data.data.indexOf('#'))
-          {
+      } else if (name === 'websocket') {
+        if (typeof(data) === 'object') {
+          if (data.url === url && !data.data.indexOf('#')) {
             const hash = querystring.parse(data.data.substr(1));
 
-            if (typeof(hash.access_token) === 'string')
-            {
+            if (typeof(hash.access_token) === 'string') {
               _config.connection.token = hash.access_token;
               _sender('manager', 'config', _config);
 
@@ -205,9 +183,7 @@ module.exports = {
             }
 
             return true;
-          }
-          else if (data.target === 'twitch' && data.name === 'subscriptions:get')
-          {
+          } else if (data.target === 'twitch' && data.name === 'subscriptions:get') {
             const subscriptions = await twurple.exec('Methods', 'getSubscriptions');
             _sender('manager', 'websocket', { name: data.name, target: 'twitch', data: subscriptions });
             return true;
@@ -219,12 +195,15 @@ module.exports = {
     }
 
     let check = false;
-    if ((name === 'disconnect' || name === 'reconnect') && (check = true))
+    if ((name === 'disconnect' || name === 'reconnect') && (check = true)) {
       disconnect();
-    if ((name === 'connect' || name === 'reconnect') && (check = true))
+    }
+    if ((name === 'connect' || name === 'reconnect') && (check = true)) {
       connect();
+    }
 
-    if (!check)
+    if (!check) {
       return await twurple.exec(data.type, name, data.args);
+    }
   }
 }

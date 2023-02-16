@@ -112,22 +112,18 @@ let channel = { id: '', name: '', joined: [] },
 
 const methods = {
   isStreamLive: async userName => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
     return await user.getStream() !== null;
   },
   checkFollow: async (userName, userIdCheck) => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
     return await api_client.users.getFollowFromUserToBroadcaster(userIdCheck, user.id);
   },
@@ -135,81 +131,70 @@ const methods = {
     return channel.joined;
   },
   getAllClipsForBroadcaster: async userName => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
     return api_client.clips.getClipsForBroadcasterPaginated(user.id).getAll();
   },
   getSubscriptions: async userName => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
     return api_client.subscriptions.getSubscriptionsPaginated(user.id).getTotalCount();
   },
   getSubscriptionsUsers: async userName => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
     return api_client.subscriptions.getSubscriptionsPaginated(user.id).getAll();
   },
   getAllRewards: async (userName, onlyManageable) => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
     return api_client.channelPoints.getCustomRewards(user.id, onlyManageable);
   },
+  getGame: async gameName => {
+    return await api_client.games.getGameByName(gameName);
+  },
   getChannelGame: async userName => {
-    if (!api_client)
-      return false;
-
     const info = await methods.getChannelInfo(userName || channel.name);
-    if (!info)
+    if (!info) {
       return false;
+    }
 
     return await info.getGame();
   },
   getChannelInfo: async userName => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
-    return await api_client.channels.getChannelInfo(user.id);
+    return await api_client.channels.getChannelInfoById(user.id);
   },
   updateChannelInfo: async (userName, title, game) => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
-    if (game)
-    {
+    if (game) {
       const tgame = await api_client.games.getGameByName(game);
       game = ((tgame && tgame.id) ? tgame.id : false);
     }
 
-    if (!title && !game)
+    if (!title && !game) {
       return false;
+    }
 
     return await api_client.channels.updateChannelInfo(user.id, {
       title: (title || undefined),
@@ -217,90 +202,93 @@ const methods = {
     });
   },
   updateReward: async (userName, rewardId, isEnabled, isPaused) => { // Doesn't work if the reward was not created by the app
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
     const data = {};
-    if (typeof(isPaused) === 'boolean')
+    if (typeof(isPaused) === 'boolean') {
       data.isPaused = isPaused;
-    if (typeof(isEnabled) === 'boolean')
+    }
+    if (typeof(isEnabled) === 'boolean') {
       data.isEnabled = isEnabled;
+    }
 
     return api_client.channelPoints.updateCustomReward(user.id, rewardId, data);
   },
   updateSettings: async (userName, settings) => {
-    if (!api_client)
-      return false;
-
     const user = await getChannelUser(userName || channel.name);
-    if (!user)
+    if (!user) {
       return false;
+    }
 
     return await api_client.chat.updateSettings(user.id, user.id, settings);
+  },
+  deleteMessage: async (userName, messageId) => {
+    const user = await getChannelUser(userName || channel.name);
+    if (!user) {
+      return false;
+    }
+
+    api_client.moderation.deleteChatMessages(user.id, user.id, messageId);
   }
 };
 
 
-function convert(obj)
-{
+function convert(obj) {
   let items;
-  if (Array.isArray(obj))
-  {
+  if (Array.isArray(obj)) {
     items = [];
-    for (const item of obj)
+    for (const item of obj) {
       items.push(convert(item));
-  }
-  else if (typeof(obj) === 'object')
-  {
-    try
-    {
+    }
+  } else if (typeof(obj) === 'object') {
+    try {
       const name = obj.constructor.name;
 
       let keys = [];
-      if (name === 'HelixCustomReward')
+      if (name === 'HelixCustomReward') {
         keys = ['autoFulfill', 'backgroundColor', 'broadcasterDisplayName', 'broadcasterId', 'broadcasterName', 'cooldownExpiryDate', 'cost', 'globalCooldown', 'id', 'isEnabled', 'isInStock', 'isPaused', 'maxRedemptionsPerStream', 'maxRedemptionsPerUserPerStream', 'prompt', 'redemptionsThisStream', 'title', 'userInputRequired'];
-      else if (name === 'HelixChannel')
+      } else if (name === 'HelixChannel') {
         keys = ['delay', 'displayName', 'gameId', 'gameName', 'id', 'language', 'name', 'title'];
-      else if (name === 'HelixGame')
+      } else if (name === 'HelixGame') {
         keys = ['boxArtUrl', 'id', 'name'];
+      }
 
       items = {};
-      for (const key of keys)
-      {
-        if (obj[key] !== 'undefined')
+      for (const key of keys) {
+        if (obj[key] !== 'undefined') {
           items[key] = obj[key];
+        }
       }
-    }
-    catch (e)
-    {
+    } catch (e) {
       items = obj;
     }
-  }
-  else
+  } else {
     items = obj;
+  }
 
   return items;
 }
 
 
-async function getChannelUser(userName)
-{
-  if (typeof(channel_ids[userName]) !== 'undefined' && channel_ids[userName].expire > Date.now())
+async function getChannelUser(userName) {
+  if (!api_client) {
+    return false;
+  } else if (typeof(channel_ids[userName]) !== 'undefined' && channel_ids[userName].expire > Date.now()) {
     return channel_ids[userName].user;
+  }
 
   const user = await api_client.users.getUserByName(userName);
-  if (user)
+  if (user) {
     channel_ids[userName] = { user, expire: (Date.now() + (5 * 60 * 1000)) };
+  }
 
   return user;
 }
 
-async function connect(clientId, accessToken, channelName, callback)
-{
+async function connect(clientId, accessToken, channelName, callback) {
   channel.id = '';
   channel.name = channelName;
   channel.joined = [];
@@ -330,11 +318,6 @@ async function connect(clientId, accessToken, channelName, callback)
     callback(await get('AuthenticationFailure', null, message, null, { retry: retryCount }));
   });
 
-  // Fires when a user is permanently banned from a channel.
-  chat_listeners.Ban = chat_client.onBan(async (_channel, user, msg) => {
-    callback(await get('Ban', msg, null, user, { ban: user }));
-  });
-
   // Fires when a user upgrades their bits badge in a channel.
   chat_listeners.BitsBadgeUpgrade = chat_client.onBitsBadgeUpgrade(async (_channel, user, upgradeInfo, msg) => {
     callback(await get('BitsBadgeUpgrade', msg, null, user, { upgrade: { user, info: upgradeInfo } }));
@@ -347,7 +330,7 @@ async function connect(clientId, accessToken, channelName, callback)
 
   // Fires when a user pays forward a subscription that was gifted to them to the community.
   chat_listeners.CommunityPayForward = chat_client.onCommunityPayForward(async (_channel, user, forwardInfo, msg) => {
-    callback(await get('CommunityPayForward', msg, null, user, { community: { forward: forwardInfo } }));
+    callback(await get('CommunityPayForward', msg, null, user, { subscribe: { forward: forwardInfo } }));
   });
 
   // Fires when a user gifts random subscriptions to the community of a channel.
@@ -385,7 +368,7 @@ async function connect(clientId, accessToken, channelName, callback)
 
   // Fires when a user upgrades their gift subscription to a paid subscription in a channel.
   chat_listeners.GiftPaidUpgrade = chat_client.onGiftPaidUpgrade(async (_channel, user, subInfo, msg) => {
-    callback(await get('GiftPaidUpgrade', msg, null, user, { subscribe: { user, info: subInfo } }));
+    callback(await get('GiftPaidUpgrade', msg, null, user, { upgrade: { user, info: subInfo } }));
   });
 
   // Fires when a channel hosts another channel.
@@ -454,8 +437,9 @@ async function connect(clientId, accessToken, channelName, callback)
     callback(await get('Part', null, null, user));
 
     const index = channel.joined.indexOf(user);
-    if (index > -1)
+    if (index > -1) {
       channel.joined.splice(index, 1);
+    }
   });
 
   chat_listeners.PasswordError = chat_client.onPasswordError(async error => {
@@ -469,7 +453,7 @@ async function connect(clientId, accessToken, channelName, callback)
 
   // Fires when a user upgrades their Prime subscription to a paid subscription in a channel.
   chat_listeners.PrimePaidUpgrade = chat_client.onPrimePaidUpgrade(async (_channel, user, subInfo, msg) => {
-    callback(await get('PrimePaidUpgrade', msg, null, user));
+    callback(await get('PrimePaidUpgrade', msg, null, user, { upgrade: { user, info: subInfo } }));
   });
 
   // Fires when R9K mode is toggled in a channel (UniqueChat).
@@ -1063,7 +1047,7 @@ async function connect(clientId, accessToken, channelName, callback)
         endDate: e.endDate,
         status: e.status,
         winningOutcomeId: e.winningOutcomeId,
-        winningOutcome: winningOutcome
+        winningOutcome: e.winningOutcome
       }
     }));
   });
@@ -1188,27 +1172,26 @@ async function connect(clientId, accessToken, channelName, callback)
   await ws_listener.start();
 }
 
-async function disconnect()
-{
-  for (const name in chat_listeners)
-  {
+async function disconnect() {
+  for (const name in chat_listeners) {
     const listener = chat_listeners[name];
-    if (listener)
+    if (listener) {
       chat_client.removeListener(listener);
+    }
   }
 
-  for (const name in ws_listeners)
-  {
+  for (const name in ws_listeners) {
     const listener = ws_listeners[name];
-    if (listener)
+    if (listener) {
       listener.stop();
+    }
   }
 
-  for (const name in pubsub_listeners)
-  {
+  for (const name in pubsub_listeners) {
     const listener = pubsub_listeners[name];
-    if (listener)
+    if (listener) {
       listener.remove();
+    }
   }
 
   await ws_listener.stop();
@@ -1220,17 +1203,14 @@ async function disconnect()
   api_client = null;
 }
 
-async function exec(type, name, args)
-{
+async function exec(type, name, args) {
   let c = null;
   name = name[0].toLowerCase() + name.substr(1);
 
-  try
-  {
-    if (type === 'API')
+  try {
+    if (type === 'API') {
       c = api_client;
-    else if (type === 'Chat')
-    {
+    } else if (type === 'Chat') {
       c = chat_client;
 
       const prefix_channel = [
@@ -1255,46 +1235,43 @@ async function exec(type, name, args)
         'say'
       ];
 
-      if (prefix_channel.indexOf(name) >= 0)
+      if (prefix_channel.indexOf(name) >= 0) {
         args.unshift(channel.name);
-    }
-    else if (type === 'PubSub')
+      }
+    } else if (type === 'PubSub') {
       c = pubsub_client;
-    else if (type === 'Methods' || type === 'Methods:convert')
+    } else if (type === 'Methods' || type === 'Methods:convert') {
       c = methods;
+    }
 
-    if (c)
-    {
+    if (c) {
       let result;
-      if (args && args.length)
+      if (args && args.length) {
         result = await c[name](...args);
-      else
+      } else {
         result = await c[name]();
+      }
 
-      if (type.split(':').slice(-1)[0] === 'convert')
+      if (type.split(':').slice(-1)[0] === 'convert') {
         return convert(result);
+      }
       return result;
     }
-  }
-  catch (e)
-  {
+  } catch (e) {
     console.error('exec error:', e);
   }
 
   return null;
 }
 
-async function get(type, msg, message, user, merge)
-{
+async function get(type, msg, message, user, merge) {
   msg = (msg || {});
   channel.id = (channel.id || msg.channelId);
   const is_command = (message && message.length && message[0] === '!');
 
   let emotes = [];
-  if (typeof(msg.parseEmotes) !== 'undefined')
-  {
-    for (const emote of await msg.parseEmotes())
-    {
+  if (typeof(msg.parseEmotes) !== 'undefined') {
+    for (const emote of await msg.parseEmotes()) {
       const settings = {
         animationSettings: 'default',
         backgroundType: 'dark',
@@ -1302,8 +1279,7 @@ async function get(type, msg, message, user, merge)
       };
 
       const info = (emote.displayInfo ? await emote.displayInfo.getUrl(settings) : null);
-      if (info)
-      {
+      if (info) {
         emotes.push({
           name: emote.name,
           length: emote.length,

@@ -1,8 +1,8 @@
-const fs = require('fs'),
+const fs = require('node:fs'),
+  path = require('node:path'),
+  https = require('node:https'),
   ws = require('ws'),
-  path = require('path'),
   temp = require('temp'),
-  https = require('https'),
   socket = require('dgram'),
   { request } = require('undici'),
   child_process = require('child_process'),
@@ -25,53 +25,68 @@ let _cmd = '',
 
 const functions = {
   twitch_compare: (module_name, receive, data, next_data, next, name, arg, simple, force_receive) => {
-    if (receive.id === 'twitch' && receive.name === name && typeof data !== 'undefined')
-    {
+    if (receive.id === 'twitch' && receive.name === name && typeof data !== 'undefined') {
       force_receive = ((typeof force_receive === 'function') ? force_receive() : (receive.data.message || ''));
 
       let check = !data[arg] || force_receive.toLowerCase() === data[arg].toLowerCase();
-      if (!simple)
-      {
+      if (!simple) {
         const msg_compare = data.case ? data[arg] : data[arg].toLowerCase(),
           msg_receive = data.case ? force_receive : force_receive.toLowerCase();
 
         check = !msg_compare || (data.contains && msg_receive.indexOf(msg_compare) >= 0) || (!data.contains && msg_compare === msg_receive);
-      }
-      else if (name.toLowerCase() === 'command')
+      } else if (name.toLowerCase() === 'command') {
         check = !force_receive.indexOf(data[arg]);
+      }
 
-      if (check)
-      {
+      if (check) {
         const flags = receive.data.flags,
-          viewer = !flags.broadcaster && !flags.moderator && !flags.vip && !flags.founder && !flags.subscriber && !flags.follower;
+          viewer = (!flags || (!flags.broadcaster && !flags.moderator && !flags.vip && !flags.founder && !flags.subscriber && !flags.follower));
 
-        let check = false;
-        check = check || (data.broadcaster && flags.broadcaster);
-        check = check || (data.moderator && flags.moderator);
-        check = check || (data.vip && flags.vip);
-        check = check || (data.founder && flags.founder);
-        check = check || (data.subscriber && flags.subscriber);
-        check = check || (data.follower && flags.follower);
+        let check = (typeof data.viewer === 'undefined');
+        check = check || (data.broadcaster && flags && flags.broadcaster);
+        check = check || (data.moderator && flags && flags.moderator);
+        check = check || (data.vip && flags && flags.vip);
+        check = check || (data.founder && flags && flags.founder);
+        check = check || (data.subscriber && flags && flags.subscriber);
+        check = check || (data.follower && flags && flags.follower);
         check = check || (data.viewer && viewer);
 
-        if (check)
-        {
-          set_variable('username', receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
-          set_variable('displayname', receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
+        if (check) {
+          set_variable('twitch:message:id', receive.data.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('twitch:message:date', receive.data.date, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('twitch:message:type', receive.data.type, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          if (name.toLowerCase() === 'command')
-          {
+          for (const key in receive.data.user) {
+            set_variable(`twitch:user:${key}`, receive.data.user[key], VARIABLE_TYPE.NEXT, module_name, next_data);
+          }
+          set_variable(`twitch:user:color`, receive.data.color, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+          if (receive.data.flags) {
+            for (const key in receive.data.flags) {
+              set_variable(`twitch:flags:${key}`, receive.data.flags[key], VARIABLE_TYPE.NEXT, module_name, next_data);
+            }
+          }
+
+          set_variable(`twitch:bits`, receive.data.bits, VARIABLE_TYPE.NEXT, module_name, next_data);
+          for (const key in receive.data.reward) {
+            set_variable(`twitch:reward:${key}`, receive.data.reward[key], VARIABLE_TYPE.NEXT, module_name, next_data);
+          }
+
+          if (arg === 'message') {
+            set_variable('twitch:message', force_receive.toString(), VARIABLE_TYPE.NEXT, module_name, next_data);
+          }
+
+          if (name.toLowerCase() === 'command') {
             const command = data[arg],
               args = force_receive.substr(command.length).trim(),
               split = args.split(' ');
 
-            set_variable('command', command, VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('arguments', args, VARIABLE_TYPE.NEXT, module_name, next_data);
-            for (let i = 0; i < split.length; ++i)
-              set_variable(`argument[${i}]`, split[i], VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('twitch:command', command, VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('twitch:command:arguments', args, VARIABLE_TYPE.NEXT, module_name, next_data);
+            for (let i = 0; i < split.length; ++i) {
+              set_variable(`twitch:command:argument[${i}]`, split[i], VARIABLE_TYPE.NEXT, module_name, next_data);
+            }
           }
-          else if (name.toLowerCase() === 'message')
-            set_variable('message', force_receive.toString(), VARIABLE_TYPE.NEXT, module_name, next_data);
 
           next();
         }
@@ -80,134 +95,74 @@ const functions = {
   }
 };
 
-const pregetters = {
-  'twitch_channel_game': async (get_data, channel_name) => [await _sender('twitch', 'getChannelGame', { type: 'Methods', args: [channel_name || false] }), channel_name],
-  'twitch_channel_info': async (get_data, channel_name) => [await _sender('twitch', 'getChannelInfo', { type: 'Methods', args: [channel_name || false] }), channel_name],
-};
-
-const getters = {
-  'date:toLocaleTimeString': ['Date Locale Time', [], () => (new Date()).toLocaleTimeString()],
-  'date:toLocaleDateString': ['Date Locale Date', [], () => (new Date()).toLocaleDateString()],
-  'twitch:channelGame': ['Twitch Channel Game', ['Channel Name'], (get_data, channel_name) => (get_data[`twitch_channel_info:${channel_name}`].displayName || '').replace('Just Chatting', 'Discussion'), ['twitch_channel_info']],
-  'twitch:channelName': ['Twitch Channel Name', ['Channel Name'], (get_data, channel_name) => (get_data[`twitch_channel_info:${channel_name}`].title || ''), ['twitch_channel_info']],
-  'twitch:channelTitle': ['Twitch Channel Title', ['Channel Name'], (get_data, channel_name) => (get_data[`twitch_channel_info:${channel_name}`].gameName || ''), ['twitch_channel_info']],
-};
-
 const actions = {
-  'audio-play': (module_name, receive, data, next_data, next) => {
-    if (data.file)
+  'inputs-audio-play': (module_name, receive, data, next_data, next) => {
+    if (data.file) {
       _sender('manager', 'audio:play', data);
-  },
-  'audio-stop': (module_name, receive, data, next_data, next) => {
-    _sender('manager', 'audio:stop');
-  },
-  'block-toggle': (module_name, receive, data, next_data, next) => {
-    const node = _config.actions[module_name].data[parseInt(data.id)];
-    if (typeof node !== 'undefined')
-    {
-      if (data.state === 'toggle')
-        node.data.data.enabled = !(typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled);
-      else
-        node.data.data.enabled = (data.state === 'on');
-
-      _sender('message', 'block-toggle', { id: node.id, module: module_name, enabled: node.data.data.enabled });
     }
   },
-  'cooldown': (module_name, receive, data, next_data, next) => {
-    if (data.seconds > 0)
-    {
+  'inputs-audio-stop': (module_name, receive, data, next_data, next) => {
+    _sender('manager', 'audio:stop');
+  },
+  'both-cooldown': (module_name, receive, data, next_data, next) => {
+    if (data.seconds > 0) {
       let value = get_variable(data.variable, 0, module_name, next_data);
-      if (typeof value !== 'number')
+      if (typeof value !== 'number') {
         value = 0;
+      }
 
       let time = data.seconds;
-      if (data.number_unit === 'seconds')
+      if (data.number_unit === 'seconds') {
         time *= 1000;
-      else if (data.number_unit === 'minutes')
+      } else if (data.number_unit === 'minutes') {
         time *= 60000;
+      }
 
       const now = Date.now();
-      if (!value || (value + time) < now)
-      {
+      if (!value || (value + time) < now) {
         set_variable(data.variable, now, VARIABLE_TYPE.NEXT, module_name, next_data);
         next();
       }
     }
   },
-  'http-request': async (module_name, receive, data, next_data, next) => {
-    if (data.url && data.method)
-    {
-      const {
-        status,
-        headers,
-        trailers,
-        body
-      } = await request(data.url, { method: data.method.toUpperCase() });
+  'both-http-request': (module_name, receive, data, next_data, next) => {
+    const url = apply_variables(data.url, module_name, next_data);
+    if (url.trim().length && data.method) {
+      request(url, { method: data.method.toUpperCase() })
+        .then(async req => {
+          set_variable('http-request:status', req.statusCode, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('http-request:body', await req.body.text(), VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
-    }
-  },
-  'socket-request': (module_name, receive, data, next_data, next) => {
-    if (data.host && data.port && data.data)
-    {
-      const tdata = Buffer.from(data.data),
-        client = socket.createSocket('udp4');
-
-      client.send(tdata, parseInt(data.port), data.host, error => {
-        if (error)
-          console.log('socket-request error:', error);
-
-        client.close();
-        next();
-      });
-    }
-  },
-  'websocket-request': (module_name, receive, data, next_data, next) => {
-    if (data.url && data.data)
-    {
-      let tdata = data.data;
-      try
-      {
-        tdata = JSON.parse(tdata);
-      }
-      catch (e) {}
-
-      const client = new ws(data.url);
-      client.on('error', error => console.error('websocket-request error:', error));
-
-      client.onopen = () => {
-        client.send(tdata, () => {
-          client.close();
           next();
         });
-      };
     }
   },
-  'kill-app': (module_name, receive, data, next_data, next) => {
-    if (!_cmd)
+  'inputs-kill-app': (module_name, receive, data, next_data, next) => {
+    if (!_cmd) {
       return;
+    }
 
     child_process.spawn(_cmd, ['/c', 'wmic', 'process', 'get', 'ProcessID,ExecutablePath'], {})
       .stdout.on('data', _data => {
-        for (let ps of _data.toString().split('\n'))
-        {
+        for (let ps of _data.toString().split('\n')) {
           ps = ps.trim().split(' ').filter(Boolean);
-          if (ps.length >= 2)
-          {
+          if (ps.length >= 2) {
             ps = {
               id: ps.slice(-1)[0],
               path: ps.slice(0, -1).join(' ')
             };
 
-            if (ps.path === data.program)
+            if (ps.path === data.program) {
               process.kill(ps.id, 'SIGKILL');
+            }
           }
         }
       });
   },
-  'launch-app': (module_name, receive, data, next_data, next) => {
-    if (!_cmd)
+  'both-launch-app': (module_name, receive, data, next_data, next) => {
+    if (!_cmd) {
       return;
+    }
 
     child_process.spawn(_cmd, ['/c', 'start', '', data.program], {
       cwd: path.dirname(data.program),
@@ -219,43 +174,102 @@ const actions = {
         console.error('launch-app:', data, error);
       });
   },
-  'open-url': (module_name, receive, data, next_data, next) => {
-    if (!_cmd)
-      return;
+  'inputs-notification': (module_name, receive, data, next_data, next) => {
+    const title = apply_variables(data.title, module_name, next_data),
+      message = apply_variables(data.message, module_name, next_data);
 
-    let address = data.address;
-    if (address.indexOf('://') < 0)
-      address = 'https://' + address;
-
-    child_process.spawn(_cmd, ['/c', 'explorer', address], {
-      cmd: process.env.USERPROFILE,
-      detached: true
-    })
-      .on('close', () => {
-        next();
-      })
-      .on('error', error => {
-        console.error('open-url:', data, error);
-      });
+    if (message.trim().length) {
+      _sender('notifications', 'ShowNotification', [message, apply_variables(title, module_name, next_data), data.icon ]);
+    }
   },
-  'self-timer': (module_name, receive, data, next_data, next) => {
-    if (data.millis > 0)
-    {
+  'inputs-open-url': (module_name, receive, data, next_data, next) => {
+    if (!_cmd) {
+      return;
+    }
+
+    let address = apply_variables(data.address, module_name, next_data);
+    if (address.trim().length) {
+      if (address.indexOf('://') < 0) {
+        address = 'https://' + address;
+      }
+
+      child_process.spawn(_cmd, ['/c', 'explorer', address], {
+        cmd: process.env.USERPROFILE,
+        detached: true
+      })
+        .on('close', () => {
+          next();
+        })
+        .on('error', error => {
+          console.error('open-url:', data, error);
+        });
+    }
+  },
+  'outputs-launch': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'multi-actions' && receive.name === 'launch') {
+      next();
+    }
+  },
+  'both-self-timer': (module_name, receive, data, next_data, next) => {
+    if (data.millis > 0) {
       let time = data.millis;
-      if (data.number_unit === 'seconds')
+      if (data.number_unit === 'seconds') {
         time *= 1000;
-      else if (data.number_unit === 'minutes')
+      } else if (data.number_unit === 'minutes') {
         time *= 60000;
+      }
 
       setTimeout(next, time);
     }
   },
-  'variable-condition': (module_name, receive, data, next_data, next) => {
-    const condition     = data.condition,
-          precondition  = condition.replace('not-', '');
+  'both-socket-request': (module_name, receive, data, next_data, next) => {
+    const host = apply_variables(data.host, module_name, next_data),
+      _data = apply_variables(data.data, module_name, next_data);
 
-    if (!condition.length)
+    if (host.trim().length && data.port && _data.trim().length) {
+      const tdata = Buffer.from(_data),
+        client = socket.createSocket('udp4');
+
+      client.send(tdata, parseInt(data.port), host, error => {
+        if (error) {
+          console.error('socket-request error:', error);
+        }
+
+        client.close();
+
+        if (!error) {
+          next();
+        }
+      });
+    }
+  },
+  'outputs-toggle-block': (module_name, receive, data, next_data, next) => {
+    const id = parseInt(data.id) || 0;
+    if (receive.id === 'multi-actions' && receive.name === 'toggle-block' && (!id || id === receive.data.id)) {
+      if (data.state === 'toggle' || receive.data.enabled === (data.state === 'on')) {
+        next();
+      }
+    }
+  },
+  'inputs-toggle-block': (module_name, receive, data, next_data, next) => {
+    const node = _config.actions[module_name].data[parseInt(data.id)];
+    if (typeof node !== 'undefined') {
+      if (data.state === 'toggle') {
+        node.data.data.enabled = !(typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled);
+      } else {
+        node.data.data.enabled = (data.state === 'on');
+      }
+
+      _sender('message', 'toggle-block', { id: node.id, module: module_name, enabled: node.data.data.enabled });
+    }
+  },
+  'both-variable-condition': (module_name, receive, data, next_data, next) => {
+    const condition = data.condition,
+      precondition = condition.replace('not-', '');
+
+    if (!condition.length) {
       return;
+    }
 
     let type = 'number';
     type = ((data.type === 'on') ? 'string' : type);
@@ -264,70 +278,108 @@ const actions = {
     let check = false;
     let value1 = apply_variables(data['value-1'], module_name, next_data);
     let value2 = '';
-    switch (type)
-    {
+    switch (type) {
       case 'string':
-        value1 = apply_variables(value1, module_name, next_data);
         value2 = apply_variables(data.string, module_name, next_data);
 
-        if (precondition === 'equal')
+        if (precondition === 'equal') {
           check = value1 === value2;
-        else if (precondition === 'contains')
+        } else if (precondition === 'contains') {
           check = value1.indexOf(value2) >= 0;
-        else if (precondition === 'starts-with')
+        } else if (precondition === 'starts-with') {
           check = !value1.indexOf(value2);
+        }
 
         break;
       case 'number':
         value1 = parseFloat(value1);
         value2 = parseFloat(data.number);
 
-        if (isNaN(value1))
+        if (isNaN(value1)) {
           return;
+        }
 
-        if (precondition === 'equal')
+        if (precondition === 'equal') {
           check = value1 === value2;
-        else if (precondition === 'greater' || precondition === 'less-or-equal')
+        } else if (precondition === 'greater' || precondition === 'less-or-equal') {
           check = value1 > value2;
-        else if (precondition === 'greater-or-equal' || precondition === 'less')
+        } else if (precondition === 'greater-or-equal' || precondition === 'less') {
           check = value1 >= value2;
+        }
 
         break;
       case 'boolean':
         value1 = ((['false', 'true'].indexOf(value1) >= 0) ? (value1 === 'true') : null);
         value2 = (data.boolean === 'true');
 
-        if (value1 === null)
+        if (value1 === null) {
           return;
+        }
 
-        check = value1 === value2;
+        if (precondition === 'equal') {
+          check = value1 === value2;
+        }
+
         break;
     }
 
-    if (!condition.indexOf('not-') || !condition.indexOf('less-'))
+    if (!condition.indexOf('not-') || !condition.indexOf('less-')) {
       check = !check;
+    }
 
-    if (check)
+    if (check) {
       next();
+    }
   },
-  'variable-increment': (module_name, receive, data, next_data, next) => {
-    let value = get_variable(data.variable);
-    if (typeof value === 'number')
-    {
+  'both-variable-increment': (module_name, receive, data, next_data, next) => {
+    let value = get_variable(data.variable, '', module_name, next_data);
+    if (typeof value === 'undefined') {
+      value = 0;
+    }
+    if (typeof value === 'number') {
       value += parseInt(data.number);
       set_variable(data.variable, value, scope(data), module_name, next_data);
     }
 
     next();
   },
-  'variable-setter': (module_name, receive, data, next_data, next) => {
+  'both-variable-remove': (module_name, receive, data, next_data, next) => {
+    const _scope = scope(data);
+
+    let target = next_data;
+    if (_scope === VARIABLE_TYPE.GLOBALS) {
+      target = _variables.globals;
+    } else if (_scope === VARIABLE_TYPE.LOCALS) {
+      target = _variables.locals[module_name];
+    }
+
+    if (typeof target !== 'undefined' && typeof target[data.variable] !== 'undefined') {
+      delete target[data.variable];
+    }
+
+    next();
+  },
+  'both-variable-replace': (module_name, receive, data, next_data, next) => {
+    const search = apply_variables(data.search, module_name, next_data),
+      replace = apply_variables(data.replace, module_name, next_data);
+
+    let value = apply_variables(data.value, module_name, next_data);
+    if (data.all) {
+      value = value.replaceAll(search, replace);
+    } else {
+      value = value.replace(search, replace);
+    }
+
+    set_variable(data.variable, apply_variables(value, module_name, next_data), scope(data), module_name, next_data);
+    next();
+  },
+  'both-variable-setter': (module_name, receive, data, next_data, next) => {
     let type = 'number';
     type = ((data.type === 'on') ? 'string' : type);
     type = ((data.type === 'off') ? 'boolean' : type);
 
     let value = '';
-    switch (type)
-    {
+    switch (type) {
       case 'string': value = apply_variables(data.string, module_name, next_data); break;
       case 'number': value = parseFloat(data.number); break;
       case 'boolean': value = (data.boolean === 'true'); break;
@@ -336,212 +388,281 @@ const actions = {
     set_variable(data.variable, value, scope(data), module_name, next_data);
     next();
   },
-  'variable-remove': (module_name, receive, data, next_data, next) => {
-    if (typeof _variables[data.variable] !== 'undefined')
-      delete _variables[data.variable];
+  'both-websocket-request': (module_name, receive, data, next_data, next) => {
+    const url = apply_variables(data.url, module_name, next_data),
+      _data = apply_variables(data.data, module_name, next_data);
 
-    next();
-  },
-  'trigger-discord-webhook': async (module_name, receive, data, next_data) => {
-    if (data.webhook && data.title)
-    {
-      const next = () => {
-        const webhook = new WebhookClient({ url: data.webhook }),
-          bigimage = (data['big-image'] ? new MessageAttachment(data['big-image']) : false),
-          thumbnail = (data.thumbnail ? new MessageAttachment(data.thumbnail) : false),
-          embed = new MessageEmbed()
-            //.setTimestamp()
-            .setColor('#c0392b')
-            .setTitle(texts.title);
+    if (url.trim().length && _data.trim().length) {
+      let tdata = _data;
+      try {
+        tdata = JSON.parse(tdata);
+      } catch (e) {}
 
-        let images = [];
-        if (data['big-image'])
-          images.push(bigimage);
-        if (data.thumbnail)
-          images.push(thumbnail);
+      const client = new ws(url);
+      client.on('error', error => console.error('websocket-request error:', error));
 
-        if (data.url)
-          embed.setURL(data.url);
-        if (data.thumbnail)
-          embed.setThumbnail('attachment://' + path.basename(data.thumbnail));
-        if (data['big-image'])
-          embed.setImage('attachment://' + encodeURI(path.basename(data['big-image'])));
-        if (data['inline-1-title'] && data['inline-1-content'])
-          embed.addField(texts['inline-1-title'], texts['inline-1-content'], true);
-        if (data['inline-2-title'] && data['inline-2-content'])
-          embed.addField(texts['inline-2-title'], texts['inline-2-content'], true);
+      client.onopen = () => {
+        client.send(tdata, () => {
+          client.close();
 
-        //embed.setAuthor('Author here', 'https://cdn.discordapp.com/embed/avatars/0.png', 'https://www.google.com');
-        //embed.setDescription('');
-        //embed.setFooter('', 'https://cdn.discordapp.com/embed/avatars/0.png');
-
-        let parse = [];
-        if (data.message && data.message.indexOf('@everyone') >= 0)
-          parse.push('everyone');
-
-        webhook.send({ content: (data.message || ''), embeds: [embed], files: images, allowed_mentions: { parse: ['everyone'] } });
+          next();
+        });
       };
-
-      let texts = {};
-      const channel_game = await _sender('twitch', 'getChannelGame', { type: 'Methods', args: [false] });
-      const channel_info = await _sender('twitch', 'getChannelInfo', { type: 'Methods', args: [false] });
-      for (const name of ['title', 'inline-1-title', 'inline-1-content', 'inline-2-title', 'inline-2-content'])
-      {
-        texts[name] = data[name]
-          .replace('${date:toLocaleTimeString}', (new Date()).toLocaleTimeString())
-          .replace('${date:toLocaleDateString}', (new Date()).toLocaleDateString())
-          .replace('${twitch:channelName}', ((channel_info && channel_info.displayName) || ''))
-          .replace('${twitch:channelTitle}', ((channel_info && channel_info.title) || ''))
-          .replace('${twitch:channelGame}', ((channel_info && channel_info.gameName) || '').replace('Just Chatting', 'Discussion'));
-      }
-
-      if (!data.thumbnail && channel_game)
-      {
-        const url = channel_game.boxArtUrl.replace('{width}', '188').replace('{height}', '250');
-
-        https.request(url, response => {
-          var sdata = new StreamTransform();
-
-          response.on('data', chunk => {
-            sdata.push(chunk);
-          });
-
-          response.on('end', () => {
-            const thumbnail_path = path.join(temp.mkdirSync(), ('thumbnail' + path.extname(url)));
-            fs.writeFileSync(thumbnail_path, sdata.read());
-            data.thumbnail = thumbnail_path;
-            next();
-          });
-        }).end();
-      }
-      else if (data.thumbnail)
-      {
-        const thumbnail_path = path.join(temp.mkdirSync(), ('thumbnail' + path.extname(data.thumbnail)));
-        fs.copyFileSync(data.thumbnail, thumbnail_path);
-        data.thumbnail = thumbnail_path;
-        next();
-      }
-      else
-        next();
     }
   },
-  'event-obs-studio-authentification': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && ((receive.name === 'AuthenticationSuccess' && data.state) || (receive.name === 'AuthenticationFailure' && !data.state)))
-      next();
-  },
-  'event-obs-studio-connection': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && ((receive.name === 'ConnectionOpened' && data.state) || (receive.name === 'ConnectionClosed' && !data.state)))
-      next();
-  },
-  'event-obs-studio-exit': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'ExitStarted')
-      next();
-  },
-  'event-obs-studio-recording': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'RecordStateChanged')
-    {
-      let state = null;
-      state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
-      state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
-      if (data.state === state)
-        next();
+  'inputs-discord-webhook-embed': async (module_name, receive, data, next_data) => {
+    const big_image = apply_variables(data['big-image'], module_name, next_data) || get_variable('discord:big-image', '', module_name, next_data),
+      thumbnail = apply_variables(data.thumbnail, module_name, next_data) || get_variable('discord:thumbnail', '', module_name, next_data);
+
+    let texts = {};
+    for (const name of ['title', 'url', 'message', 'inline-1-title', 'inline-1-content', 'inline-2-title', 'inline-2-content']) {
+      texts[name] = apply_variables(data[name], module_name, next_data);
+    }
+
+    if (data.webhook && texts.title.trim().length) {
+      const load_file = (name, data) => new Promise((resolve, reject) => {
+          https.request(data, response => {
+            const sdata = new StreamTransform();
+
+            response.on('data', chunk => {
+              sdata.push(chunk);
+            });
+
+            response.on('end', () => {
+              const file_path = path.join(temp.mkdirSync(), (name + '.' + response.headers['content-type'].split('/')[1]));
+              fs.writeFileSync(file_path, sdata.read());
+
+              resolve(file_path);
+            });
+          }).end();
+        }),
+        copy_file = (name, data) => {
+          const file_path = path.join(temp.mkdirSync(), (name + path.extname(data)));
+          fs.copyFileSync(data, file_path);
+
+          return file_path;
+        };
+
+      let big_image_path = '';
+      if (typeof big_image === 'string' && big_image.trim().length) {
+        try {
+          if (big_image.indexOf('://') < 0) {
+            big_image_path = copy_file('big_image', big_image);
+          } else {
+            big_image_path = await load_file('big_image', big_image);
+          }
+        } catch (e) {}
+      }
+
+      let thumbnail_path = '';
+      if (typeof thumbnail === 'string' && thumbnail.trim().length) {
+        try {
+          if (thumbnail.indexOf('://') < 0) {
+            thumbnail_path = copy_file('thumbnail', thumbnail);
+          } else {
+            thumbnail_path = await load_file('thumbnail', thumbnail);
+          }
+        } catch (e) {}
+      }
+
+      const webhook = new WebhookClient({ url: data.webhook }),
+        embed = new MessageEmbed()
+          .setColor('#c0392b')
+          .setTitle(texts.title);
+
+      let images = [];
+      if (big_image_path) {
+        images.push(new MessageAttachment(big_image_path));
+      }
+      if (thumbnail_path) {
+        images.push(new MessageAttachment(thumbnail_path));
+      }
+
+      if (texts.url) {
+        embed.setURL(texts.url);
+      }
+      if (big_image_path) {
+        embed.setImage('attachment://' + encodeURI(path.basename(big_image_path)));
+      }
+      if (thumbnail_path) {
+        embed.setThumbnail('attachment://' + path.basename(thumbnail_path));
+      }
+      if (texts['inline-1-title'].trim().length && texts['inline-1-content'].trim().length) {
+        embed.addField(texts['inline-1-title'], texts['inline-1-content'], true);
+      }
+      if (texts['inline-2-title'].trim().length && texts['inline-2-content'].trim().length) {
+        embed.addField(texts['inline-2-title'], texts['inline-2-content'], true);
+      }
+
+      let parse = [];
+      if (texts.message && texts.message.indexOf('@everyone') >= 0) {
+        parse.push('everyone');
+      }
+
+      webhook.send({ content: (texts.message || ''), embeds: [embed], files: images, allowed_mentions: { parse: ['everyone'] } });
     }
   },
-  'trigger-obs-studio-recording': (module_name, receive, data, next_data) => {
+  'inputs-discord-webhook-message': async (module_name, receive, data, next_data) => {
+    const message = apply_variables(data.message, module_name, next_data);
+    if (data.webhook && message.trim().length) {
+      const webhook = new WebhookClient({ url: data.webhook });
+
+      let parse = [];
+      if (message.indexOf('@everyone') >= 0) {
+        parse.push('everyone');
+      }
+
+      webhook.send({ content: message, embeds: [], files: [], allowed_mentions: { parse: ['everyone'] } });
+    }
+  },
+  'outputs-obs-studio-authentification': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && ['AuthenticationSuccess', 'AuthenticationFailure'].indexOf(receive.name) >= 0) {
+      const state = (receive.name === 'AuthenticationSuccess');
+      set_variable('obs-studio:authentification', state, VARIABLE_TYPE.GLOBALS);
+
+      if (state === data.state) {
+        next();
+      }
+    }
+  },
+  'outputs-obs-studio-connection': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && ['ConnectionOpened', 'ConnectionClosed'].indexOf(receive.name) >= 0) {
+      const state = (receive.name === 'ConnectionOpened');
+      set_variable('obs-studio:connection', state, VARIABLE_TYPE.GLOBALS);
+
+      if (state === data.state) {
+        next();
+      }
+    }
+  },
+  'outputs-obs-studio-exit': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'ExitStarted') {
+      next();
+    }
+  },
+  'outputs-obs-studio-recording': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'RecordStateChanged' && ['OBS_WEBSOCKET_OUTPUT_STARTED', 'OBS_WEBSOCKET_OUTPUT_STOPPED'].indexOf(receive.data.outputState) >= 0) {
+      const state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED');
+      set_variable('obs-studio:recording', state, VARIABLE_TYPE.GLOBALS);
+
+      if (data.state === state) {
+        next();
+      }
+    }
+  },
+  'inputs-obs-studio-recording': (module_name, receive, data, next_data) => {
     let state = 'ToggleRecord';
     state = ((data.state === 'on') ? 'StartRecord' : state);
     state = ((data.state === 'off') ? 'StopRecord' : state);
 
     _sender('obs-studio', state);
   },
-  'event-obs-studio-replay': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'ReplayBufferStateChanged')
-    {
-      let state = null;
-      state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
-      state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
-      if (data.state === state)
+  'outputs-obs-studio-replay': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'ReplayBufferStateChanged' && ['OBS_WEBSOCKET_OUTPUT_STARTED', 'OBS_WEBSOCKET_OUTPUT_STOPPED'].indexOf(receive.data.outputState) >= 0) {
+      const state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED');
+      set_variable('obs-studio:replay', state, VARIABLE_TYPE.GLOBALS);
+
+      if (data.state === state) {
         next();
+      }
     }
   },
-  'trigger-obs-studio-replay': (module_name, receive, data, next_data) => {
+  'inputs-obs-studio-replay': (module_name, receive, data, next_data) => {
     let state = 'ToggleReplayBuffer';
     state = ((data.state === 'on') ? 'StartReplayBuffer' : state);
     state = ((data.state === 'off') ? 'StopReplayBuffer' : state);
 
     _sender('obs-studio', state);
   },
-  'event-obs-studio-save-replay': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'ReplayBufferSaved')
+  'outputs-obs-studio-save-replay': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'ReplayBufferSaved') {
       next();
-  },
-  'trigger-obs-studio-save-replay': (module_name, receive, data, next_data) => {
-    _sender('obs-studio', 'SaveReplayBuffer');
-  },
-  'trigger-obs-studio-set-text': (module_name, receive, data, next_data) => {
-    if (data.source)
-      _sender('obs-studio', 'SetSourceSettings', [data.source, { text: apply_variables(data.text, module_name, next_data) }, false]);
-  },
-  'event-obs-studio-streaming': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'StreamStateChanged')
-    {
-      let state = null;
-      state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
-      state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
-
-      if (data.state === state)
-        next();
     }
   },
-  'trigger-obs-studio-streaming': (module_name, receive, data, next_data) => {
+  'inputs-obs-studio-save-replay': (module_name, receive, data, next_data) => {
+    _sender('obs-studio', 'SaveReplayBuffer');
+  },
+  'inputs-obs-studio-set-text': (module_name, receive, data, next_data) => {
+    if (data.source) {
+      _sender('obs-studio', 'SetSourceSettings', [data.source, { text: apply_variables(data.text, module_name, next_data) }, false]);
+    }
+  },
+  'outputs-obs-studio-streaming': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'StreamStateChanged' && ['OBS_WEBSOCKET_OUTPUT_STARTED', 'OBS_WEBSOCKET_OUTPUT_STOPPED'].indexOf(receive.data.outputState) >= 0) {
+      const state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED');
+      set_variable('obs-studio:streaming', state, VARIABLE_TYPE.GLOBALS);
+
+      if (data.state === state) {
+        next();
+      }
+    }
+  },
+  'inputs-obs-studio-streaming': (module_name, receive, data, next_data) => {
     let state = 'ToggleStream';
     state = ((data.state === 'on') ? 'StartStream' : state);
     state = ((data.state === 'off') ? 'StopStream' : state);
 
     _sender('obs-studio', state);
   },
-  'event-obs-studio-studio-mode': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'StudioModeStateChanged' && data.state === receive.data.studioModeEnabled)
-      next();
+  'outputs-obs-studio-studio-mode': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'StudioModeStateChanged') {
+      set_variable('obs-studio:studio-mode', receive.data.studioModeEnabled, VARIABLE_TYPE.GLOBALS);
+
+      if (data.state === receive.data.studioModeEnabled) {
+        next();
+      }
+    }
   },
-  'trigger-obs-studio-studio-mode': (module_name, receive, data, next_data) => {
+  'inputs-obs-studio-studio-mode': (module_name, receive, data, next_data) => {
     let state = undefined;
     state = ((data.state === 'on') ? true : state);
     state = ((data.state === 'off') ? false : state);
 
     _sender('obs-studio', 'ToggleStudioMode', [state]);
   },
-  'event-obs-studio-switch-scene': (module_name, receive, data, next_data, next) => {
-    if (data.scene && receive.id === 'obs-studio' && receive.name === 'SwitchScenes' && receive.data.sceneName.toLowerCase() === data.scene.toLowerCase())
-      next();
+  'outputs-obs-studio-switch-scene': (module_name, receive, data, next_data, next) => {
+    if (data.scene && receive.id === 'obs-studio' && receive.name === 'CurrentProgramSceneChanged') {
+      set_variable('obs-studio:switch-scene', receive.data.sceneName, VARIABLE_TYPE.GLOBALS);
+
+      if (receive.data.sceneName.toLowerCase() === data.scene.toLowerCase()) {
+        next();
+      }
+    }
   },
-  'trigger-obs-studio-switch-scene': (module_name, receive, data, next_data) => {
-    if (data.scene)
+  'inputs-obs-studio-switch-scene': (module_name, receive, data, next_data) => {
+    if (data.scene) {
       _sender('obs-studio', 'SetCurrentScene', [data.scene]);
+    }
   },
-  'event-obs-studio-source-selected': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'SceneItemSelected')
-    {
+  'outputs-obs-studio-source-selected': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'SceneItemSelected') {
       _sender('obs-studio', 'GetSceneItemId', { sceneName: data.scene, sourceName: data.source }).then(_data => {
-        if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId)
+        if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId) {
+          set_variable('obs-studio:source-selected:id', receive.data.sceneItemId, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('obs-studio:source-selected:name', receive.data.sceneName, VARIABLE_TYPE.NEXT, module_name, next_data);
+
           next();
+        }
       }).catch(error => {});
     }
   },
-  'event-obs-studio-lock-source': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'SceneItemLockStateChanged')
-    {
+  'outputs-obs-studio-lock-source': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'SceneItemLockStateChanged') {
       _sender('obs-studio', 'GetSceneItemId', { sceneName: data.scene, sourceName: data.source })
         .then(_data => {
-          if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId && data.state === receive.data.sceneItemLocked)
+          if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId && data.state === receive.data.sceneItemLocked) {
+            set_variable('obs-studio:lock-source:id', receive.data.sceneItemId, VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('obs-studio:lock-source:name', receive.data.sceneName, VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('obs-studio:lock-source:locked', receive.data.sceneItemLocked, VARIABLE_TYPE.NEXT, module_name, next_data);
+
             next();
+          }
         })
         .catch(error => {});
     }
   },
-  'trigger-obs-studio-lock-source': (module_name, receive, data, next_data) => {
-    if (data.scene && data.source)
-    {
+  'inputs-obs-studio-lock-source': (module_name, receive, data, next_data) => {
+    if (data.scene && data.source) {
       let state = undefined;
       state = ((data.state === 'on') ? true : state);
       state = ((data.state === 'off') ? false : state);
@@ -549,20 +670,32 @@ const actions = {
       _sender('obs-studio', 'LockSource', [data.source, data.scene, state]);
     }
   },
-  'event-obs-studio-toggle-source': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'SceneItemEnableStateChanged')
-    {
-      _sender('obs-studio', 'GetSceneItemId', { sceneName: data.scene, sourceName: data.source })
-        .then(_data => {
-          if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId && data.state === receive.data.sceneItemEnabled)
-            next();
-        })
-        .catch(error => {});
+  'outputs-obs-studio-toggle-source': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'SceneItemEnableStateChanged') {
+      const _next = () => {
+        set_variable('obs-studio:toggle-source:id', receive.data.sceneItemId, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('obs-studio:toggle-source:name', data.source, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('obs-studio:toggle-source:scene', receive.data.sceneName, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('obs-studio:toggle-source:enabled', receive.data.sceneItemEnabled, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+        next();
+      };
+
+      if (data.scene && data.source) {
+        _sender('obs-studio', 'GetSceneItemId', { sceneName: data.scene, sourceName: data.source })
+          .then(_data => {
+            if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId && data.state === receive.data.sceneItemEnabled) {
+              _next();
+            }
+          })
+          .catch(error => {});
+      } else if (data.state === receive.data.sceneItemEnabled) {
+        _next();
+      }
     }
   },
-  'trigger-obs-studio-toggle-source': (module_name, receive, data, next_data) => {
-    if (data.scene && data.source)
-    {
+  'inputs-obs-studio-toggle-source': (module_name, receive, data, next_data) => {
+    if (data.scene && data.source) {
       let state = undefined;
       state = ((data.state === 'on') ? true : state);
       state = ((data.state === 'off') ? false : state);
@@ -570,16 +703,19 @@ const actions = {
       _sender('obs-studio', 'ToggleSource', [data.source, data.scene, state]);
     }
   },
-  'event-obs-studio-toggle-filter': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'SourceFilterEnableStateChanged')
-    {
-      if (data.source === receive.data.sourceName && data.filter === receive.data.filterName && data.state === receive.data.filterEnabled)
+  'outputs-obs-studio-toggle-filter': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'SourceFilterEnableStateChanged') {
+      if (data.source === receive.data.sourceName && data.filter === receive.data.filterName && data.state === receive.data.filterEnabled) {
+        set_variable('obs-studio:toggle-filter:name', receive.data.filterName, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('obs-studio:toggle-filter:source', receive.data.sourceName, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('obs-studio:toggle-filter:enabled', receive.data.filterEnabled, VARIABLE_TYPE.NEXT, module_name, next_data);
+
         next();
+      }
     }
   },
-  'trigger-obs-studio-toggle-filter': (module_name, receive, data, next_data) => {
-    if (data.source && data.filter)
-    {
+  'inputs-obs-studio-toggle-filter': (module_name, receive, data, next_data) => {
+    if (data.source && data.filter) {
       let state = undefined;
       state = ((data.state === 'on') ? true : state);
       state = ((data.state === 'off') ? false : state);
@@ -587,302 +723,621 @@ const actions = {
       _sender('obs-studio', 'ToggleFilter', [data.filter, data.source, state]);
     }
   },
-  'event-obs-studio-virtualcam': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'VirtualcamStateChanged')
-    {
-      let state = null;
-      state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? true : state;
-      state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STOPPED') ? false : state;
+  'outputs-obs-studio-virtualcam': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'VirtualcamStateChanged' && ['OBS_WEBSOCKET_OUTPUT_STARTED', 'OBS_WEBSOCKET_OUTPUT_STOPPED'].indexOf(receive.data.outputState) >= 0) {
+      const state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED');
+      set_variable('obs-studio:virtualcam', state, VARIABLE_TYPE.GLOBALS);
 
-      if (data.state === state)
+      if (data.state === state) {
         next();
+      }
     }
   },
-  'trigger-obs-studio-virtualcam': (module_name, receive, data, next_data) => {
+  'inputs-obs-studio-virtualcam': (module_name, receive, data, next_data) => {
     let state = 'ToggleVirtualCam';
     state = ((data.state === 'on') ? 'StartVirtualCam' : state);
     state = ((data.state === 'off') ? 'StopVirtualCam' : state);
 
     _sender('obs-studio', state);
   },
-  'trigger-spotify-play-pause': (module_name, receive, data, next_data, next) => {
-    if (data.state === 'on')
-      _sender('spotify', 'play');
-    else if (data.state === 'off')
-      _sender('spotify', 'pause');
-    else
-    {
-      _sender('spotify', 'getMyCurrentPlaybackState', [true]).then(_data => {
-        _sender('spotify', ((_data.body && _data.body.is_playing) ? 'pause' : 'play'));
-      });
+  'both-spotify-search': (module_name, receive, data, next_data, next) => {
+    const track = apply_variables(data.track, module_name, next_data);
+    if (track.trim().length) {
+      _sender('spotify', 'Search', [track])
+        .then(tracks => {
+          set_variable('spotify:search:total', tracks.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+          if (tracks.length) {
+            for (let i = 0; i < tracks.length; ++i) {
+              const track = tracks[i];
+
+              set_variable(`spotify:search[${i}]:name`, track.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable(`spotify:search[${i}]:type`, track.type, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable(`spotify:search[${i}]:uri`, track.uri, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable(`spotify:search[${i}]:link`, track.external_urls.spotify, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable(`spotify:search[${i}]:image`, track.preview_url, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable(`spotify:search[${i}]:duration`, track.duration_ms, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+              let artists = [];
+              for (let j = 0; j < track.artists.length; ++j) {
+                artists.push(track.artists[j].name);
+                set_variable(`spotify:search[${i}]:artist[${j}]:name`, track.artists[j].name, VARIABLE_TYPE.NEXT, module_name, next_data);
+                set_variable(`spotify:search[${i}]:artist[${j}]:uri`, track.artists[j].uri, VARIABLE_TYPE.NEXT, module_name, next_data);
+                set_variable(`spotify:search[${i}]:artist[${j}]:link`, track.artists[j].external_urls.spotify, VARIABLE_TYPE.NEXT, module_name, next_data);
+              }
+              set_variable(`spotify:search[${i}]:artists:name`, artists.join(', '), VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable(`spotify:search[${i}]:artists:total`, artists.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+            }
+          } else {
+            set_variable('spotify:search[0]:name', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:type', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:uri', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:link', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:image', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:duration', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:artist[0]:name', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:artist[0]:uri', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:artist[0]:link', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:artists:name', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable('spotify:search[0]:artists:total', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
+          }
+
+          next();
+        });
     }
   },
-  'trigger-spotify-prev-next': (module_name, receive, data, next_data, next) => {
-    if (data.state)
-      _sender('spotify', 'skipToPrevious');
-    else
-      _sender('spotify', 'skipToNext');
+  'inputs-spotify-add-to-queue': (module_name, receive, data, next_data, next) => {
+    const track = apply_variables(data.track, module_name, next_data) || get_variable('spotify:search[0]:uri', '', module_name, next_data);
+    if (typeof track === 'string' && track.trim().length) {
+      _sender('spotify', 'AddToQueue', [track]);
+    }
   },
-  'trigger-spotify-repeat': (module_name, receive, data, next_data, next) => {
+  'inputs-spotify-play-pause': (module_name, receive, data, next_data, next) => {
+    const track = apply_variables(data.track, module_name, next_data) || get_variable('spotify:search[0]:uri', '', module_name, next_data),
+      play_pause = play => {
+        if (play) {
+          _sender('spotify', 'PlayNow', [(typeof track === 'string' && track.trim().length) ? track : false]);
+        } else {
+          _sender('spotify', 'PauseNow');
+        }
+      };
+
+    if (['on', 'off'].indexOf(data.state) < 0) {
+      _sender('spotify', 'isPlaying').then(is_playing => {
+        play_pause(!is_playing, track);
+      });
+    } else {
+      play_pause(data.state === 'on');
+    }
+  },
+  'inputs-spotify-prev-next': (module_name, receive, data, next_data, next) => {
+    _sender('spotify', (data.state ? 'skipToPrevious' : 'skipToNext'));
+  },
+  'inputs-spotify-repeat': (module_name, receive, data, next_data, next) => {
     let state = 'track';
     state = ((data.state === 'on') ? 'off' : state);
     state = ((data.state === 'off') ? 'context' : state);
 
     _sender('spotify', 'setRepeat', [state]);
   },
-  'trigger-spotify-shuffle': (module_name, receive, data, next_data, next) => {
-    if (data.state === 'on')
-      _sender('spotify', 'setShuffle', [true]);
-    else if (data.state === 'off')
-      _sender('spotify', 'setShuffle', [false]);
-    else
-    {
-      _sender('spotify', 'setShuffle', [true]).then(_data => {
-        _sender('spotify', 'setShuffle', [false]);
+  'inputs-spotify-shuffle': (module_name, receive, data, next_data, next) => {
+    if (['on', 'off'].indexOf(data.state) < 0) {
+      _sender('spotify', 'isShuffle').then(is_shuffle => {
+        _sender('spotify', 'setShuffle', [!is_shuffle]);
       });
+    } else {
+      _sender('spotify', 'setShuffle', [data.state === 'on']);
     }
   },
-  'trigger-spotify-volume': (module_name, receive, data, next_data, next) => {
+  'inputs-spotify-volume': (module_name, receive, data, next_data, next) => {
     _sender('spotify', 'setVolume', [data.volume]);
   },
-  'event-twitch-action': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Action', 'message', false),
-  'trigger-twitch-action': (module_name, receive, data, next_data) => {
-    if (data.message)
+  'outputs-twitch-action': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Action', 'message', false),
+  'inputs-twitch-action': (module_name, receive, data, next_data) => {
+    if (data.message) {
       _sender('twitch', 'Action', { type: 'Chat', args: [apply_variables(data.message, module_name, next_data)] });
+    }
   },
-  'event-twitch-announcement': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Announcement', 'message', false),
-  'trigger-twitch-announce': (module_name, receive, data, next_data) => {
-    if (data.message)
+  'outputs-twitch-announcement': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Announcement', 'message', false),
+  'inputs-twitch-announce': (module_name, receive, data, next_data) => {
+    if (data.message) {
       _sender('twitch', 'Announce', { type: 'Chat', args: [apply_variables(data.message, module_name, next_data)] });
+    }
   },
-  'event-twitch-first-message': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'obs-studio' && receive.name === 'StreamStateChanged' && receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED')
-      return set_variable('twitch-users', [], VARIABLE_TYPE.GLOBALS);
+  'outputs-twitch-ban': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'Ban') {
+      if (receive.data.user.name.toLowerCase() === data.user.toLowerCase()) {
+        set_variable('twitch:ban:user:id', receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('twitch:ban:user:name', receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('twitch:ban:user:display', receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('twitch:ban:reason', receive.data.data.reason, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('twitch:ban:permanent', receive.data.data.isPermanent, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('twitch:ban:date:start', receive.data.data.startDate, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable('twitch:ban:date:end', receive.data.data.endDate, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    let type = (typeof data.type === 'undefined' || data.type) ? 'Command' : 'Message';
+        next();
+      }
+    }
+  },
+  'inputs-twitch-ban': (module_name, receive, data, next_data) => {
+    const user = apply_variables(data.user, module_name, next_data),
+      reason = apply_variables(data.reason, module_name, next_data);
+
+    if (user.trim().length) {
+      _sender('twitch', 'Ban', { type: 'Chat', args: [user, reason] });
+    }
+  },
+  'outputs-twitch-chat-clear': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'ChatClear') {
+      next();
+    }
+  },
+  'inputs-twitch-chat-clear': (module_name, receive, data, next_data) => {
+    _sender('twitch', 'Clear', { type: 'Chat', args: [] });
+  },
+  'outputs-twitch-command': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Command', 'command', true),
+  'outputs-twitch-community-pay-forward': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'CommunityPayForward') {
+      set_variable(['twitch:all:user:id', 'twitch:community-pay-forward:user:id'], (receive.data.user.id || receive.data.subscribe.forward.userId), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:community-pay-forward:user:name'], (receive.data.user.name || receive.data.subscribe.forward.displayName.toLowerCase()), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:community-pay-forward:user:display'], (receive.data.user.display || receive.data.subscribe.forward.displayName), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:community-pay-forward:original:id', receive.data.subscribe.forward.originalGifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:community-pay-forward:original:name', receive.data.subscribe.forward.originalGifterDisplayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:community-pay-forward:original:display', receive.data.subscribe.forward.originalGifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+      next();
+    }
+  },
+  'outputs-twitch-community-sub': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'CommunitySub') {
+      set_variable(['twitch:all:user:id', 'twitch:community-sub:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:community-sub:user:name'], receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:community-sub:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:community-sub:original:id', receive.data.subscribe.info.gifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:community-sub:original:name', receive.data.subscribe.info.gifter, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:community-sub:original:display', receive.data.subscribe.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:community-sub:count', receive.data.subscribe.info.count, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:community-sub:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+      next();
+    }
+  },
+  'inputs-twitch-delete-message': (module_name, receive, data, next_data) => {
+    const all = data.all,
+      message_id = get_variable('twitch:message-id', '', module_name, next_data);
+
+    if (all || (typeof message_id === 'string' && message_id.trim().length)) {
+      _sender('twitch', 'deleteMessage', { type: 'Methods', args: [false, (all ? undefined : message_id)] });
+    }
+  },
+  'outputs-twitch-emote-only': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'EmoteOnly') {
+      set_variable('twitch:emote-only:enabled', receive.data.emote_only.enabled, VARIABLE_TYPE.GLOBALS);
+
+      if (data.state === 'toggle' || receive.data.emote_only.enabled === (data.state === 'on')) {
+        next();
+      }
+    }
+  },
+  'inputs-twitch-emote-only': (module_name, receive, data, next_data) => {
+    _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { emoteOnlyModeEnabled: data.state }] });
+  },
+  'outputs-twitch-first-message': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'obs-studio' && receive.name === 'StreamStateChanged' && receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') {
+      return set_variable('twitch:users', [], VARIABLE_TYPE.GLOBALS);
+    }
+
+    const type = (typeof data.type === 'undefined' || data.type) ? 'Command' : 'Message';
     functions.twitch_compare(module_name, receive, data, next_data, () => {
-      let users = get_variable('twitch-users', []);
-      if (typeof users !== 'object' && !Array.isArray(users))
+      let users = get_variable('twitch:users', []);
+      if (typeof users !== 'object' && !Array.isArray(users)) {
         users = [];
+      }
 
       const all = (data.all === 'true'),
         tmp = [...users],
         user = receive.data.user.name.toLowerCase(),
         exists = tmp.indexOf(user) >= 0;
 
-      if (!exists)
-      {
+      if (!exists) {
         users.push(user);
-        set_variable('twitch-users', users, VARIABLE_TYPE.GLOBALS);
+        set_variable('twitch:users', users, VARIABLE_TYPE.GLOBALS);
       }
 
-      if ((all && !exists) || (!all && !tmp.length))
+      if ((all && !exists) || (!all && !tmp.length)) {
         next();
+      }
     }, type, type.toLowerCase(), (type === 'command'));
   },
-  'event-twitch-ban': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'Ban')
-    {
-      if (receive.data.user.name.toLowerCase() === data.user.toLowerCase())
-        next();
-    }
-  },
-  'trigger-twitch-ban': (module_name, receive, data, next_data) => {
-    let user = apply_variables(data.user, module_name, next_data);
-    let reason = apply_variables(data.reason, module_name, next_data);
+  'outputs-twitch-followers-only': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'FollowersOnly') {
+      set_variable('twitch:follower-only:enabled', receive.data.follower_only.enabled, VARIABLE_TYPE.GLOBALS);
 
-    if (user)
-      _sender('twitch', 'Ban', { type: 'Chat', args: [user, reason] });
-  },
-  'event-twitch-chat-clear': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'ChatClear')
-      next();
-  },
-  'trigger-twitch-chat-clear': (module_name, receive, data, next_data) => {
-    _sender('twitch', 'Clear', { type: 'Chat', args: [] });
-  },
-  'event-twitch-command': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Command', 'command', true),
-  'event-twitch-community-pay-forward': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'CommunityPayForward')
-      next();
-  },
-  'event-twitch-community-sub': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'CommunitySub')
-      next();
-  },
-  'event-twitch-emote-only': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'EmoteOnly')
-    {
-      if (data.state === 'toggle' || receive.data.emote_only.enabled === (data.state === 'on'))
+      if (data.state === 'toggle' || receive.data.follower_only.enabled === (data.state === 'on')) {
         next();
+      }
     }
   },
-  'trigger-twitch-emote-only': (module_name, receive, data, next_data) => {
-    _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { emoteOnlyModeEnabled: data.state }] });
-  },
-  'event-twitch-followers-only': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'FollowersOnly')
-    {
-      if (data.state === 'toggle' || receive.data.follower_only.enabled === (data.state === 'on'))
-        next();
-    }
-  },
-  'trigger-twitch-followers-only': (module_name, receive, data, next_data) => {
+  'inputs-twitch-followers-only': (module_name, receive, data, next_data) => {
     _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { followerOnlyModeDelay: parseInt(data.delay), followerOnlyModeEnabled: data.state }] });
   },
-  'event-twitch-gift-paid-upgrade': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'GiftPaidUpgrade')
-      next();
+  'both-twitch-game': (module_name, receive, data, next_data, next) => {
+    const game = apply_variables(data.game, module_name, next_data)
+    if (game.trim().length) {
+      _sender('twitch', 'getGame', { type: 'Methods', args: [game] })
+        .then(game => {
+          set_variable('twitch:game:id', game.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('twitch:game:name', game.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('twitch:game:image', game.boxArtUrl, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+          next();
+        });
+    }
   },
-  'event-twitch-host': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
-    // todo: manage the number of viewers (receive.data.host.viewers)
+  'outputs-twitch-gift-paid-upgrade': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'GiftPaidUpgrade') {
+      set_variable(['twitch:all:user:id', 'twitch:gift-paid-upgrade:user:id'], (receive.data.user.id || receive.data.upgrade.info.userId), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:gift-paid-upgrade:user:name'], (receive.data.user.name || receive.data.upgrade.info.displayName.toLowerCase()), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:gift-paid-upgrade:user:display'], (receive.data.user.display || receive.data.upgrade.info.displayName), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:gift-paid-upgrade:original:id', receive.data.upgrade.info.gifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:gift-paid-upgrade:original:name', receive.data.upgrade.info.gifter, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:gift-paid-upgrade:original:display', receive.data.upgrade.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:gift-paid-upgrade:plan:id', receive.data.upgrade.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+      next();
+    }
+  },
+  'outputs-twitch-host': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+    set_variable('twitch:host:channel', receive.data.host.channel, VARIABLE_TYPE.GLOBALS);
+    set_variable('twitch:host:count', receive.data.host.viewers.length, VARIABLE_TYPE.GLOBALS);
+
     next();
   }, 'Host', 'channel', true, () => receive.data.host.channel),
-  'event-twitch-hosted': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Hosted', 'channel', true, () => receive.data.host.channel),
-  'trigger-twitch-host': (module_name, receive, data, next_data) => {
-    let channel = apply_variables(data.channel, module_name, next_data);
+  'outputs-twitch-hosted': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+    set_variable('twitch:hosted:channel', receive.data.host.channel, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('twitch:hosted:count', receive.data.host.viewers.length, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    if (channel)
+    next();
+  }, 'Hosted', 'channel', true, () => receive.data.host.channel),
+  'inputs-twitch-host': (module_name, receive, data, next_data) => {
+    const channel = apply_variables(data.channel, module_name, next_data);
+    if (channel.trim().length) {
       _sender('twitch', 'Host', { type: 'Chat', args: [channel] });
-  },
-  'trigger-twitch-info': (module_name, receive, data, next_data) => {
-    let game = apply_variables(data.game, module_name, next_data);
-    let status = apply_variables(data.status, module_name, next_data);
-
-    if (status.length || game.length)
-      _sender('twitch', 'updateChannelInfo', { type: 'Methods', args: [false, status, game] });
-  },
-  'event-twitch-message': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
-  'trigger-twitch-message': (module_name, receive, data, next_data) => {
-    if (data.message)
-    {
-      let message = apply_variables(data.message, module_name, next_data);
-      if (message.length)
-        _sender('twitch', 'Say', { type: 'Chat', args: [message] });
     }
   },
-  'trigger-twitch-message-delay': (module_name, receive, data, next_data) => {
+  'outputs-twitch-info': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'Update') {
+      _sender('twitch', 'getChannelInfo', { type: 'Methods', args: [false] })
+        .then(info => {
+          if (info) {
+            set_variable('twitch:channel:name', info.name, VARIABLE_TYPE.GLOBALS);
+            set_variable('twitch:channel:display', info.displayName, VARIABLE_TYPE.GLOBALS);
+            set_variable('twitch:channel:title', info.title, VARIABLE_TYPE.GLOBALS);
+            set_variable('twitch:channel:lang', info.language, VARIABLE_TYPE.GLOBALS);
+            set_variable('twitch:channel:delay', info.delay, VARIABLE_TYPE.GLOBALS);
+
+            info.getGame()
+              .then(game => {
+                set_variable('twitch:channel:game:id', game.id, VARIABLE_TYPE.GLOBALS);
+                set_variable('twitch:channel:game:name', game.name, VARIABLE_TYPE.GLOBALS);
+                set_variable('twitch:channel:game:image', game.boxArtUrl, VARIABLE_TYPE.GLOBALS);
+
+                next();
+              })
+              .catch(error => {
+                set_variable('twitch:channel:game:id', receive.data.data.categoryId, VARIABLE_TYPE.GLOBALS);
+                set_variable('twitch:channel:game:name', receive.data.data.categoryName, VARIABLE_TYPE.GLOBALS);
+                set_variable('twitch:channel:game:image', '', VARIABLE_TYPE.GLOBALS);
+
+                next();
+              });
+          }
+        })
+        .catch(error => {
+          set_variable('twitch:channel:title', receive.data.data.streamTitle, VARIABLE_TYPE.GLOBALS);
+          set_variable('twitch:channel:lang', receive.data.data.streamLanguage, VARIABLE_TYPE.GLOBALS);
+          set_variable('twitch:channel:game:id', receive.data.data.categoryId, VARIABLE_TYPE.GLOBALS);
+          set_variable('twitch:channel:game:name', receive.data.data.categoryName, VARIABLE_TYPE.GLOBALS);
+
+          next();
+        });
+    }
+  },
+  'both-twitch-info': (module_name, receive, data, next_data, next) => {
+    _sender('twitch', 'getChannelInfo', { type: 'Methods', args: [false] })
+      .then(info => {
+        if (info) {
+          set_variable('twitch:channel:name', info.name, VARIABLE_TYPE.GLOBALS);
+          set_variable('twitch:channel:display', info.displayName, VARIABLE_TYPE.GLOBALS);
+          set_variable('twitch:channel:title', info.title, VARIABLE_TYPE.GLOBALS);
+          set_variable('twitch:channel:lang', info.language, VARIABLE_TYPE.GLOBALS);
+          set_variable('twitch:channel:delay', info.delay, VARIABLE_TYPE.GLOBALS);
+
+          info.getGame()
+            .then(game => {
+              set_variable('twitch:channel:game:id', game.id, VARIABLE_TYPE.GLOBALS);
+              set_variable('twitch:channel:game:name', game.name, VARIABLE_TYPE.GLOBALS);
+              set_variable('twitch:channel:game:image', game.boxArtUrl, VARIABLE_TYPE.GLOBALS);
+
+              next();
+            })
+            .catch(error => {
+              set_variable('twitch:channel:game:id', info.gameId, VARIABLE_TYPE.GLOBALS);
+              set_variable('twitch:channel:game:name', info.gameName, VARIABLE_TYPE.GLOBALS);
+              set_variable('twitch:channel:game:image', '', VARIABLE_TYPE.GLOBALS);
+
+              next();
+            });
+        }
+      });
+  },
+  'inputs-twitch-info': (module_name, receive, data, next_data) => {
+    const game = apply_variables(data.game, module_name, next_data),
+      status = apply_variables(data.status, module_name, next_data);
+
+    if (status.trim().length || game.trim().length) {
+      _sender('twitch', 'updateChannelInfo', { type: 'Methods', args: [false, status, game] });
+    }
+  },
+  'outputs-twitch-message': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
+  'inputs-twitch-message': (module_name, receive, data, next_data) => {
+    if (data.message) {
+      let message = apply_variables(data.message, module_name, next_data);
+      if (message.length) {
+        _sender('twitch', 'Say', { type: 'Chat', args: [message] });
+      }
+    }
+  },
+  'inputs-twitch-message-delay': (module_name, receive, data, next_data) => {
     _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { nonModeratorChatDelay: parseInt(data.delay), nonModeratorChatDelayEnabled: data.state }] });
   },
-  'event-twitch-message-remove': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'MessageRemove', 'message', false),
-  'event-twitch-prime-community-gift': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'PrimeCommunityGift')
+  'outputs-twitch-message-remove': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'MessageRemove', 'message', false),
+  'outputs-twitch-prime-community-gift': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'PrimeCommunityGift') {
+      set_variable(['twitch:all:user:id', 'twitch:prime-community-gift:user:id'], (receive.data.user.id || receive.data.subscribe.info.userId), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:prime-community-gift:user:name'], (receive.data.user.name || receive.data.subscribe.info.displayName.toLowerCase()), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:prime-community-gift:user:display'], (receive.data.user.display || receive.data.subscribe.info.displayName), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:prime-community-gift:original:id', receive.data.subscribe.info.gifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:prime-community-gift:original:name', receive.data.subscribe.info.gifter, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:prime-community-gift:original:display', receive.data.subscribe.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:prime-community-gift:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'event-twitch-prime-paid-upgrade': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'PrimePaidUpgrade')
+  'outputs-twitch-prime-paid-upgrade': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'PrimePaidUpgrade') {
+      set_variable(['twitch:all:user:id', 'twitch:prime-paid-upgrade:user:id'], (receive.data.user.id || receive.data.upgrade.info.userId), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:prime-paid-upgrade:user:name'], (receive.data.user.name || receive.data.upgrade.info.displayName.toLowerCase()), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:prime-paid-upgrade:user:display'], (receive.data.user.display || receive.data.upgrade.info.displayName), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:prime-paid-upgrade:plan:id', receive.data.upgrade.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'event-twitch-raid': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
-    // todo: manage the number of viewers (receive.data.host.viewers)
+  'outputs-twitch-raid': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+    set_variable('twitch:raid:channel', receive.data.raid.channel, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('twitch:raid:count', receive.data.raid.info.viewerCount, VARIABLE_TYPE.NEXT, module_name, next_data);
+
     next();
   }, 'Raid', 'channel', true, () => receive.data.raid.channel),
-  'trigger-twitch-raid': (module_name, receive, data, next_data) => {
-    let channel = apply_variables(data.game, module_name, next_data);
-
-    if (channel.length)
+  'inputs-twitch-raid': (module_name, receive, data, next_data) => {
+    const channel = apply_variables(data.game, module_name, next_data);
+    if (channel.trim().length) {
       _sender('twitch', 'Raid', { type: 'Chat', args: [channel] });
+    }
   },
-  'event-twitch-raid-cancel': (module_name, receive, data, next_data, next) => next,
-  'trigger-twitch-raid-cancel': (module_name, receive, data, next_data) => {
+  'outputs-twitch-raid-cancel': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'RaidCancel') {
+      set_variable('twitch:raid:channel', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:raid:count', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+      next();
+    }
+  },
+  'inputs-twitch-raid-cancel': (module_name, receive, data, next_data) => {
     _sender('twitch', 'Unraid', { type: 'Chat', args: [] });
   },
-  'event-twitch-resub': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'Resub')
+  'outputs-twitch-resub': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'Resub') {
+      set_variable(['twitch:all:user:id', 'twitch:subscribe:user:id'], receive.data.subscribe.info.userId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:subscribe:user:name'], receive.data.subscribe.info.displayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:subscribe:user:display'], receive.data.subscribe.info.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:message', receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:months', receive.data.subscribe.info.months, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:plan:name', receive.data.subscribe.info.planName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:streak', receive.data.subscribe.info.streak, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'event-twitch-redemption': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'Redemption' && receive.data.reward && (!data.reward || data.reward === receive.data.reward.id))
+  'outputs-twitch-redemption': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+    if (receive.data.reward && (!data.reward || data.reward === receive.data.reward.id)) {
+      set_variable(['twitch:all:user:id', 'twitch:redemption:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:redemption:user:name'], receive.data.user.name.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:redemption:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+      set_variable('twitch:redemption:id', receive.data.reward.id);
+      set_variable('twitch:redemption:status', receive.data.reward.status);
+      set_variable('twitch:redemption:title', receive.data.reward.title);
+      set_variable('twitch:redemption:prompt', receive.data.reward.prompt);
+      set_variable('twitch:redemption:cost', receive.data.reward.cost);
+      set_variable('twitch:redemption:queued', receive.data.reward.queued);
+      set_variable('twitch:redemption:images', receive.data.reward.images);
+
       next();
-  },
-  'event-twitch-reward-gift': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'RewardGift')
+    }
+  }, 'Redemption', 'message', true),
+  'outputs-twitch-reward-gift': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'RewardGift') {
+      set_variable(['twitch:all:user:id', 'twitch:reward:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:reward:user:name'], receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:reward:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:reward:original:id', receive.data.reward.info.gifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:reward:original:name', receive.data.reward.info.gifterDisplayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:reward:original:display', receive.data.reward.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:reward:count', receive.data.reward.info.count, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:reward:domain', receive.data.reward.info.domain, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:reward:shared', receive.data.reward.info.gifterGiftCount, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:reward:trigger', receive.data.reward.info.triggerType, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'event-twitch-ritual': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
-    // todo: manage the number of viewers (receive.data.host.viewers)
+  'outputs-twitch-ritual': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+    set_variable(['twitch:all:user:id', 'twitch:ritual:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable(['twitch:all:user:name', 'twitch:ritual:user:name'], receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable(['twitch:all:user:display', 'twitch:ritual:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('twitch:ritual:message', receive.data.ritual.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('twitch:ritual:ritual', receive.data.ritual.info.ritualName, VARIABLE_TYPE.NEXT, module_name, next_data);
+
     next();
   }, 'Ritual', 'user', true, () => receive.data.ritual.user),
-  'event-twitch-slow': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'Slow')
-    {
-      if (data.state === 'toggle' || receive.data.slow.enabled === (data.state === 'on'))
+  'outputs-twitch-slow': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'Slow') {
+      set_variable('twitch:slow:enabled', receive.data.slow.enabled, VARIABLE_TYPE.GLOBALS);
+      set_variable('twitch:slow:delay', receive.data.slow.delay, VARIABLE_TYPE.GLOBALS);
+
+      if (data.state === 'toggle' || receive.data.slow.enabled === (data.state === 'on')) {
         next();
+      }
     }
   },
-  'trigger-twitch-slow': (module_name, receive, data, next_data) => {
+  'inputs-twitch-slow': (module_name, receive, data, next_data) => {
     _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { slowModeDelay: parseInt(data.delay), slowModeEnabled: data.state }] });
   },
-  'event-twitch-standard-pay-forward': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'StandardPayForward')
+  'outputs-twitch-standard-pay-forward': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'StandardPayForward') {
+      set_variable(['twitch:all:user:id', 'twitch:subscribe:user:id'], receive.data.subscribe.info.recipientUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:subscribe:user:name'], receive.data.subscribe.info.recipientDisplayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:subscribe:user:display'], receive.data.subscribe.info.recipientDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:original:id', receive.data.subscribe.info.originalGifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:original:name', receive.data.subscribe.info.originalGifterDisplayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:original:display', receive.data.subscribe.info.originalGifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'event-twitch-sub': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'Subscription')
+  'outputs-twitch-sub': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'Subscription') {
+      set_variable(['twitch:all:user:id', 'twitch:subscribe:user:id'], receive.data.subscribe.info.userId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:subscribe:user:name'], receive.data.subscribe.info.displayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:subscribe:user:display'], receive.data.subscribe.info.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:message', receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:months', receive.data.subscribe.info.months, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:plan:name', receive.data.subscribe.info.planName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:streak', receive.data.subscribe.info.streak, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'event-twitch-sub-extend': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'SubExtend')
+  'outputs-twitch-sub-extend': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'SubExtend') {
+      set_variable(['twitch:all:user:id', 'twitch:subscribe:user:id'], receive.data.subscribe.info.userId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:subscribe:user:name'], receive.data.subscribe.info.displayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:subscribe:user:display'], receive.data.subscribe.info.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:months', receive.data.subscribe.info.months, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:months:end', receive.data.subscribe.info.endMonth, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'event-twitch-sub-gift': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'SubGift')
+  'outputs-twitch-sub-gift': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'SubGift') {
+      set_variable(['twitch:all:user:id', 'twitch:subscribe:user:id'], receive.data.subscribe.info.userId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:name', 'twitch:subscribe:user:name'], receive.data.subscribe.info.displayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:all:user:display', 'twitch:subscribe:user:display'], receive.data.subscribe.info.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:gifter:id', receive.data.subscribe.info.gifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:gifter:name', receive.data.subscribe.info.gifterDisplayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:gifter:display', receive.data.subscribe.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:message', receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:duration', receive.data.subscribe.info.giftDuration, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:count', receive.data.subscribe.info.gifterGiftCount, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:months', receive.data.subscribe.info.months, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:plan:name', receive.data.subscribe.info.planName, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:streak', receive.data.subscribe.info.streak, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'event-twitch-subs-only': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'SubsOnly')
-    {
-      if (data.state === 'toggle' || receive.data.subscribe_only.enabled === (data.state === 'on'))
+  'outputs-twitch-subs-only': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'SubsOnly') {
+      set_variable('twitch:subs-only:enabled', receive.data.subscribe_only.enabled, VARIABLE_TYPE.GLOBALS);
+
+      if (data.state === 'toggle' || receive.data.subscribe_only.enabled === (data.state === 'on')) {
         next();
+      }
     }},
-  'trigger-twitch-subs-only': (module_name, receive, data, next_data) => {
+  'inputs-twitch-subs-only': (module_name, receive, data, next_data) => {
     _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { subscriberOnlyModeEnabled: data.state }] });
   },
-  'event-twitch-timeout': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Timeout', 'user', true, () => receive.data.timeout.user),
-  'trigger-twitch-timeout': (module_name, receive, data, next_data) => {
-    let user = apply_variables(data.user, module_name, next_data);
-    let reason = apply_variables(data.reason, module_name, next_data);
+  'outputs-twitch-timeout': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+    set_variable('twitch:timeout:user', (receive.data.timeout.user || receive.data.user), VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('twitch:timeout:duration', receive.data.timeout.duration, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    if (user && data.duration)
+    next();
+  }, 'Timeout', 'user', true, () => receive.data.timeout.user),
+  'inputs-twitch-timeout': (module_name, receive, data, next_data) => {
+    const user = apply_variables(data.user, module_name, next_data),
+      reason = apply_variables(data.reason, module_name, next_data);
+
+    if (user.trim().length && data.duration) {
       _sender('twitch', 'Timeout', { type: 'Chat', args: [user, data.duration, reason] });
+    }
   },
-  'event-twitch-unhost': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'Unhost')
+  'outputs-twitch-unhost': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'Unhost') {
+      set_variable('twitch:host:channel', '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable('twitch:host:count', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
+
       next();
+    }
   },
-  'trigger-twitch-unhost': (module_name, receive, data, next_data) => {
+  'inputs-twitch-unhost': (module_name, receive, data, next_data) => {
     _sender('twitch', 'UnhostOutside', { type: 'Chat', args: [] });
   },
-  'event-twitch-unique-message': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && (receive.name === 'R9k' || receive.name === 'UniqueChat'))
-    {
-      if (data.state === 'toggle' || receive.data.r9k.enabled === (data.state === 'on'))
+  'outputs-twitch-unique-message': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && (receive.name === 'R9k' || receive.name === 'UniqueChat')) {
+      set_variable('twitch:unique-message:enabled', receive.data.r9k.enabled, VARIABLE_TYPE.GLOBALS);
+
+      if (data.state === 'toggle' || receive.data.r9k.enabled === (data.state === 'on')) {
         next();
+      }
     }
   },
-  'trigger-twitch-unique-message': (module_name, receive, data, next_data) => {
+  'inputs-twitch-unique-message': (module_name, receive, data, next_data) => {
     _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { uniqueChatModeEnabled: data.state }] });
   },
-  'event-twitch-whisper': (module_name, receive, data, next_data, next) => { // todo: to modify functions.twitch_compare
-    if (data.message && receive.id === 'twitch' && receive.name === 'Whisper')
-    {
-      const msg_compare = (data.case ? data.message : data.message.toLowerCase());
-      const msg_receive = (data.case ? receive.data.message : receive.data.message.toLowerCase());
-      if (!msg_compare || (data.contains && msg_receive.indexOf(msg_compare) >= 0) || (!data.contains && msg_compare === msg_receive))
+  'outputs-twitch-whisper': (module_name, receive, data, next_data, next) => { // todo: to modify functions.twitch_compare
+    const message = apply_variables(data.message, module_name, next_data);
+    if (message.trim().length && receive.id === 'twitch' && receive.name === 'Whisper') {
+      const msg_compare = (data.case ? message : message.toLowerCase()),
+        msg_receive = (data.case ? receive.data.message : receive.data.message.toLowerCase());
+
+      if (!msg_compare || (data.contains && msg_receive.indexOf(msg_compare) >= 0) || (!data.contains && msg_compare === msg_receive)) {
         next();
+      }
     }
   },
-  'trigger-twitch-whisper': (module_name, receive, data, next_data) => {
-    let user = apply_variables(data.user, module_name, next_data);
-    let message = apply_variables(data.message, module_name, next_data);
+  'inputs-twitch-whisper': (module_name, receive, data, next_data) => {
+    const user = apply_variables(data.user, module_name, next_data),
+      message = apply_variables(data.message, module_name, next_data);
 
-    if (user && message)
+    if (user.trim().length && message.trim().length) {
       _sender('twitch', 'Whisper', { type: 'Chat', args: [user, message] });
+    }
   },
 };
 
-function scope(data)
-{
+function scope(data) {
   let variable_type = VARIABLE_TYPE.GLOBALS;
   variable_type = ((data.scope === 'toggle') ? VARIABLE_TYPE.LOCALS : variable_type);
   variable_type = ((data.scope === 'off') ? VARIABLE_TYPE.NEXT : variable_type);
@@ -890,80 +1345,164 @@ function scope(data)
   return variable_type;
 }
 
-function get_variable(name, base, module_name, next_data)
-{
-  if (typeof next_data !== 'undefined' && typeof next_data[name] !== 'undefined')
+function get_variable(name, base, module_name, next_data) {
+  if (typeof next_data !== 'undefined' && typeof next_data[name] !== 'undefined') {
     return next_data[name];
-
-  if (typeof module_name !== 'undefined')
-  {
-    if (typeof _variables.locals[module_name] !== 'undefined' && typeof _variables.locals[module_name][name] !== 'undefined')
-      return _variables.locals[module_name][name];
   }
 
-  if (typeof _variables.globals[name] !== 'undefined')
+  if (typeof module_name !== 'undefined') {
+    if (typeof _variables.locals[module_name] !== 'undefined' && typeof _variables.locals[module_name][name] !== 'undefined') {
+      return _variables.locals[module_name][name];
+    }
+  }
+
+  if (typeof _variables.globals[name] !== 'undefined') {
     return _variables.globals[name];
+  }
 
   return base;
 }
 
-function set_variable(name, value, variable_type, module_name, next_data)
-{
-  if (variable_type === VARIABLE_TYPE.NEXT)
-    next_data[name] = value;
-  else if (variable_type === VARIABLE_TYPE.LOCALS)
-  {
-    if (typeof _variables.locals[module_name] === 'undefined')
-      _variables.locals[module_name] = {};
+function set_variable(name, value, variable_type, module_name, next_data) {
+  for (const _name of (Array.isArray(name) ? name : [name])) {
+    if (variable_type === VARIABLE_TYPE.NEXT) {
+      next_data[_name] = value;
+    } else if (variable_type === VARIABLE_TYPE.LOCALS) {
+      if (typeof _variables.locals[module_name] === 'undefined') {
+        _variables.locals[module_name] = {};
+      }
 
-    _variables.locals[module_name][name] = value;
+      _variables.locals[module_name][_name] = value;
+    } else {
+      _variables.globals[_name] = value;
+    }
   }
-  else
-    _variables.globals[name] = value;
 }
 
-function apply_variables(text, module_name, next_data)
-{
-  if (typeof next_data !== 'undefined')
-  {
-    for (const name in next_data)
-      text = text.replaceAll(`$\{${name}}`, next_data[name].toString());
+function apply_variables(text, module_name, next_data) {
+  if (typeof next_data !== 'undefined') {
+    for (const name in next_data) {
+      if (typeof next_data[name] !== 'undefined') {
+        text = text.replaceAll(`$\{${name}}`, `${next_data[name]}`);
+      }
+    }
+  }
+  if (typeof module_name !== 'undefined' && typeof _variables.locals[module_name] === 'object') {
+    for (const name in _variables.locals[module_name]) {
+      if (typeof _variables.locals[module_name][name] !== 'undefined') {
+        text = text.replaceAll(`$\{${name}}`, `${_variables.locals[module_name][name]}`);
+      }
+    }
   }
 
-  if (typeof module_name !== 'undefined' && typeof _variables.locals[module_name] === 'object')
-  {
-    for (const name in _variables.locals[module_name])
-      text = text.replaceAll(`$\{${name}}`, _variables.locals[module_name][name].toString());
+  for (const name in _variables.globals) {
+    if (typeof _variables.globals[name] !== 'undefined') {
+      text = text.replaceAll(`$\{${name}}`, `${_variables.globals[name]}`);
+    }
   }
-
-  for (const name in _variables.globals)
-    text = text.replaceAll(`$\{${name}}`, _variables.globals[name]);
 
   return text.replace(/\$\{[^}]*}/g, '');
 }
 
-function process_block(module_name, node, next_data, receive, force)
-{
+function variables_block(node, module_name, next_data, first) {
+  let connections = { inputs: 0, outputs: 0 };
+  for (const input_index in node.inputs) {
+    connections.inputs += node.inputs[input_index].connections.length;
+  }
+  for (const output_index in node.outputs) {
+    connections.outputs += node.outputs[output_index].connections.length;
+  }
+
+  set_variable('block:previous:id', (first ? -1 : node.id), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable('block:previous:type', (first ? '' : node.type), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable('block:previous:name', (first ? '' : node.html), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable('block:previous:title', (first ? '' : node.title), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable('block:previous:input:exists', (typeof node.inputs.input_1 !== 'undefined'), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable('block:previous:output:exists', (typeof node.outputs.output_1 !== 'undefined'), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable('block:previous:input:connections', connections.inputs, VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable('block:previous:output:connections', connections.outputs, VARIABLE_TYPE.NEXT, module_name, next_data);
+}
+
+function process_block(module_name, node, next_data, receive, force) {
   receive = receive || {};
   next_data = next_data || {};
 
-  if ((force || !Object.keys(node.inputs).length) && typeof actions[node.data.type] !== 'undefined')
-  {
+  if ((force || !Object.keys(node.inputs).length) && typeof actions[node.data.type] !== 'undefined') {
     const next = node => {
-      for (const output_index in node.outputs)
-      {
+      variables_block(node, module_name, next_data);
+
+      for (const output_index in node.outputs) {
         const output = node.outputs[output_index].connections;
-        for (const connection of node.outputs[output_index].connections)
-        {
+        for (const connection of node.outputs[output_index].connections) {
           const node = _config.actions[module_name].data[connection.node];
-          if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled))
+          if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled)) {
             actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
+          }
         }
       }
     };
 
-    if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled || force))
+    if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled || force)) {
+      variables_block(node, module_name, next_data, true);
+
       actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
+    }
+  }
+}
+
+// deprecated
+function node_converter(node) {
+  const replacements = [
+      'audio-play',
+      'audio-stop',
+      'toggle-block',
+      'cooldown',
+      'http-request',
+      'socket-request',
+      'websocket-request',
+      'kill-app',
+      'launch-app',
+      'notification',
+      'open-url',
+      'self-timer',
+      'variable-condition',
+      'variable-increment',
+      'variable-setter',
+      'variable-remove'
+    ],
+    split = node.html.split('-');
+
+  let check = true;
+  if (split[0] === 'event') {
+    split[0] = 'outputs';
+  } else if (split[0] === 'trigger') {
+    split[0] = 'inputs';
+  } else if (split.join('-') === 'inputs-discord-webhook') {
+    split.push('embed');
+  } else {
+    check = false;
+  }
+
+  if (check) {
+    node.html = split.join('-');
+    node.name = `${node.id}.${node.html}`;
+    node.class = `block-${node.html}`;
+    node.data.type = node.html;
+  } else if (replacements.indexOf(node.html) >= 0) {
+    const is_inputs = typeof node.inputs.input_1 !== 'undefined',
+      is_outputs = typeof node.outputs.output_1 !== 'undefined';
+
+    let prefix = 'outputs';
+    if (is_inputs && is_outputs) {
+      prefix = 'both';
+    } else if (is_inputs) {
+      prefix = 'inputs';
+    }
+
+    node.html = `${prefix}-${node.html}`;
+    node.name = `${node.id}.${node.html}`;
+    node.class = `block-${node.html}`;
+    node.data.type = node.html;
   }
 }
 
@@ -972,76 +1511,115 @@ module.exports = {
     _sender = sender;
     _config = config;
 
-    for (const item of process.env.path.split(';'))
-    {
+    // deprecated
+    for (const module_name in _config.actions) {
+      for (const id in _config.actions[module_name].data) {
+        node_converter(_config.actions[module_name].data[id]);
+      }
+    }
+
+    for (const item of process.env.path.split(';')) {
       const program = path.join(item, 'cmd.exe');
-      if (fs.existsSync(program))
-      {
+      if (fs.existsSync(program)) {
         _cmd = program;
         break;
       }
     }
+
+    const update_times = () => {
+      const date = new Date();
+
+      set_variable('date', date.toString(), VARIABLE_TYPE.GLOBALS);
+      set_variable('date:locale', date.toLocaleDateString(), VARIABLE_TYPE.GLOBALS);
+      set_variable('date:year', date.getFullYear(), VARIABLE_TYPE.GLOBALS);
+      set_variable('date:month', date.getMonth(), VARIABLE_TYPE.GLOBALS);
+      set_variable('date:day', date.getDate(), VARIABLE_TYPE.GLOBALS);
+      set_variable('date:utc:year', date.getUTCFullYear(), VARIABLE_TYPE.GLOBALS);
+      set_variable('date:utc:month', date.getUTCMonth(), VARIABLE_TYPE.GLOBALS);
+      set_variable('date:utc:day', date.getUTCDate(), VARIABLE_TYPE.GLOBALS);
+
+      set_variable('time', Math.floor(date.getTime() / 1000), VARIABLE_TYPE.GLOBALS);
+      set_variable('time:timezone:offset', date.getTimezoneOffset(), VARIABLE_TYPE.GLOBALS);
+      set_variable('time:locale', date.toLocaleTimeString(), VARIABLE_TYPE.GLOBALS);
+      set_variable('time:hours', date.getHours(), VARIABLE_TYPE.GLOBALS);
+      set_variable('time:minutes', date.getMinutes(), VARIABLE_TYPE.GLOBALS);
+      set_variable('time:seconds', date.getSeconds(), VARIABLE_TYPE.GLOBALS);
+      set_variable('time:utc:hours', date.getUTCHours(), VARIABLE_TYPE.GLOBALS);
+      set_variable('time:utc:minutes', date.getUTCMinutes(), VARIABLE_TYPE.GLOBALS);
+      set_variable('time:utc:seconds', date.getUTCSeconds(), VARIABLE_TYPE.GLOBALS);
+    };
+
+    setTimeout(() => {
+      setInterval(update_times, 1000);
+      update_times();
+
+      module.exports.receiver('multi-actions', 'launch');
+    }, 1000);
   },
   receiver: (id, name, data) => {
-    if (id === 'manager')
-    {
-      if (name === 'show')
+    if (id === 'manager') {
+      if (name === 'show') {
         _sender('message', 'config', _config);
-      else if (name === 'enabled')
+      } else if (name === 'enabled') {
         _config.default.enabled = data;
+      }
 
       return;
-    }
-    else if (id === 'message' && name === 'index')
-    {
-      if (typeof data === 'object')
-      {
-        if (data.save)
-        {
+    } else if (id === 'message' && name === 'index') {
+      if (typeof data === 'object') {
+        if (data.save) {
           _config.actions = data.save;
           _sender('manager', 'config:override', _config);
-        }
-        else if (data.module)
-        {
+        } else if (data.module) {
           _config.settings.module = data.module;
           _sender('manager', 'config', _config);
-        }
-        else if (data.request)
-        {
+        } else if (data.request) {
+          if (data.request[1] === 'multi-actions') {
+            return module.exports.receiver(...data.request.slice(1));
+          }
+
           _sender(...data.request.slice(1)).then(_data => {
-            if (_data !== null)
+            if (_data !== null) {
               _sender('message', 'receive', { source: data.request[0], id: data.request[1], name: data.request[2], data: _data });
+            }
           }).catch(error => {});
-        }
-        else if (data.test)
-        {
+        } else if (data.test) {
           const action = _config.actions[data.test[0]];
           process_block(data.test[0], action.data[data.test[1]], false, false, true);
+        } else if (data.import) {
+          try {
+            data = JSON.parse(fs.readFileSync(data.import.path, 'utf-8'));
+            for (const id in data) {
+              node_converter(data[id]);
+            }
+
+            _sender('message', 'import', data);
+          } catch (e) {
+            _sender('manager', 'notification', { message: 'Error while importing' });
+          }
+        } else if (data.export) {
+          fs.writeFileSync(data.export.path, data.export.data);
         }
-        else if (data.import)
-          _sender('message', 'import', fs.readFileSync(data.import, 'utf-8'));
-        else if (data.export)
-          fs.writeFileSync(...data.export);
+      }
+
+      return;
+    } else if (id === 'methods') {
+      if (name === 'audio') {
+        _sender('message', 'receive', { source: false, id: 'manager', name: data.name, data: data.data });
       }
 
       return;
     }
-    else if (id === 'methods')
-    {
-      if (name === 'audio')
-        _sender('message', 'receive', { source: false, id: 'manager', name: data.name, data: data.data });
-    }
 
-    if (_config.default.enabled)
-    {
-      for (const module_name in _config.actions)
-      {
+    if (_config.default.enabled) {
+      for (const module_name in _config.actions) {
         const action = _config.actions[module_name],
           receive = { id, name, data };
 
         let next_data = {};
-        for (const node_index in action.data)
+        for (const node_index in action.data) {
           process_block(module_name, action.data[node_index], next_data, receive);
+        }
       }
     }
   }

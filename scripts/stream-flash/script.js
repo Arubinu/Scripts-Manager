@@ -1,4 +1,4 @@
-const path = require('path'),
+const path = require('node:path'),
   { screen, BrowserWindow } = require('electron');
 
 let win = null,
@@ -25,13 +25,11 @@ let win = null,
     }
   };
 
-function is_numeric(n)
-{
+function is_numeric(n) {
   return (!isNaN(parseFloat(n)) && isFinite(n));
 }
 
-function create_window()
-{
+function create_window() {
   win = new BrowserWindow({
     show: false,
     width: 1920,
@@ -42,7 +40,6 @@ function create_window()
     hasShadow: false,
     resizable: false,
     thickFrame: false,
-    alwaysOnTop: true,
     skipTaskbar: true,
     transparent: true,
     titleBarStyle: 'hidden',
@@ -61,43 +58,43 @@ function create_window()
     set_duration(_config.settings.duration);
     win.show();
   });
+  setInterval(() => {
+    if (_config.default.enabled) {
+      win.setAlwaysOnTop(true, 'screen-saver');
+      win.setVisibleOnAllWorkspaces(true);
+    }
+  }, 100);
 }
 
-function update_interface()
-{
+function update_interface() {
   const screens = screen.getAllDisplays();
 
   _sender('message', 'config', _config);
   _sender('message', 'screens', screens.length);
 }
 
-function save_config()
-{
+function save_config() {
   _sender('manager', 'config', _config);
 }
 
-function set_opacity(opacity)
-{
+function set_opacity(opacity) {
   opacity = Math.max(0, Math.min(100, opacity));
   win.webContents.send('opacity', opacity);
 }
 
-function set_duration(duration)
-{
+function set_duration(duration) {
   duration = Math.max(100, duration);
   win.webContents.send('duration', duration);
 }
 
-function next_screen(index)
-{
+function next_screen(index) {
   const screens = screen.getAllDisplays();
-  if (typeof(index) === 'undefined')
-  {
+  if (typeof(index) === 'undefined') {
     _screen = ((_screen + 1) % screens.length);
     _config.settings.screen = _screen;
-  }
-  else
+  } else {
     _screen = ((index < screens.length) ? index : 0);
+  }
 
   const bounds = screens[_screen].bounds;
   win.setPosition(bounds.x, bounds.y);
@@ -105,11 +102,9 @@ function next_screen(index)
   win.setSize(bounds.width, bounds.height);
 }
 
-function flash_screen(name, force)
-{
+function flash_screen(name, force) {
   let now = Date.now();
-  if (force || !_last || (_last + (_config.settings.delay * 1000)) < now)
-  {
+  if (force || !_last || (_last + (_config.settings.delay * 1000)) < now) {
     _last = now + (force ? 1000 : 0);
     win.webContents.send('flash', name);
     return true;
@@ -123,23 +118,22 @@ module.exports = {
     _sender = sender;
     _config = config;
 
-    for (const section in _default)
-    {
-      if (typeof(_config[section]) !== 'object')
+    for (const section in _default) {
+      if (typeof(_config[section]) !== 'object') {
         _config[section] = {};
+      }
 
-      for (const name in _default[section])
-      {
+      for (const name in _default[section]) {
         const config_value = _config[section][name];
         const default_value = _default[section][name];
         const config_type = typeof(config_value);
         const default_type = typeof(default_value);
-        if (config_type !== default_type)
-        {
-          if (default_type === 'number' && config_type === 'string' && is_numeric(config_value))
+        if (config_type !== default_type) {
+          if (default_type === 'number' && config_type === 'string' && is_numeric(config_value)) {
             _config[section][name] = parseFloat(config_value);
-          else
+          } else {
             _config[section][name] = default_value;
+          }
         }
       }
     }
@@ -154,8 +148,7 @@ module.exports = {
         clearTimeout(_pause);
         _pause = 0;
 
-        if (item.checked)
-        {
+        if (item.checked) {
           _pause = setTimeout(() => {
             _pause = 0;
             item.checked = false;
@@ -174,35 +167,31 @@ module.exports = {
     create_window();
   },
   receiver: (id, name, data) => {
-    if (id === 'manager')
-    {
-      if (name === 'show')
+    if (id === 'manager') {
+      if (name === 'show') {
         update_interface();
-      else if (name === 'enabled')
+      } else if (name === 'enabled') {
         _config.default.enabled = data;
+      }
     }
 
-    if (id === 'message')
-    {
-      if (typeof(data) === 'object')
-      {
+    if (id === 'message') {
+      if (typeof(data) === 'object') {
         const name = Object.keys(data)[0];
-        if (typeof(data[name]) === typeof(_config.settings[name]))
+        if (typeof(data[name]) === typeof(_config.settings[name])) {
           _config.settings[name] = data[name];
+        }
         save_config();
 
-        if (name === 'screen')
-        {
+        if (name === 'screen') {
           next_screen(data.screen);
           flash_screen(false, true);
-        }
-        else if (name === 'opacity')
+        } else if (name === 'opacity') {
           set_opacity(data.opacity);
-        else if (name === 'duration')
+        } else if (name === 'duration') {
           set_duration(data.duration);
-      }
-      else if (data === 'reset')
-      {
+        }
+      } else if (data === 'reset') {
         _config.statistics.flash = 0;
         _config.statistics.viewer = 0;
         _config.statistics.moderator = 0;
@@ -213,31 +202,32 @@ module.exports = {
       }
     }
 
-    if (_config.default.enabled)
-    {
-      if (id === 'twitch' && name === 'Register')
+    if (_config.default.enabled) {
+      if (id === 'twitch' && name === 'Register') {
         flash_screen('connected', true);
-      else if (id === 'twitch' && (name === 'Error' || name === 'Disconnected'))
+      } else if (id === 'twitch' && (name === 'Error' || name === 'Disconnected')) {
         flash_screen('disconnected', true);
-      //_sender('twitch', 'GetChannelRewards', ['my-client-id', true]).then(data => console.log('GetChannelRewards:', data));
+      }
 
-      if (id === 'twitch' && (name === 'Message' || (_config.settings.join && name === 'Join') || (_config.settings.command && name === 'Command')))
-      {
-        if (_pause || !flash_screen())
+      if (id === 'twitch' && (name === 'Message' || (_config.settings.join && name === 'Join') || (_config.settings.command && name === 'Command'))) {
+        if (_pause || !flash_screen()) {
           return;
+        }
 
         ++_config.statistics.flash;
 
-        if (data.flags)
-        {
+        if (data.flags) {
           let viewer = !data.flags.broadcaster;
-          if (data.flags.moderator && !(viewer = false))
+          if (data.flags.moderator && !(viewer = false)) {
             ++_config.statistics.moderator;
-          if (data.flags.subscriber && !(viewer = false))
+          }
+          if (data.flags.subscriber && !(viewer = false)) {
             ++_config.statistics.subscriber;
+          }
 
-          if (viewer)
+          if (viewer) {
             ++_config.statistics.viewer;
+          }
         }
 
         update_interface();

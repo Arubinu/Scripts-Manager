@@ -6,20 +6,18 @@ let _edit = false,
   _target = false,
   _widgets = {};
 
-function get_widget(id)
-{
+function get_widget(id) {
   return document.querySelector(`[wid="${id}"]`);
 }
 
-function get_widget_id(widget)
-{
+function get_widget_id(widget) {
   return widget.getAttribute('wid');
 }
 
-function update_widget(id, x, y, width, height)
-{
-  if (typeof(_widgets[id]) === 'undefined')
+function update_widget(id, x, y, width, height) {
+  if (typeof(_widgets[id]) === 'undefined') {
     return;
+  }
 
   const data = _widgets[id];
   const iframe = data.iframe;
@@ -43,8 +41,9 @@ function update_widget(id, x, y, width, height)
   };
 
   widget.querySelector('.name').innerText = data.name;
-  if (data.url !== iframe.getAttribute('src'))
+  if (data.url !== iframe.getAttribute('src')) {
     iframe.setAttribute('src', data.url);
+  }
 
   widget.classList.toggle('is-hide', data.hide);
 
@@ -54,16 +53,12 @@ function update_widget(id, x, y, width, height)
   widget.style.height = `${rect.height}px`;
 }
 
-function move_mousedown(event)
-{
-  if (_edit && event.button === 0)
-  {
+function move_mousedown(event) {
+  if (_edit && event.button === 0) {
     const widget = event.target.closest('[wid]');
-    if (widget)
-    {
+    if (widget) {
       const id = get_widget_id(widget);
-      if (typeof(_widgets[id]) !== 'undefined')
-      {
+      if (typeof(_widgets[id]) !== 'undefined') {
         _move = true;
         _target = {
           id: id,
@@ -76,17 +71,13 @@ function move_mousedown(event)
   }
 }
 
-function resize_mousedown(event)
-{
-  if (_edit && event.button === 0)
-  {
+function resize_mousedown(event) {
+  if (_edit && event.button === 0) {
     const widget = event.target.closest('[wid]');
-    if (widget)
-    {
+    if (widget) {
       const id = get_widget_id(widget);
       const mode = event.target.getAttribute('mode');
-      if (mode && typeof(_widgets[id]) !== 'undefined')
-      {
+      if (mode && typeof(_widgets[id]) !== 'undefined') {
         _resize = true;
         _target = {
           id: id,
@@ -100,93 +91,86 @@ function resize_mousedown(event)
   }
 }
 
-function mousemove(event)
-{
+function mousemove(event) {
   event.preventDefault();
 
-  if (_edit)
-  {
-    if (_move)
-    {
+  if (_edit) {
+    if (_move) {
       _target.move = { x: event.x, y: event.y };
       _target.widget.temp = { x: (_target.widget.x + (_target.move.x - _target.start.x)), y: (_target.widget.y + (_target.move.y - _target.start.y)) }
       update_widget(_target.id, _target.widget.temp.x, _target.widget.temp.y);
-    }
-    else if (_resize)
-    {
+    } else if (_resize) {
       _target.move = { x: event.x, y: event.y };
       _target.widget.temp = {};
-      if (_target.mode.indexOf('n') >= 0)
-      {
+      if (_target.mode.indexOf('n') >= 0) {
         const diff = (_target.move.y - _target.start.y);
         _target.widget.temp.height = Math.max(0, (_target.widget.height - diff));
-        if (_target.widget.anchor[0] === 'middle')
-        {
+        if (_target.widget.anchor[0] === 'middle') {
           _target.widget.temp.y = (_target.widget.y + (diff / 2));
           _target.widget.temp.height = Math.max(0, (_target.widget.height - diff));
-        }
-        else if (_target.widget.anchor[0] === 'top')
+        } else if (_target.widget.anchor[0] === 'top') {
           _target.widget.temp.y = (_target.widget.y + diff);
+        }
       }
-      if (_target.mode.indexOf('e') >= 0)
-      {
+      if (_target.mode.indexOf('e') >= 0) {
         const diff = (_target.move.x - _target.start.x);
         _target.widget.temp.width = Math.max(0, (_target.widget.width + diff));
-        if (_target.widget.anchor[1] === 'center')
+        if (_target.widget.anchor[1] === 'center') {
           _target.widget.temp.x = (_target.widget.x + (diff / 2));
-        else if (_target.widget.anchor[1] === 'right')
+        } else if (_target.widget.anchor[1] === 'right') {
           _target.widget.temp.x = (_target.widget.x + diff);
+        }
       }
-      if (_target.mode.indexOf('s') >= 0)
-      {
+      if (_target.mode.indexOf('s') >= 0) {
         const diff = (_target.move.y - _target.start.y);
         _target.widget.temp.height = Math.max(0, (_target.widget.height + diff));
-        if (_target.widget.anchor[0] === 'middle')
+        if (_target.widget.anchor[0] === 'middle') {
           _target.widget.temp.y = (_target.widget.y + (diff / 2));
-        else if (_target.widget.anchor[0] === 'bottom')
+        } else if (_target.widget.anchor[0] === 'bottom') {
           _target.widget.temp.y = (_target.widget.y + diff);
+        }
       }
-      if (_target.mode.indexOf('w') >= 0)
-      {
+      if (_target.mode.indexOf('w') >= 0) {
         const diff = (_target.move.x - _target.start.x);
         _target.widget.temp.width = Math.max(0, (_target.widget.width - diff));
-        if (_target.widget.anchor[1] === 'center')
-        {
+        if (_target.widget.anchor[1] === 'center') {
           _target.widget.temp.x = (_target.widget.x + (diff / 2));
           _target.widget.temp.width = Math.max(0, (_target.widget.width - diff));
-        }
-        else if (_target.widget.anchor[1] === 'left')
+        } else if (_target.widget.anchor[1] === 'left') {
           _target.widget.temp.x = (_target.widget.x + diff);
+        }
       }
 
-      if (_target.widget.temp)
+      if (_target.widget.temp) {
         update_widget(_target.id, _target.widget.temp.x, _target.widget.temp.y, _target.widget.temp.width, _target.widget.temp.height );
+      }
     }
   }
 }
 
-function mouseup()
-{
-  if (_edit)
-  {
-    if ((_move || _resize) && _target.widget.temp)
+function mouseup() {
+  if (_edit) {
+    if ((_move || _resize) && _target.widget.temp) {
       ipcRenderer.invoke('edit', { id: _target.id, x: _target.widget.temp.x, y: _target.widget.temp.y, width: _target.widget.temp.width, height: _target.widget.temp.height });
+    }
   }
 
   _move = false;
   _resize = false;
-  if (_target)
-  {
-    if (typeof(_target.widget.temp) !== 'undefined')
-    {
-      if (typeof(_target.widget.temp.x) !== 'undefined')
+  if (_target) {
+    if (typeof(_target.widget.temp) !== 'undefined') {
+      if (typeof(_target.widget.temp.x) !== 'undefined') {
         _target.widget.x = _target.widget.temp.x;
-      if (typeof(_target.widget.temp.y) !== 'undefined')
+      }
+      if (typeof(_target.widget.temp.y) !== 'undefined') {
         _target.widget.y = _target.widget.temp.y;
-      if (typeof(_target.widget.temp.width) !== 'undefined')
+      }
+      if (typeof(_target.widget.temp.width) !== 'undefined') {
         _target.widget.width = _target.widget.temp.width;
-      if (typeof(_target.widget.temp.height) !== 'undefined')
+      }
+      if (typeof(_target.widget.temp.height) !== 'undefined') {
         _target.widget.height = _target.widget.temp.height;
+      }
 
       delete _target.widget.temp;
     }
@@ -207,15 +191,13 @@ ipcRenderer.on('enabled', (event, data) => {
 
 ipcRenderer.on('add', (event, data) => {
   let widget = get_widget(data.id);
-  if (!widget)
-  {
+  if (!widget) {
     widget = document.querySelector('#template > [wid]').cloneNode(true);
 
     widget.querySelector('.move').addEventListener('mousedown', move_mousedown);
     widget.querySelector('.resize').addEventListener('mousedown', resize_mousedown);
     widget.querySelector('.resize').addEventListener('mousemove', function(event) {
-      if (!_resize)
-      {
+      if (!_resize) {
         const margin = 5;
         const rect = this.getBoundingClientRect();
 
@@ -256,26 +238,25 @@ ipcRenderer.on('add', (event, data) => {
     _widgets[data.id] = data.widget;
     widget.setAttribute('wid', data.id);
     document.body.appendChild(widget);
-  }
-  else
-  {
-    for (const attr in data.widget)
+  } else {
+    for (const attr in data.widget) {
       _widgets[data.id][attr] = data.widget[attr];
+    }
   }
 
   update_widget(data.id);
 });
 
 ipcRenderer.on('remove', (event, data) => {
-  if (typeof(_widgets[data.id]) !== 'undefined')
-  {
+  if (typeof(_widgets[data.id]) !== 'undefined') {
     _widgets[data.id].element.remove();
     delete _widgets[data.id];
   }
 
   const widget = get_widget(data.id);
-  if (widget)
+  if (widget) {
     widget.remove();
+  }
 });
 
 ipcRenderer.on('edit', (event, data) => {
@@ -297,6 +278,7 @@ document.addEventListener('mousemove', mousemove);
 document.addEventListener('mouseup', mouseup);
 
 window.addEventListener('resize', () => {
-  for (const id in _widgets)
+  for (const id in _widgets) {
     update_widget(id);
+  }
 }, true);

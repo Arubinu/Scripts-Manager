@@ -1,18 +1,17 @@
-const	spotify = require('spotify-web-api-node'),
-  querystring = require('node:querystring');
+const querystring = require('node:querystring'),
+  spotify = require('spotify-web-api-node');
 
-const	{
+const {
   client_id: CLIENT_ID,
   client_secret: CLIENT_SECRET,
 } = require('./auth.json');
 
-let		_vars = {},
+let _vars = {},
   _config = {},
   _sender = null,
   instance = new spotify();
 
-function update_interface()
-{
+function update_interface() {
   const scopes = [
     'user-read-playback-state',
     'user-modify-playback-state',
@@ -27,30 +26,166 @@ function update_interface()
   }, _config));
 }
 
-const	functions = {
-  Search: async track => {
-    const	data	= await instance.searchTracks(track);
+async function refresh_token(error) {
+  try {
+    if (error.body.error.message === 'The access token expired') {
+      const data = await instance.refreshAccessToken();
 
-    if (typeof data.body === 'object' && typeof data.body.tracks === 'object' && Array.isArray(data.body.tracks.items) && data.body.tracks.items.length)
-      return data.body.tracks.items[0];
-  },
-  GetDevices: async () => {
-    const	data	= await instance.getMyDevices();
+      _config.connection.access_token = data.body.access_token;
+      instance.setAccessToken(_config.connection.access_token);
 
-    return data.body.devices;
-  },
-  GetActiveDevice: async () => {
-    const	devices	= await functions.GetDevices();
+      return true;
+    }
+  } catch (e) {}
 
-    if (devices.length >= 0)
-    {
-      for (const device of devices)
-      {
-        if (device.is_active)
-          return device;
+  return false;
+}
+
+const functions = {
+  Search: async function(track) {
+    try {
+      const data = await instance.searchTracks(track);
+      if (typeof data.body === 'object' && typeof data.body.tracks === 'object' && Array.isArray(data.body.tracks.items) && data.body.tracks.items.length) {
+        return data.body.tracks.items;
+      }
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.Search(...arguments);
       }
 
-      return devices[0];
+      throw e;
+    }
+  },
+  AddToQueue: async function(track, device) {
+    try {
+      if (!device) {
+        device = await functions.GetActiveDevice();
+      }
+
+      if (track.indexOf('spotify:')) {
+        const tracks = await functions.Search(track);
+        if (tracks.length) {
+          return await instance.addToQueue(tracks[0].uri, { device_id: device.id });
+        }
+      } else {
+        return await instance.addToQueue(track, { device_id: device.id });
+      }
+
+      return false;
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.AddToQueue(...arguments);
+      }
+
+      throw e;
+    }
+  },
+  PlayNow: async function(track, device) {
+    try {
+      if (!device) {
+        device = await functions.GetActiveDevice();
+      }
+      if (track) {
+        if (track.indexOf('spotify:')) {
+          const tracks = await functions.Search(track);
+          if (tracks.length) {
+            return await instance.play({
+              device_id: device.id,
+              context_uri: tracks[0].uri
+            });
+          }
+        } else {
+          return await instance.play({
+            device_id: device.id,
+            context_uri: track
+          });
+        }
+      } else {
+        return await instance.play({ device_id: device.id });
+      }
+
+      return false;
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.PlayNow(...arguments);
+      }
+
+      throw e;
+    }
+  },
+  PauseNow: async function(device) {
+    try {
+      if (!device) {
+        device = await functions.GetActiveDevice();
+      }
+
+      return await instance.pause({ device_id: device.id });
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.PauseNow(...arguments);
+      }
+
+      throw e;
+    }
+  },
+  GetDevices: async function() {
+    try {
+      const data = await instance.getMyDevices();
+
+      return data.body.devices;
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.GetDevices(...arguments);
+      }
+
+      throw e;
+    }
+  },
+  GetActiveDevice: async function() {
+    try {
+      const devices = await functions.GetDevices();
+
+      if (devices.length >= 0) {
+        for (const device of devices) {
+          if (device.is_active) {
+            return device;
+          }
+        }
+
+        return devices[0];
+      }
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.GetActiveDevice(...arguments);
+      }
+
+      throw e;
+    }
+  },
+  isPlaying: async function() {
+    try {
+      const data = await instance.getMyCurrentPlaybackState();
+
+      return data.body && data.body.is_playing;
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.GetActiveDevice(...arguments);
+      }
+
+      throw e;
+    }
+  },
+  isShuffle: async function() {
+    try {
+      const data = await instance.getMyCurrentPlaybackState();
+
+      return data.body && data.body.shuffle_state;
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.GetActiveDevice(...arguments);
+      }
+
+      throw e;
     }
   }
 };
@@ -66,29 +201,27 @@ module.exports = {
   initialized: () => {
     instance.setClientId(_config.connection.client_id || CLIENT_ID);
     instance.setClientSecret(_config.connection.client_secret || CLIENT_SECRET);
-    if (_config.connection.access_token)
+    if (_config.connection.access_token) {
       instance.setAccessToken(_config.connection.access_token);
-    if (_config.connection.refresh_token)
+    }
+    if (_config.connection.refresh_token) {
       instance.setRefreshToken(_config.connection.refresh_token);
+    }
   },
   receiver: async (id, name, data) => {
-    if (id === 'manager')
-    {
-      if (name === 'show')
+    if (id === 'manager') {
+      if (name === 'show') {
         update_interface();
-      else if (name === 'enabled')
+      } else if (name === 'enabled') {
         _config.default.enabled = data;
+      }
 
       return;
-    }
-    else if (id === 'message')
-    {
-      if (typeof(data) === 'object')
-      {
+    } else if (id === 'message') {
+      if (typeof(data) === 'object') {
         const name = Object.keys(data)[0];
 
-        if (typeof(data[name]) === typeof(_config.connection[name]))
-        {
+        if (typeof(data[name]) === typeof(_config.connection[name])) {
           _config.connection[name] = data[name];
 
           instance.setClientId(_config.connection.client_id || CLIENT_ID);
@@ -102,20 +235,16 @@ module.exports = {
       }
 
       return;
-    }
-    else if (id === 'methods')
-    {
+    } else if (id === 'methods') {
       const url = '/spotify/authorize';
 
-      if (name === 'http' && data.req && data.req.url.split('?')[0] === url)
-      {
+      if (name === 'http' && data.req && data.req.url.split('?')[0] === url) {
         const search = querystring.parse(data.req.url.split('?')[1]);
 
         data.res.writeHead(200);
         data.res.end(`<h1 style="font-family: sans-serif;">You can now close this page ...</h1>`);
 
-        if (typeof search.code === 'string')
-        {
+        if (typeof search.code === 'string') {
           instance.authorizationCodeGrant(search.code).then(data => {
             _config.connection.access_token = data.body.access_token;
             _config.connection.refresh_token = data.body.refresh_token;
@@ -137,19 +266,30 @@ module.exports = {
       return;
     }
 
-    if (typeof functions[name] === 'function')
-    {
-      if (Array.isArray(data) && data.length)
+    if (typeof functions[name] === 'function') {
+      if (Array.isArray(data) && data.length) {
         return await functions[name](...data);
-      else
+      } else {
         return await functions[name]();
-    }
-    else if (typeof instance[name] === 'function')
-    {
-      if (Array.isArray(data) && data.length)
-        return await instance[name](...data);
-      else
-        return await instance[name]();
+      }
+    } else if (typeof instance[name] === 'function') {
+      try {
+        if (Array.isArray(data) && data.length) {
+          return await instance[name](...data);
+        } else {
+          return await instance[name]();
+        }
+      } catch (e) {
+        if (await refresh_token(e)) {
+          if (Array.isArray(data) && data.length) {
+            return await instance[name](...data);
+          } else {
+            return await instance[name]();
+          }
+        }
+
+        throw e;
+      }
     }
   }
 }

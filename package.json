@@ -1,6 +1,6 @@
 {
   "name": "Scripts-Manager",
-  "version": "2.0.0b5",
+  "version": "2.0.0b6",
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
@@ -31,6 +31,7 @@
     "@twurple/eventsub-ws": "^5.3.3",
     "@twurple/pubsub": "^5.1.6",
     "discord.js": "^13.8.0",
+    "electron-custom-notifications": "github:Arubinu/electron-custom-notifications",
     "electron-log": "^4.4.7",
     "electron-store": "^8.0.1",
     "node-global-key-listener": "^0.1.1",
@@ -64,9 +65,6 @@
         "AppImage",
         "tar.gz"
       ]
-    },
-    "dmg": {
-      "icon": "build/logo.icns"
     },
     "nsis": {
       "oneClick": true,

@@ -65,7 +65,7 @@
               <div class="control ml-6 pl-6 has-icons-right">
                 <input class="input has-text-centered is-two-thirds" type="password" />
                 <span class="icon is-small is-right">
-                  <i class="fas fa-solid fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                  <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
                 </span>
               </div>
             </div>
@@ -87,35 +87,36 @@
     <script type="text/javascript">
       let timeout = 0;
 
-      for (const name of ['address', 'password'])
-      {
+      for (const name of ['address', 'password']) {
         const elem = document.querySelector(`.${name} input`);
         const callback = function(event) {
           let data = {};
           data[name] = elem.value;
 
-          if (name === 'address' && data[name].trim())
-          {
+          if (name === 'address' && data[name].trim()) {
             const address = data[name].trim();
 
             data[name] = address;
 
             let split = address.split('://');
-            if (split.length === 1)
+            if (split.length === 1) {
               split = ['ws', split[0]];
-            else if (split.length !== 2)
+            } else if (split.length !== 2) {
               split = ['ws', 'localhost'];
-            else if (!split[0].length)
+            } else if (!split[0].length) {
               split[0] = 'ws';
+            }
 
             let hostsplit = split[1].split('/');
-            if (hostsplit[0].indexOf(':') < 0)
+            if (hostsplit[0].indexOf(':') < 0) {
               hostsplit[0] += ':4455';
+            }
             split[1] = hostsplit.join('/');
 
             data[name] = split.join('://');
-            if (data[name] !== address)
+            if (data[name] !== address) {
               elem.value = data[name];
+            }
           }
 
           window.parent.postMessage(data, '*');
@@ -130,37 +131,39 @@
         });
       }
 
-      document.querySelector('.fa-eye, .fa-eye-slash').addEventListener('click', event => {
-        let slash = event.target.matches('.fa-eye-slash');
+      for (const elem of document.querySelectorAll('.fa-eye, .fa-eye-slash')) {
+        elem.addEventListener('click', event => {
+          const slash = event.target.matches('.fa-eye-slash');
 
-        event.target.classList.remove(slash ? 'fa-eye-slash' : 'fa-eye');
-        event.target.classList.add(slash ? 'fa-eye' : 'fa-eye-slash');
+          event.target.classList.remove(slash ? 'fa-eye-slash' : 'fa-eye');
+          event.target.classList.add(slash ? 'fa-eye' : 'fa-eye-slash');
 
-        document.querySelector('.password input').setAttribute('type', (slash ? 'text' : 'password'));
-      });
+          event.target.parentElement.previousElementSibling.setAttribute('type', (slash ? 'text' : 'password'));
+        });
+      }
 
       window.addEventListener('message', event => {
-        if (event.origin !== 'null')
-        {
-          if (event.data.name == 'config')
-          {
+        if (event.origin !== 'null') {
+          if (event.data.name == 'config') {
             const _config = event.data.data;
 
-            for (const name of ['address', 'password'])
+            for (const name of ['address', 'password']) {
               document.querySelector(`.${name} input`).value = _config.connection[name];
-          }
-          else if (event.data.name == 'logs')
-          {
-            if (event.data.data)
-            {
+            }
+          } else if (event.data.name == 'logs') {
+            if (event.data.data) {
               const table = document.querySelector('.table > tbody');
               const update = !Array.isArray(event.data.data);
 
-              if (update || event.data.data.length)
+              if (update || event.data.data.length) {
                 table.parentElement.classList.add('show');
+              }
 
-              for (const row of (update ? [event.data.data] : event.data.data))
-              {
+              for (const row of (update ? [event.data.data] : event.data.data)) {
+                if (typeof row === 'undefined') {
+                  continue;
+                }
+
                 const tr = document.createElement('tr');
                 const date = document.createElement('td');
                 const type = document.createElement('td');
@@ -169,10 +172,11 @@
                 cross.classList.add('fas', 'fa-xmark');
 
                 const columns = [date, type];
-                if (row.type.toLowerCase() == 'connectionopened')
+                if (row.type.toLowerCase() == 'connectionopened') {
                   columns.forEach(column => column.classList.add('is-info'));
-                else if (row.type.toLowerCase() == 'connectionclosed')
+                } else if (row.type.toLowerCase() == 'connectionclosed') {
                   columns.forEach(column => column.classList.add('is-danger'));
+                }
 
                 date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
                 type.innerText = row.type;

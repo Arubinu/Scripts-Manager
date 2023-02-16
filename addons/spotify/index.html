@@ -10,6 +10,11 @@
 
     <link id="config_stylesheet" rel="stylesheet" />
     <style type="text/css">
+      .has-cursor-pointer {
+        pointer-events: initial;
+        cursor: pointer !important;
+        z-index: 10;
+      }
       .has-addons .button {
         border-color: #444;
       }
@@ -31,8 +36,11 @@
           </div>
           <div class="field-body">
             <div class="field has-addons access_token">
-              <div class="control ml-6 pl-6 is-expanded">
+              <div class="control ml-6 pl-6 has-icons-right is-expanded">
                 <input class="input has-text-centered is-two-thirds" type="password" />
+                <span class="icon is-small is-right">
+                  <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                </span>
               </div>
               <div class="control">
                 <a class="button is-dark">
@@ -49,8 +57,11 @@
           </div>
           <div class="field-body">
             <div class="field refresh_token">
-              <div class="control ml-6 pl-6">
+              <div class="control ml-6 pl-6 has-icons-right">
                 <input class="input has-text-centered" type="password" />
+                <span class="icon is-small is-right">
+                  <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                </span>
               </div>
             </div>
           </div>
@@ -67,8 +78,11 @@
           </div>
           <div class="field-body">
             <div class="field client_id">
-              <div class="control ml-6 pl-6">
-                <input class="input has-text-centered" type="text" />
+              <div class="control ml-6 pl-6 has-icons-right">
+                <input class="input has-text-centered" type="password" />
+                <span class="icon is-small is-right">
+                  <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                </span>
               </div>
             </div>
           </div>
@@ -80,8 +94,11 @@
           </div>
           <div class="field-body">
             <div class="field client_secret">
-              <div class="control ml-6 pl-6">
-                <input class="input has-text-centered" type="text" />
+              <div class="control ml-6 pl-6 has-icons-right">
+                <input class="input has-text-centered" type="password" />
+                <span class="icon is-small is-right">
+                  <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                </span>
               </div>
             </div>
           </div>
@@ -92,8 +109,7 @@
     <script type="text/javascript">
       let timeout = 0;
 
-      for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret'])
-      {
+      for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret']) {
         const elem = document.querySelector(`.${name} input`);
         const callback = event => {
           let data = {};
@@ -114,30 +130,39 @@
       document.querySelector('.redirect_url').addEventListener('mouseup', event => {
         var selectedText = '';
 
-        if (window.getSelection)
-        {
+        if (window.getSelection) {
           const selection = window.getSelection(),
             range = document.createRange();
 
           range.selectNodeContents(event.target);
           selection.removeAllRanges();
           selection.addRange(range);
-        }
-        else
+        } else {
           return;
+        }
 
         document.execCommand('copy');
       });
 
+      for (const elem of document.querySelectorAll('.fa-eye, .fa-eye-slash')) {
+        elem.addEventListener('click', event => {
+          const slash = event.target.matches('.fa-eye-slash');
+
+          event.target.classList.remove(slash ? 'fa-eye-slash' : 'fa-eye');
+          event.target.classList.add(slash ? 'fa-eye' : 'fa-eye-slash');
+
+          event.target.parentElement.previousElementSibling.setAttribute('type', (slash ? 'text' : 'password'));
+        });
+      }
+
       window.addEventListener('message', event => {
-        if (event.origin !== 'null')
-        {
-          if (event.data.name == 'config')
-          {
+        if (event.origin !== 'null') {
+          if (event.data.name == 'config') {
             const _config = event.data.data;
 
-            for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret'])
+            for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret']) {
               document.querySelector(`.${name} input`).value = _config.connection[name];
+            }
 
             document.querySelector('.access_token .button').setAttribute('external-link', _config.authorize);
             document.querySelector('.redirect_url').innerText = _config.redirect_url;

@@ -8,8 +8,7 @@ let _target = '',
   _audio = {},
   _bluetooth = {};
 
-function get_target(target = _target)
-{
+function get_target(target = _target) {
   const split = target.split(':');
   const [type, id, name] = [
     split[0],
@@ -21,8 +20,7 @@ function get_target(target = _target)
 }
 
 class AudioPlayer {
-  constructor()
-  {
+  constructor() {
     this._element = document.createElement('audio');
   }
 
@@ -34,20 +32,18 @@ class AudioPlayer {
     const devices = await navigator.mediaDevices.enumerateDevices();
 
     let output_devices = [];
-    for (const device of devices)
-    {
-      if (device.kind === 'audiooutput')
+    for (const device of devices) {
+      if (device.kind === 'audiooutput') {
         output_devices.push(device);
+      }
     }
 
     return output_devices;
   }
 
   async set_device(name, contains = false) {
-    for (const device of await this.get_devices())
-    {
-      if ((contains && device.label.indexOf(name) >= 0) || (!contains && device.label === name))
-      {
+    for (const device of await this.get_devices()) {
+      if ((contains && device.label.indexOf(name) >= 0) || (!contains && device.label === name)) {
         await this._element.setSinkId(device.deviceId);
         return device;
       }
@@ -61,8 +57,9 @@ class AudioPlayer {
   }
 
   play(file, volume) {
-    if (typeof volume !== 'undefined')
+    if (typeof volume !== 'undefined') {
       this.set_volume(volume).then(() => {});
+    }
 
     this._element.src = file;
     this._element.play();
@@ -290,8 +287,7 @@ class Bluetooth {
     'date_utc'
   ];
 
-  constructor(id, type, options)
-  {
+  constructor(id, type, options) {
     console.log('Bluetooth scan:', id, options);
 
     this.device = null;
@@ -299,39 +295,34 @@ class Bluetooth {
 
     navigator.bluetooth.requestDevice(options)
       .then(device => {
-        //console.log('device:', device);
         this.device = device;
         this.device.addEventListener('gattserverdisconnected', this.destroy);
 
         return this.device.gatt.connect();
       })
       .then(server => {
-        //console.log('server:', server);
         return server.getPrimaryServices();
       })
       .then(services => {
-        //console.log('services:', services);
-
         this.connected = true;
 
         let queue = Promise.resolve();
         services.forEach(service => {
           let service_name = '';
-          for (const _service of options.services.concat(options.optionalServices || []))
+          for (const _service of options.services.concat(options.optionalServices || [])) {
             service_name = ((service.uuid === BluetoothUUID.getService(_service)) ? _service : service_name);
+          }
 
           queue = queue.then(_ => service.getCharacteristics().then(characteristics => {
             characteristics.forEach(characteristic => {
               let characteristic_name = '';
-              for (const _characteristic of Bluetooth._characteristics)
+              for (const _characteristic of Bluetooth._characteristics) {
                 characteristic_name = ((characteristic.uuid === BluetoothUUID.getCharacteristic(_characteristic)) ? _characteristic : characteristic_name);
+              }
 
-              if (characteristic_name && characteristic.properties)
-              {
-                if (characteristic.properties.read)
-                {
+              if (characteristic_name && characteristic.properties) {
+                if (characteristic.properties.read) {
                   characteristic.readValue().then(data => {
-                    //console.log('test', this.device.parseValue(data));
                     ipcRenderer.invoke('manager', { id, type, name: 'bluetooth:data', data: {
                       service: service_name,
                       characteristic: characteristic_name,
@@ -341,8 +332,7 @@ class Bluetooth {
                   });
                 }
 
-                if (characteristic.properties.notify)
-                {
+                if (characteristic.properties.notify) {
                   characteristic.startNotifications().then(characteristic => {
                     characteristic.addEventListener('characteristicvaluechanged', event => {
                       ipcRenderer.invoke('manager', { id, type, name: 'bluetooth:data', data: {
@@ -362,29 +352,23 @@ class Bluetooth {
         return queue;
       })
       .catch(error => {
-        //const target = get_target();
-        //ipcRenderer.invoke('manager', Object.assign({ name: 'bluetooth:error', data: error }, target));
         ipcRenderer.invoke('manager', { id, type, name: 'bluetooth:error', data: error });
       });
   }
 
-  destroy()
-  {
+  destroy() {
     this.connected = false;
-    if (this.device && this.device.gatt && this.device.gatt.connected)
-    {
+    if (this.device && this.device.gatt && this.device.gatt.connected) {
       this.device.gatt.disconnect();
       this.device = null;
     }
   }
 
-  static characteristic_data(name, data)
-  {
+  static characteristic_data(name, data) {
     const datas = Bluetooth.convert_dataview(name, data);
 
     let result = datas;
-    switch (name)
-    {
+    switch (name) {
       case 'battery_level': result = datas.number[0]; break;
       case 'heart_rate_measurement': result = datas.number[1]; break;
       case 'body_sensor_location': result = ['OTHER', 'CHEST', 'WRIST', 'FINGER', 'HAND', 'EAR_LOBE', 'FOOT'][datas.number[0]]; break;
@@ -393,35 +377,26 @@ class Bluetooth {
     return result;
   }
 
-  static convert_dataview(name, dataview)
-  {
+  static convert_dataview(name, dataview) {
     let datas = { flags: null, string: null, number: null, number16: null };
 
-    try
-    {
+    try {
       const flags = dataview.getUint16(0, true);
       datas.flags = [flags & 0x0, flags & 0x1, flags & 0x2, flags & 0x3, flags & 0x4, flags & 0x5, flags & 0x6, flags & 0x7, flags & 0x8, flags & 0x9, flags & 0x10, flags & 0x11, flags & 0x12, flags & 0x13, flags & 0x14, flags & 0x15, flags & 0x16];
-    }
-    catch (e) {}
+    } catch (e) {}
 
-    try
-    {
+    try {
       const text = new TextDecoder('ascii');
       datas.string = text.decode(dataview.buffer);
-    }
-    catch (e) {}
+    } catch (e) {}
 
-    try
-    {
+    try {
       datas.number = new Int8Array(dataview.buffer);
-    }
-    catch (e) {}
+    } catch (e) {}
 
-    try
-    {
+    try {
       datas.number16 = dataview.getUint16(0, true);
-    }
-    catch (e) {}
+    } catch (e) {}
 
     return datas;
   }
@@ -434,8 +409,9 @@ ipcRenderer.on('init', (event, data) => {
 
   // define iframe height
   setInterval(() => {
-    if (iframe.contentWindow.document.body)
+    if (iframe.contentWindow.document.body) {
       iframe.style.height = `${iframe.contentWindow.document.body.scrollHeight - 20}px`;
+    }
   }, 1000);
 
   // menu generation
@@ -457,8 +433,7 @@ ipcRenderer.on('init', (event, data) => {
     a.setAttribute('data-target', `${type}:${id}`);
     li.appendChild(a);
 
-    if (id.indexOf(':') < 0)
-    {
+    if (id.indexOf(':') < 0) {
       const label = document.createElement('label');
       label.setAttribute('for', `checkbox_${index}`);
       label.classList.add('switch');
@@ -483,22 +458,19 @@ ipcRenderer.on('init', (event, data) => {
     return li;
   };
 
-  for (const type in data.configs)
-  {
+  for (const type in data.configs) {
     const list = document.querySelector(`.${type}-list`);
-    for (const id in data.configs[type])
-    {
+    for (const id in data.configs[type]) {
       let name = data.configs[type][id].default.name;
       let li = add_li(type, id, name, list);
 
-      if (type === 'scripts')
-      {
+      if (type === 'scripts') {
         const menu = data.menus[id];
-        if (menu.length)
-        {
+        if (menu.length) {
           let ul = add_ul(name, li, list);
-          for (let submenu of menu)
+          for (let submenu of menu) {
             add_li(type, `${id}:${submenu.id}`, submenu.name, ul);
+          }
         }
       }
     }
@@ -506,15 +478,11 @@ ipcRenderer.on('init', (event, data) => {
 
   // from main
   ipcRenderer.on('manager', (event, data) => {
-    if (data.name === 'bluetooth:scan')
-    {
+    if (data.name === 'bluetooth:scan') {
       _bluetooth[data.id] = new Bluetooth(data.id, data.type, data.data);
       return;
-    }
-    else if (data.name === 'bluetooth:connect')
-    {
-      if (typeof _bluetooth[data.id] !== 'undefined' && !_bluetooth[data.id].connected)
-      {
+    } else if (data.name === 'bluetooth:connect') {
+      if (typeof _bluetooth[data.id] !== 'undefined' && !_bluetooth[data.id].connected) {
         data.name = 'bluetooth:connected';
 
         // to main
@@ -524,11 +492,8 @@ ipcRenderer.on('init', (event, data) => {
         iframe.contentWindow.postMessage(data, '*');
       }
       return;
-    }
-    else if (data.name === 'bluetooth:disconnect')
-    {
-      if (typeof _bluetooth[data.id] !== 'undefined')
-      {
+    } else if (data.name === 'bluetooth:disconnect') {
+      if (typeof _bluetooth[data.id] !== 'undefined') {
         _bluetooth[data.id].destroy();
         delete _bluetooth[data.id];
 
@@ -540,8 +505,7 @@ ipcRenderer.on('init', (event, data) => {
       return;
     }
 
-    if (data.name === 'audio:devices')
-    {
+    if (data.name === 'audio:devices') {
       const audio = new AudioPlayer();
       audio.get_devices()
         .then(devices => {
@@ -553,13 +517,12 @@ ipcRenderer.on('init', (event, data) => {
 
           // to renderer
           iframe.contentWindow.postMessage(data, '*');
-        })
+        });
       return;
-    }
-    else if (data.name === 'audio:play')
-    {
-      if (typeof _audio[data.id] === 'undefined')
+    } else if (data.name === 'audio:play') {
+      if (typeof _audio[data.id] === 'undefined') {
         _audio[data.id] = {};
+      }
 
       const id = uniqid();
       _audio[data.id][id] = new AudioPlayer();
@@ -569,26 +532,21 @@ ipcRenderer.on('init', (event, data) => {
       };
 
       let volume = parseInt(data.data.volume);
-      if (typeof volume !== 'number')
+      if (typeof volume !== 'number') {
         volume = 100;
+      }
 
-      if (data.data.device)
-      {
+      if (data.data.device) {
         _audio[data.id][id].set_device((typeof data.data.device === 'string') ? data.data.device : data.data.device.label)
           .then(device => {
             _audio[data.id][id].play(data.data.file, volume);
           });
-      }
-      else
+      } else
         _audio[data.id][id].play(data.data.file, volume);
       return;
-    }
-    else if (data.name === 'audio:stop')
-    {
-      if (typeof _audio[data.id] !== 'undefined')
-      {
-        for (const id in _audio[data.id])
-        {
+    } else if (data.name === 'audio:stop') {
+      if (typeof _audio[data.id] !== 'undefined') {
+        for (const id in _audio[data.id]) {
           _audio[data.id][id].pause();
           delete _audio[data.id][id];
         }
@@ -596,25 +554,20 @@ ipcRenderer.on('init', (event, data) => {
       return;
     }
 
-    if (data.target === get_target().target)
-    {
+    if (data.target === get_target().target) {
       const iframe_doc = iframe.contentWindow.document;
 
-      if (data.name === 'load')
-      {
-        if (data.target === 'general:about')
-        {
+      if (data.name === 'load') {
+        if (data.target === 'general:about') {
           _manager = data.data;
-          if (typeof _manager === 'object' && typeof _manager.default === 'object')
-          {
+          if (typeof _manager === 'object' && typeof _manager.default === 'object') {
             let browse = iframe_doc.querySelector('.browse input');
-            if (typeof _manager.default.all === 'string')
+            if (typeof _manager.default.all === 'string') {
               browse.value = _manager.default.all;
+            }
           }
         }
-      }
-      else if (!data.name.indexOf('browse:'))
-      {
+      } else if (!data.name.indexOf('browse:')) {
         let elem = iframe_doc.querySelector(data.data.elem);
         elem.value = data.result.filePath || data.result.filePaths[0];
         elem.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
@@ -623,8 +576,7 @@ ipcRenderer.on('init', (event, data) => {
   });
   ipcRenderer.on('message', (event, data) => {
     const target = get_target();
-    if (data.type === target.type && data.id === target.id)
-    {
+    if (data.type === target.type && data.id === target.id) {
       // to renderer
       iframe.contentWindow.postMessage(data, '*');
     }
@@ -632,8 +584,7 @@ ipcRenderer.on('init', (event, data) => {
 
   // from renderer
   window.addEventListener('message', event => {
-    if (event.origin !== 'null')
-    {
+    if (event.origin !== 'null') {
       let target = get_target();
       target.data = event.data;
 
@@ -648,8 +599,9 @@ ipcRenderer.on('init', (event, data) => {
       const iframe_doc = iframe.contentWindow.document;
 
       const config_stylesheet = iframe_doc.querySelector(`#config_stylesheet`);
-      if (config_stylesheet)
+      if (config_stylesheet) {
         config_stylesheet.setAttribute('href', path.join(__dirname, 'public/css/config.css'));
+      }
 
       // get new target
       let target = get_target();
@@ -657,17 +609,14 @@ ipcRenderer.on('init', (event, data) => {
       target.data = true;
 
       // display versions
-      if (target.target === 'general:about')
-      {
+      if (target.target === 'general:about') {
         const this_ = iframe_doc.querySelector('.this-version');
         const this_file = path.join(__dirname, 'package.json');
-        if (fs.existsSync(this_file))
-        {
+        if (fs.existsSync(this_file)) {
           const pkg = require(this_file);
           this_.innerText = pkg.version;
           this_.parentElement.children[0].innerText = pkg.name;
-        }
-        else
+        } else
           this_.parentElement.remove();
 
         let browse = iframe_doc.querySelector('.browse input');
@@ -676,15 +625,16 @@ ipcRenderer.on('init', (event, data) => {
           target.name = 'save';
           target.data = { default: { all: browse.value } };
 
-          if (target.data.default.all.trim().length)
-          {
+          if (target.data.default.all.trim().length) {
             const addons_path = path.join(target.data.default.all, 'addons');
-            if (!fs.existsSync(addons_path))
+            if (!fs.existsSync(addons_path)) {
               fs.mkdir(addons_path, () => {});
+            }
 
             const scripts_path = path.join(target.data.default.all, 'scripts');
-            if (!fs.existsSync(scripts_path))
+            if (!fs.existsSync(scripts_path)) {
               fs.mkdir(scripts_path, () => {});
+            }
           }
 
           ipcRenderer.invoke('manager', target);
@@ -703,11 +653,11 @@ ipcRenderer.on('init', (event, data) => {
       // open links in default browser and open dialog
       iframe_doc.addEventListener('click', event => {
         let elem = event.target.closest('[browse-file], [browse-file], [browse-folder], [external-link]');
-        if (!elem)
+        if (!elem) {
           elem = event.target;
+        }
 
-        if (elem.matches('[browse-file], [browse-files]'))
-        {
+        if (elem.matches('[browse-file], [browse-files]')) {
           const type = (elem.hasAttribute('browse-file') ? 'file' : 'files');
           let target = get_target();
           target.name = `browse:${type}`;
@@ -718,9 +668,7 @@ ipcRenderer.on('init', (event, data) => {
           };
 
           ipcRenderer.invoke('manager', target);
-        }
-        else if (elem.matches('[browse-folder]'))
-        {
+        } else if (elem.matches('[browse-folder]')) {
           let target = get_target();
           target.name = 'browse:folder';
           target.data = {
@@ -728,9 +676,7 @@ ipcRenderer.on('init', (event, data) => {
           };
 
           ipcRenderer.invoke('manager', target);
-        }
-        else if (elem.matches('[external-link]'))
-        {
+        } else if (elem.matches('[external-link]')) {
           event.preventDefault();
           shell.openExternal(elem.getAttribute('external-link'));
         }
@@ -738,8 +684,9 @@ ipcRenderer.on('init', (event, data) => {
 
       // removes focus from buttons and links so as not to have the blue outline
       iframe_doc.addEventListener('mouseup', event => {
-        if (!event.target.matches('input, select, textarea') && !event.target.closest('input, select, textarea'))
+        if (!event.target.matches('input, select, textarea') && !event.target.closest('input, select, textarea')) {
           iframe.blur();
+        }
       }, false);
 
       // to main
@@ -749,8 +696,7 @@ ipcRenderer.on('init', (event, data) => {
 
   // click on menu link
   document.addEventListener('click', event => {
-    if (event.target.matches('.menu a'))
-    {
+    if (event.target.matches('.menu a')) {
       // unselect all
       list.querySelectorAll('li, li > a').forEach(elem => {
         elem.classList.remove('is-active');
@@ -759,15 +705,14 @@ ipcRenderer.on('init', (event, data) => {
       // select with parent
       event.target.classList.add('is-active');
       const parent = event.target.parentElement.parentElement.closest('li');
-      if (parent && parent.previousSibling)
+      if (parent && parent.previousSibling) {
         parent.previousSibling.classList.add('is-active');
+      }
 
       // change target
       let target = event.target.getAttribute('data-target');
-      if (target)
-      {
-        if (_target)
-        {
+      if (target) {
+        if (_target) {
           // get old target
           let target = get_target();
           target.name = 'show';
@@ -781,15 +726,15 @@ ipcRenderer.on('init', (event, data) => {
         target = get_target();
 
         let uri = `../${target.type}/${target.id}/${target.name}.html`;
-        if (target.type === 'general')
+        if (target.type === 'general') {
           uri = `../public/${target.id}.html`;
+        }
 
-        if (!fs.existsSync(path.join(__dirname, 'erase', uri)))
-        {
-          if (typeof _manager === 'object' && typeof _manager.default === 'object')
-          {
-            if (typeof _manager.default.all === 'string')
+        if (!fs.existsSync(path.join(__dirname, 'erase', uri))) {
+          if (typeof _manager === 'object' && typeof _manager.default === 'object') {
+            if (typeof _manager.default.all === 'string') {
               uri = path.join(_manager.default.all, 'erase', uri);
+            }
           }
         }
 
@@ -798,8 +743,7 @@ ipcRenderer.on('init', (event, data) => {
     }
 
     // send a message to the switch
-    if (event.target.matches('.menu .switch .slider'))
-    {
+    if (event.target.matches('.menu .switch .slider')) {
       setTimeout(() => {
         let target = get_target(event.target.parentElement.parentElement.querySelector('a').getAttribute('data-target'));
         target.name = 'enabled';

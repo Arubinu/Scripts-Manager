@@ -10,6 +10,11 @@
 
     <link id="config_stylesheet" rel="stylesheet" />
     <style type="text/css">
+      .has-cursor-pointer {
+        pointer-events: initial;
+        cursor: pointer !important;
+        z-index: 10;
+      }
       .has-addons .button {
         border-color: #444;
       }
@@ -68,8 +73,11 @@
           </div>
           <div class="field-body">
             <div class="field has-addons token">
-              <div class="control ml-6 pl-6 is-expanded">
+              <div class="control ml-6 pl-6 has-icons-right is-expanded">
                 <input class="input has-text-centered is-two-thirds" type="password" />
+                <span class="icon is-small is-right">
+                  <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                </span>
               </div>
               <div class="control">
                 <a class="button is-dark">
@@ -100,8 +108,7 @@
     <script type="text/javascript">
       let timeout = 0;
 
-      for (const name of ['channel', 'token'])
-      {
+      for (const name of ['channel', 'token']) {
         const elem = document.querySelector(`.${name} input`);
         const callback = event => {
           let data = {};
@@ -119,30 +126,37 @@
         });
       }
 
+      for (const elem of document.querySelectorAll('.fa-eye, .fa-eye-slash')) {
+        elem.addEventListener('click', event => {
+          const slash = event.target.matches('.fa-eye-slash');
+
+          event.target.classList.remove(slash ? 'fa-eye-slash' : 'fa-eye');
+          event.target.classList.add(slash ? 'fa-eye' : 'fa-eye-slash');
+
+          event.target.parentElement.previousElementSibling.setAttribute('type', (slash ? 'text' : 'password'));
+        });
+      }
+
       window.addEventListener('message', event => {
-        if (event.origin !== 'null')
-        {
-          if (event.data.name == 'config')
-          {
+        if (event.origin !== 'null') {
+          if (event.data.name == 'config') {
             const _config = event.data.data;
 
-            for (const name of ['channel', 'token'])
+            for (const name of ['channel', 'token']) {
               document.querySelector(`.${name} input`).value = _config.connection[name];
+            }
 
             document.querySelector('.token .button').setAttribute('external-link', _config.authorize);
-          }
-          else if (event.data.name == 'logs')
-          {
-            if (event.data.data)
-            {
+          } else if (event.data.name == 'logs') {
+            if (event.data.data) {
               const table = document.querySelector('.table > tbody');
               const update = !Array.isArray(event.data.data);
 
-              if (update || event.data.data.length)
+              if (update || event.data.data.length) {
                 table.parentElement.classList.add('show');
+              }
 
-              for (const row of (update ? [event.data.data] : event.data.data))
-              {
+              for (const row of (update ? [event.data.data] : event.data.data)) {
                 const tr = document.createElement('tr');
                 const date = document.createElement('td');
                 const type = document.createElement('td');
@@ -156,27 +170,31 @@
                 cross.classList.add('fas', 'fa-xmark');
 
                 const columns = [date, type, from, sub, vip, mod, brd];
-                if (row.type == 'Register')
+                if (row.type == 'Register') {
                   columns.forEach(column => column.classList.add('is-info'));
-                else if (row.type == 'Reconnect')
+                } else if (row.type == 'Reconnect') {
                   columns.forEach(column => column.classList.add('is-warning'));
-                else if (row.type == 'Disconnected')
+                } else if (row.type == 'Disconnected') {
                   columns.forEach(column => column.classList.add('is-danger'));
+                }
 
                 date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
                 type.innerText = row.type[0].toUpperCase() + row.type.substr(1);
                 from.innerText = (row.user ? (row.user.name || '') : '');
 
-                if (row.flags)
-                {
-                  if (row.flags.subscriber)
+                if (row.flags) {
+                  if (row.flags.subscriber) {
                     sub.appendChild(cross.cloneNode());
-                  if (row.flags.vip)
+                  }
+                  if (row.flags.vip) {
                     vip.appendChild(cross.cloneNode());
-                  if (row.flags.moderator)
+                  }
+                  if (row.flags.moderator) {
                     mod.appendChild(cross.cloneNode());
-                  if (row.flags.broadcaster)
+                  }
+                  if (row.flags.broadcaster) {
                     brd.appendChild(cross.cloneNode());
+                  }
                 }
 
                 tr.appendChild(date);

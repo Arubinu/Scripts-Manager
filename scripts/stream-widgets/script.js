@@ -67,6 +67,8 @@ function create_window() {
 
     //win.webContents.openDevTools();
     win.webContents.send('enabled', _config.default.enabled);
+    win.setAlwaysOnTop(true, 'screen-saver');
+    win.setVisibleOnAllWorkspaces(true);
     win.show();
   });
   setInterval(() => {
@@ -99,6 +101,7 @@ function next_screen(index) {
 
   const bounds = screens[_screen].bounds;
   win.setPosition(bounds.x, bounds.y);
+  win.setMinimumSize(bounds.width, bounds.height); // fix
   win.setSize(bounds.width, bounds.height);
 
   win.webContents.send('flash');

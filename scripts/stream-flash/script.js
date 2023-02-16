@@ -56,6 +56,9 @@ function create_window() {
   win.loadFile(path.join(__dirname, 'flash', 'index.html')).then(() => {
     set_opacity(_config.settings.opacity);
     set_duration(_config.settings.duration);
+
+    win.setAlwaysOnTop(true, 'screen-saver');
+    win.setVisibleOnAllWorkspaces(true);
     win.show();
   });
   setInterval(() => {

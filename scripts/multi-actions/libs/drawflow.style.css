@@ -98,6 +98,18 @@
 .drawflow-node.disabled .title-box {
   background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, .15), rgba(0, 0, 0, .15) 5px, transparent 5px, transparent 10px);
 }
+.drawflow-node.helper .title-box:hover img,
+.drawflow-node.helper .title-box:not(:hover) .help {
+  display: none !important;
+}
+.drawflow-node .title-box .help {
+  display: inline-block;
+  margin-left: 5px;
+  margin-right: 10px;
+  height: 1.5em;
+  vertical-align: -3px;
+  font-size: 1.5rem;
+}
 .drawflow-node .title-box img {
   margin-left: 5px;
   margin-right: 10px;

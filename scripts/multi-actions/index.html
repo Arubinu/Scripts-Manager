@@ -118,6 +118,22 @@
         outline: 2px dashed rgba(255, 255, 255, .65);
       }
 
+      .drawflow-node.block-note {
+        padding: 0 12px !important;
+        width: auto !important;
+        text-align: center;
+        background-color: rgba(255, 255, 255, .15) !important;
+        border: none !important;
+        border-radius: 15px !important;
+        box-shadow: 0 0px 3px 2px rgba(255, 255, 255, .15) !important;
+        z-index: 6 !important;
+      }
+      .drawflow-node.block-note [contenteditable] {
+        font-size: 1.3rem;
+        outline: none !important;
+        cursor: text;
+      }
+
       .drawflow-node .title-box {
         position: relative;
         padding-right: 2rem !important;
@@ -332,6 +348,11 @@
         max-width: 100%;
         max-height: 100%;
       }
+
+      option.disabled,
+      .modules.disabled {
+        background-color: rgb(117, 84, 84) !important;
+      }
     </style>
 
     <link rel="stylesheet" href="./libs/drawflow.min.css" />
@@ -350,6 +371,7 @@
       <div class="block-drawflow">
         <div class="title-box">
           <img src="" />
+          <i class="fas fa-circle-info help" title="Important information related to the block"></i>
           <span></span>
           <div class="icons">
             <i class="fas fa-caret-down" title="Options"></i>
@@ -365,6 +387,7 @@
           Export<i class="fas fa-download"></i>
           <input type="text" class="is-hidden" />
         </li>
+        <li class="select-action">Select all<i class="fas fa-object-group"></i></li>
         <li class="delete-action">Delete all<i class="fas fa-trash-can"></i></li>
       </ul>
     </div>
@@ -400,7 +423,19 @@
           <div class="content">
             <h4>Module name :</h4>
           </div>
-          <input type="text" class="input has-text-centered" />
+          <div class="field has-addons access_token">
+            <div class="control is-expanded">
+              <input type="text" class="input has-text-centered is-two-thirds" />
+            </div>
+            <div class="control">
+              <a class="button module-enabled">
+                Enabled <i class="ml-2 fas fa-square-check"></i>
+              </a>
+              <a class="button module-disabled">
+                Disabled <i class="ml-2 far fa-square-check"></i>
+              </a>
+            </div>
+          </div>
         </section>
         <footer class="modal-card-foot is-justify-content-space-between">
           <button class="button is-danger delete-module" style="justify-content: space-between;">Delete</button>
@@ -408,6 +443,24 @@
             <button class="button is-success">Confirm</button>
             <button class="button" aria-label="close">Cancel</button>
           </div>
+        </footer>
+      </div>
+    </div>
+
+    <div class="modal delete-blocks">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Delete Blocks</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+          Are you sure you want to remove the "<span class="block-name"></span>" block?
+          <br />Any blocks connected to it will be too.
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button is-success">Confirm</button>
+          <button class="button" aria-label="close">Cancel</button>
         </footer>
       </div>
     </div>
@@ -489,18 +542,52 @@
       const selector = document.querySelector('.modules');
       const editor = new Drawflow(drawflow);
 
+      let _config = false;
       window.editor = editor;
+      editor.draggable_inputs = false;
 
-      if (typeof(editor.renameModule) !== 'function') {
-        editor.renameModule = new_name => {
-          const current = editor.module;
-          editor.drawflow.drawflow[new_name] = editor.drawflow.drawflow[current];
-          delete editor.drawflow.drawflow[current];
+      if (typeof editor.toggleModule !== 'function') {
+        editor.toggleModule = name => {
+          const module_name = (typeof name === 'string' && name.length) ? name : editor.module,
+            pos = _config.settings.disabled.indexOf(module_name);
 
-          editor.changeModule(new_name);
-          window.drawflow_save();
-          window.drawflow_select();
+          if (pos >= 0) {
+            _config.settings.disabled.splice(pos, 1);
+          } else {
+            _config.settings.disabled.push(module_name);
+          }
+
+          window.parent.postMessage({ disabled: _config.settings.disabled }, '*');
+
+          updateDisabled();
         };
+      }
+
+      if (typeof editor.renameModule !== 'function') {
+        editor.renameModule = new_name => {
+          if (typeof editor.drawflow.drawflow[new_name] === 'undefined') {
+            const current = editor.module;
+            editor.drawflow.drawflow[new_name] = editor.drawflow.drawflow[current];
+            delete editor.drawflow.drawflow[current];
+
+            editor.changeModule(new_name);
+            window.drawflow_save();
+            window.drawflow_select();
+          }
+        };
+      }
+
+      function updateDisabled() {
+        if (_config && Array.isArray(_config.settings.disabled)) {
+          for (const option of selector.querySelectorAll(':scope > option')) {
+            option.classList.toggle('disabled', (_config.settings.disabled.indexOf(option.value) >= 0));
+          }
+
+          const disabled = _config.settings.disabled.indexOf(editor.module) >= 0;
+          selector.classList.toggle('disabled', disabled);
+          document.querySelector('div.edit-module .module-enabled').classList.toggle('is-hidden', disabled);
+          document.querySelector('div.edit-module .module-disabled').classList.toggle('is-hidden', !disabled);
+        }
       }
 
       // Events!
@@ -524,6 +611,7 @@
               return init();
             }
 
+            updateDisabled();
             window.drawflow_initializer(editor.drawflow.drawflow);
           }, 10);
         };
@@ -592,6 +680,8 @@
         const elem = document.querySelector('div.edit-module');
         const input = elem.querySelector('input');
 
+        updateDisabled();
+
         elem.classList.add('is-active');
         input.value = editor.module;
         input.focus();
@@ -603,6 +693,9 @@
           document.querySelector('div.edit-module .is-success').dispatchEvent(new Event('click', { bubbles: true }));
         }
       });
+
+      document.querySelector('div.edit-module .module-enabled').addEventListener('click', editor.toggleModule);
+      document.querySelector('div.edit-module .module-disabled').addEventListener('click', editor.toggleModule);
 
       document.querySelector('div.edit-module .is-success').addEventListener('click', event => {
         const modal = event.target.closest('.modal');
@@ -619,7 +712,7 @@
           const to_delete = editor.module;
 
           // editor.removeModule(to_delete); // not work
-          if (typeof(editor.drawflow.drawflow[to_delete]) !== 'undefined') {
+          if (typeof editor.drawflow.drawflow[to_delete] !== 'undefined') {
             delete editor.drawflow.drawflow[to_delete];
           }
 
@@ -645,7 +738,7 @@
         if (event.origin !== 'null') {
           if (event.data.name === 'config') {
             setTimeout(() => {
-              const _config = event.data.data;
+              _config = event.data.data;
               if (Object.keys(_config.actions).length) {
                 for (const module_name in _config.actions) {
                   _config.actions[module_name].data = window.filter_nodes(_config.actions[module_name].data);
@@ -655,7 +748,7 @@
                 editor.import({ drawflow: _config.actions });
                 window.drawflow_select();
 
-                if (typeof(window.drawflow_initializer) === 'function') {
+                if (typeof window.drawflow_initializer === 'function') {
                   window.drawflow_initializer(_config.actions);
                 }
 
@@ -664,6 +757,8 @@
                   selector.value = module_name;
                   editor.changeModule(module_name);
                 }
+
+                updateDisabled();
               } else {
                 editor.module = 'Default';
                 editor.addModule(editor.module);
@@ -671,7 +766,7 @@
                 window.drawflow_select();
               }
             }, 100);
-          } else if (event.data.name === 'receive' && typeof(window.drawflow_receiver) === 'function') {
+          } else if (event.data.name === 'receive' && typeof window.drawflow_receiver === 'function') {
             window.drawflow_receiver(event.data.data.source, event.data.data.id, event.data.data.name, event.data.data.data);
           } else if (event.data.name === 'import') {
             window.import_nodes(window.filter_nodes(event.data.data));

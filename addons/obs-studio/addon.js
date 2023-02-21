@@ -357,4 +357,4 @@ module.exports = {
       return await obs.call(name, data);
     }
   }
-}
+};

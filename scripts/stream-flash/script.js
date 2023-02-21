@@ -92,7 +92,7 @@ function set_duration(duration) {
 
 function next_screen(index) {
   const screens = screen.getAllDisplays();
-  if (typeof(index) === 'undefined') {
+  if (typeof index === 'undefined') {
     _screen = ((_screen + 1) % screens.length);
     _config.settings.screen = _screen;
   } else {
@@ -116,21 +116,22 @@ function flash_screen(name, force) {
   return false;
 }
 
+
 module.exports = {
   init: (origin, config, sender) => {
     _sender = sender;
     _config = config;
 
     for (const section in _default) {
-      if (typeof(_config[section]) !== 'object') {
+      if (typeof _config[section] !== 'object') {
         _config[section] = {};
       }
 
       for (const name in _default[section]) {
         const config_value = _config[section][name];
         const default_value = _default[section][name];
-        const config_type = typeof(config_value);
-        const default_type = typeof(default_value);
+        const config_type = typeof config_value;
+        const default_type = typeof default_value;
         if (config_type !== default_type) {
           if (default_type === 'number' && config_type === 'string' && is_numeric(config_value)) {
             _config[section][name] = parseFloat(config_value);
@@ -179,9 +180,9 @@ module.exports = {
     }
 
     if (id === 'message') {
-      if (typeof(data) === 'object') {
+      if (typeof data === 'object') {
         const name = Object.keys(data)[0];
-        if (typeof(data[name]) === typeof(_config.settings[name])) {
+        if (typeof data[name] === typeof _config.settings[name]) {
           _config.settings[name] = data[name];
         }
         save_config();
@@ -238,4 +239,4 @@ module.exports = {
       }
     }
   }
-}
+};

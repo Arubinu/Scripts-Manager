@@ -56,19 +56,6 @@
       <div class="m-5">
         <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
           <div class="field-label is-normal">
-            <label class="label">Channel:</label>
-          </div>
-          <div class="field-body">
-            <div class="field channel">
-              <div class="control ml-6 pl-6">
-                <input class="input has-text-centered" type="text" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
-          <div class="field-label is-normal">
             <label class="label">Token:</label>
           </div>
           <div class="field-body">
@@ -108,7 +95,7 @@
     <script type="text/javascript">
       let timeout = 0;
 
-      for (const name of ['channel', 'token']) {
+      for (const name of ['token']) {
         const elem = document.querySelector(`.${name} input`);
         const callback = event => {
           let data = {};
@@ -142,7 +129,7 @@
           if (event.data.name == 'config') {
             const _config = event.data.data;
 
-            for (const name of ['channel', 'token']) {
+            for (const name of ['token']) {
               document.querySelector(`.${name} input`).value = _config.connection[name];
             }
 
@@ -157,6 +144,10 @@
               }
 
               for (const row of (update ? [event.data.data] : event.data.data)) {
+                if (typeof row === 'undefined') {
+                  continue;
+                }
+
                 const tr = document.createElement('tr');
                 const date = document.createElement('td');
                 const type = document.createElement('td');

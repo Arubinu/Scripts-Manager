@@ -1,5 +1,8 @@
-const querystring = require('node:querystring'),
-  spotify = require('spotify-web-api-node');
+const path = require('node:path'),
+  querystring = require('node:querystring'),
+  spotify = require('spotify-web-api-node'),
+  WebApiRequest = require(path.join(path.dirname(require.resolve('spotify-web-api-node')), 'webapi-request')),
+  HttpManager = require(path.join(path.dirname(require.resolve('spotify-web-api-node')), 'http-manager'));
 
 const {
   client_id: CLIENT_ID,
@@ -10,6 +13,13 @@ let _vars = {},
   _config = {},
   _sender = null,
   instance = new spotify();
+
+instance.getQueue = function(callback) {
+  return WebApiRequest.builder(this.getAccessToken())
+    .withPath('/v1/me/player/queue')
+    .build()
+    .execute(HttpManager.get, callback);
+};
 
 function update_interface() {
   const scopes = [
@@ -65,10 +75,10 @@ const functions = {
       if (track.indexOf('spotify:')) {
         const tracks = await functions.Search(track);
         if (tracks.length) {
-          return await instance.addToQueue(tracks[0].uri, { device_id: device.id });
+          return await instance.addToQueue(tracks[0].uri, { device_id: device && device.id });
         }
       } else {
-        return await instance.addToQueue(track, { device_id: device.id });
+        return await instance.addToQueue(track, { device_id: device && device.id });
       }
 
       return false;
@@ -90,18 +100,18 @@ const functions = {
           const tracks = await functions.Search(track);
           if (tracks.length) {
             return await instance.play({
-              device_id: device.id,
-              context_uri: tracks[0].uri
+              device_id: device && device.id,
+              uris: [tracks[0].uri]
             });
           }
         } else {
           return await instance.play({
-            device_id: device.id,
-            context_uri: track
+            device_id: device && device.id,
+            uris: [track]
           });
         }
       } else {
-        return await instance.play({ device_id: device.id });
+        return await instance.play({ device_id: device && device.id });
       }
 
       return false;
@@ -119,7 +129,7 @@ const functions = {
         device = await functions.GetActiveDevice();
       }
 
-      return await instance.pause({ device_id: device.id });
+      return await instance.pause({ device_id: device && device.id });
     } catch (e) {
       if (await refresh_token(e)) {
         return functions.PauseNow(...arguments);
@@ -165,7 +175,6 @@ const functions = {
   isPlaying: async function() {
     try {
       const data = await instance.getMyCurrentPlaybackState();
-
       return data.body && data.body.is_playing;
     } catch (e) {
       if (await refresh_token(e)) {
@@ -189,6 +198,7 @@ const functions = {
     }
   }
 };
+
 
 module.exports = {
   init: (origin, config, sender, vars) => {
@@ -218,10 +228,10 @@ module.exports = {
 
       return;
     } else if (id === 'message') {
-      if (typeof(data) === 'object') {
+      if (typeof data === 'object') {
         const name = Object.keys(data)[0];
 
-        if (typeof(data[name]) === typeof(_config.connection[name])) {
+        if (typeof data[name] === typeof _config.connection[name]) {
           _config.connection[name] = data[name];
 
           instance.setClientId(_config.connection.client_id || CLIENT_ID);
@@ -292,4 +302,4 @@ module.exports = {
       }
     }
   }
-}
+};

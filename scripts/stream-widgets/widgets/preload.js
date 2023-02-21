@@ -15,7 +15,7 @@ function get_widget_id(widget) {
 }
 
 function update_widget(id, x, y, width, height) {
-  if (typeof(_widgets[id]) === 'undefined') {
+  if (typeof _widgets[id] === 'undefined') {
     return;
   }
 
@@ -23,10 +23,10 @@ function update_widget(id, x, y, width, height) {
   const iframe = data.iframe;
   const widget = data.element;
   const rect = {
-    x: ((typeof(x) !== 'undefined') ? x : data.x),
-    y: ((typeof(y) !== 'undefined') ? y : data.y),
-    width: ((typeof(width) !== 'undefined') ? width : data.width),
-    height: ((typeof(height) !== 'undefined') ? height : data.height)
+    x: ((typeof x !== 'undefined') ? x : data.x),
+    y: ((typeof y !== 'undefined') ? y : data.y),
+    width: ((typeof width !== 'undefined') ? width : data.width),
+    height: ((typeof height !== 'undefined') ? height : data.height)
   };
 
   const positions = {
@@ -47,8 +47,8 @@ function update_widget(id, x, y, width, height) {
 
   widget.classList.toggle('is-hide', data.hide);
 
-  widget.style.top = `calc(${(typeof(positions.y[data.anchor[0]]) === 'undefined') ? rect.y : positions.y[data.anchor[0]]}px)`;
-  widget.style.left = `calc(${(typeof(positions.x[data.anchor[1]]) === 'undefined') ? rect.x : positions.x[data.anchor[1]]}px)`;
+  widget.style.top = `calc(${(typeof positions.y[data.anchor[0]] === 'undefined') ? rect.y : positions.y[data.anchor[0]]}px)`;
+  widget.style.left = `calc(${(typeof positions.x[data.anchor[1]] === 'undefined') ? rect.x : positions.x[data.anchor[1]]}px)`;
   widget.style.width = `${rect.width}px`;
   widget.style.height = `${rect.height}px`;
 }
@@ -58,7 +58,7 @@ function move_mousedown(event) {
     const widget = event.target.closest('[wid]');
     if (widget) {
       const id = get_widget_id(widget);
-      if (typeof(_widgets[id]) !== 'undefined') {
+      if (typeof _widgets[id] !== 'undefined') {
         _move = true;
         _target = {
           id: id,
@@ -77,7 +77,7 @@ function resize_mousedown(event) {
     if (widget) {
       const id = get_widget_id(widget);
       const mode = event.target.getAttribute('mode');
-      if (mode && typeof(_widgets[id]) !== 'undefined') {
+      if (mode && typeof _widgets[id] !== 'undefined') {
         _resize = true;
         _target = {
           id: id,
@@ -158,17 +158,17 @@ function mouseup() {
   _move = false;
   _resize = false;
   if (_target) {
-    if (typeof(_target.widget.temp) !== 'undefined') {
-      if (typeof(_target.widget.temp.x) !== 'undefined') {
+    if (typeof _target.widget.temp !== 'undefined') {
+      if (typeof _target.widget.temp.x !== 'undefined') {
         _target.widget.x = _target.widget.temp.x;
       }
-      if (typeof(_target.widget.temp.y) !== 'undefined') {
+      if (typeof _target.widget.temp.y !== 'undefined') {
         _target.widget.y = _target.widget.temp.y;
       }
-      if (typeof(_target.widget.temp.width) !== 'undefined') {
+      if (typeof _target.widget.temp.width !== 'undefined') {
         _target.widget.width = _target.widget.temp.width;
       }
-      if (typeof(_target.widget.temp.height) !== 'undefined') {
+      if (typeof _target.widget.temp.height !== 'undefined') {
         _target.widget.height = _target.widget.temp.height;
       }
 
@@ -248,7 +248,7 @@ ipcRenderer.on('add', (event, data) => {
 });
 
 ipcRenderer.on('remove', (event, data) => {
-  if (typeof(_widgets[data.id]) !== 'undefined') {
+  if (typeof _widgets[data.id] !== 'undefined') {
     _widgets[data.id].element.remove();
     delete _widgets[data.id];
   }

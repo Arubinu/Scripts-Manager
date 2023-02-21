@@ -10,8 +10,72 @@
 
     <link id="config_stylesheet" rel="stylesheet" />
     <style type="text/css">
-      .has-addons .button {
-        border-color: #444;
+      .is-selected {
+        background-color: rgba(0, 0, 0, .5);
+      }
+      .is-narrow,
+      .is-narrow-top {
+        border-top: 1px solid #555;
+      }
+      .is-narrow,
+      .is-narrow-bottom {
+        border-bottom: 1px solid #555;
+      }
+
+      .anchor-column {
+        margin: auto;
+        width: 165px;
+        height: 175px;
+        min-width: 165px;
+        max-width: 165px;
+      }
+
+      .anchor {
+        overflow: visible;
+        position: relative;
+        width: 100px;
+        height: 100px;
+        background-color: rgb(102, 102, 102);
+      }
+      .anchor > div {
+        position: absolute;
+        width: calc(8px * 2);
+        height: calc(8px * 2);
+        background-color: rgb(200, 200, 200);
+        border: 2px solid rgba(255, 255, 255, .5);
+        cursor: pointer;
+      }
+      .anchor > div.is-selected {
+        outline: 2px solid rgba(255, 255, 255, .5);
+        border: none;
+      }
+      .anchor > .top,
+      .anchor > .top-left,
+      .anchor > .top-right {
+        top: -8px;
+      }
+      .anchor > .right,
+      .anchor > .top-right,
+      .anchor > .bottom-right {
+        right: -8px;
+      }
+      .anchor > .bottom,
+      .anchor > .bottom-left,
+      .anchor > .bottom-right {
+        bottom: -8px;
+      }
+      .anchor > .left,
+      .anchor > .top-left,
+      .anchor > .bottom-left {
+        left: -8px;
+      }
+      .anchor > .left,
+      .anchor > .right {
+        top: calc(50% - 8px);
+      }
+      .anchor > .top,
+      .anchor > .bottom {
+        left: calc(50% - 8px);
       }
     </style>
   </head>
@@ -25,7 +89,7 @@
       </section>
 
       <div class="m-5">
-        <div class="columns is-horizontal is-narrow mt-2 mb-5">
+        <div class="columns is-horizontal is-narrow-bottom mt-2 mb-5">
           <div class="column mt-2">
             <label class="label">Screen to notify:</label>
           </div>
@@ -35,11 +99,67 @@
             </div>
           </div>
         </div>
+
+        <div class="columns">
+          <div class="column">
+            <div class="field opacity">
+              <label class="label has-text-centered">
+                <span class="icon" title="Notification opacity">
+                  <i class="fas fa-solid fa-info-circle"></i>
+                </span>
+                Opacity (%)
+              </label>
+              <div class="control">
+                <input class="input has-text-centered" type="number" min="10" max="100" step="1" />
+              </div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field scale">
+              <label class="label has-text-centered">
+                <span class="icon" title="Notification scale">
+                  <i class="fas fa-solid fa-info-circle"></i>
+                </span>
+                Scale (%)
+              </label>
+              <div class="control">
+                <input class="input has-text-centered" type="number" min="50" max="100" step="1" />
+              </div>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field round">
+              <label class="label has-text-centered">
+                <span class="icon" title="Notification round">
+                  <i class="fas fa-solid fa-info-circle"></i>
+                </span>
+                Rounded edges (%)
+              </label>
+              <div class="control">
+                <input class="input has-text-centered" type="number" min="0" max="100" step="1" />
+              </div>
+            </div>
+          </div>
+          <div class="column anchor-column">
+            <div class="content is-pulled-right mr-2">
+              <h4 class="has-text-centered mb-5">Anchor</h4>
+              <div class="anchor">
+                <div class="top-left" title="Top-Left"></div>
+                <div class="top-right" title="Top-Right"></div>
+                <div class="bottom-left" title="Bottom-Left"></div>
+                <div class="bottom-right" title="Bottom-Right"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <script type="text/javascript">
-      let _config = {};
+      const anchors = document.querySelectorAll('.anchor > div');
+
+      let _config = {},
+        changes = true;
 
       function update_buttons() {
         const buttons = document.querySelectorAll('.screen .buttons .button');
@@ -48,10 +168,47 @@
         }
       }
 
+      for (const name of ['round', 'scale', 'opacity']) {
+        const elem = document.querySelector(`.${name} input`);
+        const callback = event => {
+          let data = {};
+          data[name] = parseInt(elem.value);
+
+          window.parent.postMessage(data, '*');
+        };
+
+        elem.addEventListener('input', callback);
+      }
+
+      for (const anchor of anchors) {
+        anchor.addEventListener('click', event => {
+          anchors.forEach(anchor => {
+            anchor.classList.remove('is-selected');
+          });
+
+          anchor.classList.add('is-selected');
+
+          if (changes) {
+            _config.settings.anchor = anchor.getAttribute('title').toLowerCase().split('-');
+            window.parent.postMessage({anchor: _config.settings.anchor}, '*');
+          }
+        });
+      }
+
       window.addEventListener('message', event => {
         if (event.origin !== 'null') {
           if (event.data.name == 'config') {
             _config = event.data.data;
+
+            for (const name of ['round', 'scale', 'opacity']) {
+              document.querySelector(`.${name} input`).value = _config.settings[name];
+            }
+
+            changes = false;
+            const anchor = _config.settings.anchor[0][0].toUpperCase() + _config.settings.anchor[0].substr(1) + '-' + _config.settings.anchor[1][0].toUpperCase() + _config.settings.anchor[1].substr(1);
+            document.querySelector(`.anchor > [title="${anchor}"]`).click();
+            changes = true;
+
             update_buttons();
           } else if (event.data.name == 'screens') {
             const buttons = document.querySelector('.screen .buttons');

@@ -258,7 +258,7 @@
               elem.click();
             }
 
-            const hide = (init ? (typeof(widget.hide) !== 'undefined' && widget.hide) : eye.classList.contains('fa-eye'));
+            const hide = (init ? (typeof widget.hide !== 'undefined' && widget.hide) : eye.classList.contains('fa-eye'));
             eye.classList.toggle('fa-eye', !hide);
             eye.classList.toggle('fa-eye-slash', hide);
 
@@ -272,7 +272,7 @@
           widgets.appendChild(elem);
         } else {
           const eye = elem.querySelector('.fas');
-          if (typeof(widget.hide) !== 'undefined' && widget.hide != eye.classList.contains('fa-eye-slash')) {
+          if (typeof widget.hide !== 'undefined' && widget.hide != eye.classList.contains('fa-eye-slash')) {
             eye.click();
           }
         }

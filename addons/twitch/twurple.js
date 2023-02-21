@@ -4,7 +4,7 @@ const { ApiClient } = require('@twurple/api'),
   { StaticAuthProvider } = require('@twurple/auth'),
   { EventSubWsListener } = require('@twurple/eventsub-ws');
 
-let channel = { id: '', name: '', joined: [] },
+let channel = { id: '', name: '', display: '', creation: '', description: '', joined: [] },
   channel_ids = {},
   api_client = null,
   chat_client = null,
@@ -208,10 +208,10 @@ const methods = {
     }
 
     const data = {};
-    if (typeof(isPaused) === 'boolean') {
+    if (typeof isPaused === 'boolean') {
       data.isPaused = isPaused;
     }
-    if (typeof(isEnabled) === 'boolean') {
+    if (typeof isEnabled === 'boolean') {
       data.isEnabled = isEnabled;
     }
 
@@ -243,7 +243,7 @@ function convert(obj) {
     for (const item of obj) {
       items.push(convert(item));
     }
-  } else if (typeof(obj) === 'object') {
+  } else if (typeof obj === 'object') {
     try {
       const name = obj.constructor.name;
 
@@ -276,7 +276,7 @@ function convert(obj) {
 async function getChannelUser(userName) {
   if (!api_client) {
     return false;
-  } else if (typeof(channel_ids[userName]) !== 'undefined' && channel_ids[userName].expire > Date.now()) {
+  } else if (typeof channel_ids[userName] !== 'undefined' && channel_ids[userName].expire > Date.now()) {
     return channel_ids[userName].user;
   }
 
@@ -288,19 +288,31 @@ async function getChannelUser(userName) {
   return user;
 }
 
-async function connect(clientId, accessToken, channelName, callback) {
+async function connect(clientId, accessToken, callback) {
   channel.id = '';
-  channel.name = channelName;
+  channel.name = '';
+  channel.display = '';
+  channel.creation = '';
+  channel.description = '';
   channel.joined = [];
 
   const auth_provider = new StaticAuthProvider(clientId, accessToken);
 
   api_client = new ApiClient({ authProvider: auth_provider });
+
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  const me = await api_client.users.getMe(false);
+  channel.id = me.id;
+  channel.name = me.name;
+  channel.display = me.displayName;
+  channel.creation = me.creationDate;
+  channel.description = me.description;
+
   chat_client = new ChatClient({ authProvider: auth_provider, channels: [channel.name], requestMembershipEvents: true });
   ws_listener = new EventSubWsListener({ apiClient: api_client });
   pubsub_client = new PubSubClient();
 
-  channel.id = (await api_client.users.getUserByName(channel.name)).id;
   const pubsub_userid = await pubsub_client.registerUserListener(auth_provider);
 
   // Fires when a user sends an action (/me) to a channel.
@@ -437,7 +449,7 @@ async function connect(clientId, accessToken, channelName, callback) {
     callback(await get('Part', null, null, user));
 
     const index = channel.joined.indexOf(user);
-    if (index > -1) {
+    if (index >= 0) {
       channel.joined.splice(index, 1);
     }
   });
@@ -513,11 +525,6 @@ async function connect(clientId, accessToken, channelName, callback) {
   // Fires when a user gifts a subscription to a channel to another user.
   chat_listeners.SubGift = chat_client.onSubGift(async (_channel, user, subInfo) => {
     callback(await get('SubGift', null, null, user, { subscribe: { user, info: subInfo } }));
-  });
-
-  // Fires when a user is timed out from a channel.
-  chat_listeners.Timeout = chat_client.onTimeout(async (_channel, user, duration, msg) => {
-    callback(await get('Timeout', msg, null, user, { timeout: { user, duration } }));
   });
 
   // Fires when sub only mode is toggled in a channel.
@@ -661,7 +668,10 @@ async function connect(clientId, accessToken, channelName, callback) {
         isAnonymous: e.isAnonymous,
         message: e.message,
         bits: e.bits
-      }
+      },
+      message: e.message,
+      isCheer: true,
+      bits: e.bits
     }));
   });
 
@@ -734,7 +744,7 @@ async function connect(clientId, accessToken, channelName, callback) {
 
   // Subscribes to events that represent a user getting banned from a channel.
   ws_listeners.ChannelBan = await ws_listener.subscribeToChannelBanEvents(channel.id, async e => {
-    callback(await get('Ban', null, null, null, {
+    let obj = {
       user: {
         id: e.userId,
         type: '',
@@ -753,7 +763,13 @@ async function connect(clientId, accessToken, channelName, callback) {
         endDate: e.endDate,
         isPermanent: e.isPermanent
       }
-    }));
+    };
+
+    if (!e.isPermanent) {
+      obj = Object.assign(obj, { timeout: { user: e.userName, duration: (e.endDate - e.startDate) } });
+    }
+
+    callback(await get((e.isPermanent ? 'Ban' : 'Timeout'), null, null, null, obj));
   });
 
   // Subscribes to events that represent a user getting unbanned from a channel.
@@ -1266,11 +1282,10 @@ async function exec(type, name, args) {
 
 async function get(type, msg, message, user, merge) {
   msg = (msg || {});
-  channel.id = (channel.id || msg.channelId);
   const is_command = (message && message.length && message[0] === '!');
 
   let emotes = [];
-  if (typeof(msg.parseEmotes) !== 'undefined') {
+  if (typeof msg.parseEmotes !== 'undefined') {
     for (const emote of await msg.parseEmotes()) {
       const settings = {
         animationSettings: 'default',
@@ -1290,11 +1305,11 @@ async function get(type, msg, message, user, merge) {
     }
   }
 
-  return Object.assign((merge || {}), {
+  return Object.assign({
     id: msg.id,
     type: (is_command ? 'Command' : type),
     date: (msg.date ? msg.date : (msg.redemptionDate ? msg.redemptionDate : (new Date()).toISOString())),
-    channel: { id: channel.id, name: channel.name },
+    channel: Object.assign({}, channel),
     flags: (msg.userInfo
       ? {
         broadcaster: msg.userInfo.isBroadcaster,
@@ -1328,7 +1343,7 @@ async function get(type, msg, message, user, merge) {
       queued: msg.rewardIsQueued,
       images: (msg.rewardImage || msg.defaultImage),
     }
-  });
+  }, (merge || {}));
 }
 
 module.exports = {

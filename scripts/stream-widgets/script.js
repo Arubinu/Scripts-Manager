@@ -46,10 +46,10 @@ function create_window() {
   win.setIgnoreMouseEvents(true);
   win.loadFile(path.join(__dirname, 'widgets', 'index.html')).then(() => {
     ipcMain.handle('edit', (event, data) => {
-      if (typeof(_config.widgets[data.id]) !== 'undefined') {
+      if (typeof _config.widgets[data.id] !== 'undefined') {
         let widget = JSON.parse(_config.widgets[data.id]);
         for (const attr of ['x', 'y', 'width', 'height']) {
-          if (typeof(data[attr]) !== 'undefined') {
+          if (typeof data[attr]  !== 'undefined') {
             widget[attr] = data[attr];
           }
         }
@@ -92,7 +92,7 @@ function save_config() {
 
 function next_screen(index) {
   const screens = screen.getAllDisplays();
-  if (typeof(index) === 'undefined') {
+  if (typeof index === 'undefined') {
     _screen = ((_screen + 1) % screens.length);
     _config.settings.screen = _screen;
   } else {
@@ -107,21 +107,22 @@ function next_screen(index) {
   win.webContents.send('flash');
 }
 
+
 module.exports = {
   init: (origin, config, sender) => {
     _sender = sender;
     _config = config;
 
     for (const section in _default) {
-      if (typeof(_config[section]) !== 'object') {
+      if (typeof _config[section] !== 'object') {
         _config[section] = {};
       }
 
       for (const name in _default[section]) {
         const config_value = _config[section][name];
         const default_value = _default[section][name];
-        const config_type = typeof(config_value);
-        const default_type = typeof(default_value);
+        const config_type = typeof config_value;
+        const default_type = typeof default_value;
         if (config_type !== default_type) {
           if (default_type === 'number' && config_type === 'string' && is_numeric(config_value)) {
             _config[section][name] = parseFloat(config_value);
@@ -166,7 +167,7 @@ module.exports = {
     }
 
     if (id === 'message') {
-      if (typeof(data) === 'object') {
+      if (typeof data === 'object') {
         const name = Object.keys(data)[0];
 
         if (name === 'create') {
@@ -182,7 +183,7 @@ module.exports = {
           const id = data[name].id;
           delete _config.widgets[id];
           win.webContents.send('remove', { id });
-        } else if (typeof(data[name]) === typeof(_config.settings[name])) {
+        } else if (typeof data[name] === typeof _config.settings[name]) {
           _config.settings[name] = data[name];
         }
         save_config();
@@ -193,4 +194,4 @@ module.exports = {
       }
     }
   }
-}
+};

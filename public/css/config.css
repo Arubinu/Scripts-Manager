@@ -1,7 +1,6 @@
 @import 'share.css';
 @import 'all.min.css';
-@import 'bulma.min.css';
-@import 'bulma-prefers-dark.css';
+@import 'bulma-dark.min.css';
 
 *,
 *:focus {

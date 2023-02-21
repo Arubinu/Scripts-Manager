@@ -59,7 +59,7 @@ async function connect() {
   if (_config.connection.channel && _config.connection.token) {
     global_send('Connection', []);
     _connected = true;
-    await twurple.connect(CLIENT_ID, _config.connection.token, _config.connection.channel, obj => {
+    await twurple.connect(CLIENT_ID, _config.connection.token, obj => {
       _logs.unshift(obj);
       for (let i = (_logs.length - 1); i >= 20; --i) {
         delete _logs[i];
@@ -94,7 +94,7 @@ async function disconnect(broadcast) {
     _logs.unshift(obj);
     _sender('message', 'logs', obj);
 
-    if (typeof(broadcast) === 'undefined' || broadcast) {
+    if (typeof broadcast === 'undefined' || broadcast) {
       global_send('Disconnected', []);
     }
   }
@@ -109,7 +109,7 @@ module.exports = {
   },
   initialized: () => {
     if (_config.default.enabled) {
-      connect();
+      connect().then();
     }
   },
   receiver: async (id, name, data) => {
@@ -117,7 +117,7 @@ module.exports = {
       if (name === 'show') {
         if (!data && _changes && _config.default.enabled) {
           try {
-            reconnect();
+            await reconnect();
           } catch (e) {}
         }
 
@@ -126,25 +126,25 @@ module.exports = {
       } else if (name === 'enabled') {
         _config.default.enabled = data;
         if (!_config.default.enabled) {
-          disconnect();
+          await disconnect();
         } else {
-          connect();
+          await connect();
         }
       }
 
       return;
     } else if (id === 'message') {
-      if (typeof(data) === 'object') {
+      if (typeof data === 'object') {
         const name = Object.keys(data)[0];
         if (name === 'refresh') {
           if (_config.default.enabled) {
-            reconnect();
+            await reconnect();
           }
 
           return;
         }
 
-        if (typeof(data[name]) === typeof(_config.connection[name])) {
+        if (typeof data[name] === typeof _config.connection[name]) {
           _changes = true;
           _config.connection[name] = data[name];
         }
@@ -171,11 +171,11 @@ module.exports = {
 
         return true;
       } else if (name === 'websocket') {
-        if (typeof(data) === 'object') {
+        if (typeof data === 'object') {
           if (data.url === url && !data.data.indexOf('#')) {
             const hash = querystring.parse(data.data.substr(1));
 
-            if (typeof(hash.access_token) === 'string') {
+            if (typeof hash.access_token === 'string') {
               _config.connection.token = hash.access_token;
               _sender('manager', 'config', _config);
 
@@ -196,14 +196,14 @@ module.exports = {
 
     let check = false;
     if ((name === 'disconnect' || name === 'reconnect') && (check = true)) {
-      disconnect();
+      await disconnect();
     }
     if ((name === 'connect' || name === 'reconnect') && (check = true)) {
-      connect();
+      await connect();
     }
 
     if (!check) {
       return await twurple.exec(data.type, name, data.args);
     }
   }
-}
+};

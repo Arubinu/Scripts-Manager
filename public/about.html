@@ -12,6 +12,23 @@
   </head>
 
   <body>
+    <div class="modal reload-app">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Information</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body has-text-centered">
+          You need to restart Scripts Manager!
+          <br />For Addons and Scripts in the folder to be loaded.
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button" aria-label="close">Cancel</button>
+        </footer>
+      </div>
+    </div>
+
     <div class="container">
       <section class="hero is-small has-background-grey-dark">
         <div class="hero-body">
@@ -113,6 +130,22 @@
         </div>
       </div>
     </div>
+
+    <script type="text/javascript">
+      document.querySelectorAll('[aria-label="close"]').forEach(elem => {
+        elem.addEventListener('click', () => {
+          const modal = elem.closest('.modal');
+          if (modal) {
+            modal.classList.remove('is-active');
+          }
+        }, false);
+      });
+
+      document.querySelector('.browse input').addEventListener('change', event => {
+        const elem = document.querySelector('div.reload-app');
+        elem.classList.add('is-active');
+      }, false);
+    </script>
   </body>
 
 </html>

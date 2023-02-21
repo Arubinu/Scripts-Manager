@@ -2,7 +2,7 @@ const fs = require('node:fs'),
   http = require('node:http'),
   path = require('node:path'),
   ws = require('ws'),
-  { usb } = require('usb'),
+  { usb, WebUSB } = require('usb'),
   elog = require('electron-log'),
   estore = require('electron-store'),
   inifile = { read: require('read-ini-file'), write: require('write-ini-file') },
@@ -22,6 +22,7 @@ let win,
   addons = {},
   manager = {},
   scripts = {},
+  usb_infos = {},
   bluetooth_callback = null;
 
 function create_server() {
@@ -256,8 +257,7 @@ async function save_config(type, id, data, override) {
   } else if (type === 'scripts') {
     obj = scripts[id].config;
     is_global = scripts[id].is_global;
-  }
-  else {
+  } else {
     return false;
   }
 
@@ -272,8 +272,7 @@ async function save_config(type, id, data, override) {
           for (const name in data[section]) {
             obj[section][name] = data[section][name];
           }
-        }
-        else {
+        } else {
           obj[section] = JSON.parse(JSON.stringify(data[section]));
         }
       }
@@ -327,8 +326,7 @@ function load_addons(dir, is_global) {
                   for (const key in tmp) {
                     if (key === 'general') {
                       config[key].enabled = (typeof tmp[key].enabled === 'boolean') ? tmp[key].enabled : false;
-                    }
-                    else {
+                    } else {
                       config[key] = Object.assign(((typeof config[key] === 'object') ? config[key] : {}), tmp[key]);
                     }
                   }
@@ -399,8 +397,7 @@ function load_scripts(dir, is_global) {
                   for (const key in tmp) {
                     if (key === 'default') {
                       config[key].enabled = (typeof tmp[key].enabled === 'boolean') ? tmp[key].enabled : false;
-                    }
-                    else {
+                    } else {
                       config[key] = Object.assign(((typeof config[key] === 'object') ? config[key] : {}), tmp[key]);
                     }
                   }
@@ -482,6 +479,12 @@ async function all_sender(type, id, target, name, data) {
       }
 
       return;
+    } else if (names[0] === 'usb' && names.length > 1) {
+      if (names[1] === 'devices') {
+        usb_sender();
+      }
+
+      return;
     }
   }
 
@@ -513,8 +516,7 @@ async function all_sender(type, id, target, name, data) {
         generate_menu();
       } else if (split[0] === 'config') {
         save_config(type, id, data, (split.length === 2 && split[1] === 'override'));
-      }
-      else {
+      } else {
         return 'feature not found';
       }
 
@@ -566,13 +568,54 @@ function generate_menu() {
   ])));
 }
 
+function usb_sender(type, device) {
+  if (typeof device === 'object' && type === 'remove') {
+    for (const key in usb_infos) {
+      const item = usb_infos[key];
+      if (item.vendorId === device.deviceDescriptor.idVendor && item.productId === device.deviceDescriptor.idProduct) {
+        return all_methods('usb', { type, device: Object.assign({}, item, device) });
+      }
+    }
+
+    return all_methods('usb', { type, device });
+  }
+
+  (new WebUSB({ allowAllDevices: true })).getDevices()
+    .then(devices => {
+      let usb_keys = Object.keys(usb_infos);
+      for (const item of devices) {
+        const key = `${item.vendorId}-${item.productId}`;
+        if (usb_keys.indexOf(key) < 0) {
+          usb_keys.push(key);
+          usb_infos[key] = item;
+        }
+
+        if (typeof device === 'object' && item.vendorId === device.deviceDescriptor.idVendor && item.productId === device.deviceDescriptor.idProduct) {
+          return all_methods('usb', { type, device: Object.assign({}, item, device) });
+        }
+      }
+
+      if (typeof device === 'object') {
+        all_methods('usb', { type, device });
+      } else {
+        all_methods('usb', { type: 'scripts', id: 'manager', name: 'usb:devices', data: devices });
+      }
+    });
+}
+
 function usb_detection() {
-  usb.on('attach', device => all_methods('usb', { type: 'add', device }));
-  usb.on('detach', device => all_methods('usb', { type: 'remove', device }));
+  usb_sender();
+
+  usb.on('attach', device => {
+    usb_sender('add', device);
+  });
+  usb.on('detach', device => {
+    usb_sender('remove', device);
+  });
 }
 
 process.on('uncaughtException', err => {
-  if (err.message.indexOf('EADDRINUSE') >= 0) {
+  if (err.message.indexOf('EADDRINUSE') >= 0 || err.message.indexOf('ERR_FAILED (-2)') >= 0) {
     if (Notification.isSupported()) {
       (new Notification({
         title: 'Scripts Manager',

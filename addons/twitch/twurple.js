@@ -576,7 +576,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('Follow', null, null, null, {
       user: {
         id: e.userId,
-        type: '',
+        type: undefined,
         name: e.userName,
         display: e.userDisplayName
       },
@@ -586,28 +586,12 @@ async function connect(clientId, accessToken, callback) {
     }));
   });
 
-  // Subscribes to events that represent a user subscribing to a channel.
-  ws_listeners.ChannelSubscription = await ws_listener.subscribeToChannelSubscriptionEvents(channel.id, async e => {
-    callback(await get('Subscription', null, null, null, {
-      user: {
-        id: e.userId,
-        type: '',
-        name: e.userName,
-        display: e.userDisplayName
-      },
-      data: {
-        tier: e.tier,
-        isGift: e.isGift
-      }
-    }));
-  });
-
   // Subscribes to events that represent a user gifting a subscription to a channel to someone else.
   ws_listeners.ChannelSubscriptionGift = await ws_listener.subscribeToChannelSubscriptionGiftEvents(channel.id, async e => {
     callback(await get('SubscriptionGift', null, null, null, {
       user: {
         id: e.gifterId,
-        type: '',
+        type: undefined,
         name: e.gifterName,
         display: e.gifterDisplayName
       },
@@ -625,7 +609,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('SubscriptionMessage', null, null, null, {
       user: {
         id: e.userId,
-        type: '',
+        type: undefined,
         name: e.userName,
         display: e.userDisplayName
       },
@@ -644,7 +628,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('SubscriptionEnd', null, null, null, {
       user: {
         id: e.userId,
-        type: '',
+        type: undefined,
         name: e.userName,
         display: e.userDisplayName
       },
@@ -660,7 +644,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('Cheer', null, null, null, {
       user: {
         id: e.userId,
-        type: '',
+        type: undefined,
         name: e.userName,
         display: e.userDisplayName
       },
@@ -712,7 +696,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('CharityDonation', null, null, null, {
       user: {
         id: e.donorId,
-        type: '',
+        type: undefined,
         name: e.donorName,
         display: e.donorDisplayName
       },
@@ -747,7 +731,7 @@ async function connect(clientId, accessToken, callback) {
     let obj = {
       user: {
         id: e.userId,
-        type: '',
+        type: undefined,
         name: e.userName,
         display: e.userDisplayName
       },
@@ -777,7 +761,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('Unban', null, null, null, {
       user: {
         id: e.userId,
-        type: '',
+        type: undefined,
         name: e.userName,
         display: e.userDisplayName
       },
@@ -813,7 +797,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('ModeratorRemove', null, null, null, {
       user: {
         id: e.userId,
-        type: '',
+        type: undefined,
         name: e.userName,
         display: e.userDisplayName
       }
@@ -825,7 +809,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('RaidFrom', null, null, null, {
       user: {
         id: e.raidingBroadcasterId,
-        type: '',
+        type: undefined,
         name: e.raidingBroadcasterName,
         display: e.raidingBroadcasterDisplayName
       },
@@ -840,7 +824,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('RaidTo', null, null, null, {
       user: {
         id: e.raidedBroadcasterId,
-        type: '',
+        type: undefined,
         name: e.raidedBroadcasterName,
         display: e.raidedBroadcasterDisplayName
       },
@@ -924,7 +908,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('RedemptionAdd', null, null, null, {
       user: {
         id: e.raidedBroadcasterId,
-        type: '',
+        type: undefined,
         name: e.raidedBroadcasterName,
         display: e.raidedBroadcasterDisplayName
       },
@@ -945,7 +929,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('RedemptionUpdate', null, null, null, {
       user: {
         id: e.raidedBroadcasterId,
-        type: '',
+        type: undefined,
         name: e.raidedBroadcasterName,
         display: e.raidedBroadcasterDisplayName
       },
@@ -1166,7 +1150,7 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('UserUpdate', null, null, null, {
       user: {
         id: e.raidedBroadcasterId,
-        type: '',
+        type: undefined,
         name: e.raidedBroadcasterName,
         display: e.raidedBroadcasterDisplayName,
         description: e.userDescription,
@@ -1306,7 +1290,7 @@ async function get(type, msg, message, user, merge) {
   }
 
   return Object.assign({
-    id: msg.id,
+    id: msg.id || msg.targetMessageId,
     type: (is_command ? 'Command' : type),
     date: (msg.date ? msg.date : (msg.redemptionDate ? msg.redemptionDate : (new Date()).toISOString())),
     channel: Object.assign({}, channel),
@@ -1323,7 +1307,7 @@ async function get(type, msg, message, user, merge) {
     user: { // type: mod, global_mod, admin, staff
       id: (msg.userInfo ? msg.userInfo.userId : (msg.userId ? msg.userId : null)),
       type: (msg.userInfo ? msg.userInfo.userType : null),
-      name: (msg.userInfo ? msg.userInfo.userName : (msg.userName ? msg.userName : (user || null))),
+      name: (msg.userInfo ? msg.userInfo.userName : (msg.userName ? msg.userName : (user || (msg.userDisplayName ? msg.userDisplayName.toLowerCase() : null)))),
       display: (msg.userInfo ? msg.userInfo.displayName : (msg.userDisplayName ? msg.userDisplayName : null))
     },
     color: (msg.userInfo ? msg.userInfo.color : null),

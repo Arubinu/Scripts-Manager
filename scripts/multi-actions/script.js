@@ -134,8 +134,8 @@ const functions = {
 
         if (check) {
           set_variable('twitch:message:id', receive.data.id, VARIABLE_TYPE.NEXT, module_name, next_data);
-          set_variable('twitch:message:date', receive.data.date, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('twitch:message:type', receive.data.type, VARIABLE_TYPE.NEXT, module_name, next_data);
+          functions.date_to_vars(receive.data.date, 'twitch:message', VARIABLE_TYPE.NEXT, module_name, next_data);
 
           for (const key in receive.data.user) {
             set_variable(`twitch:user:${key}`, receive.data.user[key], VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1067,6 +1067,11 @@ const actions = {
     }, type, type.toLowerCase(), (type === 'command'));
   },
   'outputs-twitch-follow': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+    set_variable(['twitch:all:user:id', 'twitch:follow:user:id'], receive.data.data.userId, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable(['twitch:all:user:name', 'twitch:follow:user:name'], receive.data.data.displayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable(['twitch:all:user:display', 'twitch:follow:user:display'], receive.data.data.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+    functions.date_to_vars(receive.data.data.followDate, 'twitch:follow', VARIABLE_TYPE.NEXT, module_name, next_data);
+
     next();
   }, 'Follow', 'message', true),
   'outputs-twitch-followers-only': (module_name, receive, data, next_data, next) => {
@@ -1102,7 +1107,6 @@ const actions = {
       set_variable('twitch:gift-paid-upgrade:original:id', receive.data.upgrade.info.gifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:gift-paid-upgrade:original:name', receive.data.upgrade.info.gifter, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:gift-paid-upgrade:original:display', receive.data.upgrade.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:gift-paid-upgrade:plan:id', receive.data.upgrade.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
 
       next();
     }
@@ -1253,9 +1257,6 @@ const actions = {
   },
   'outputs-twitch-raid-cancel': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'twitch' && receive.name === 'RaidCancel') {
-      set_variable('twitch:raid:channel', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:raid:count', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
-
       next();
     }
   },
@@ -1282,9 +1283,7 @@ const actions = {
       set_variable(['twitch:all:user:id', 'twitch:redemption:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable(['twitch:all:user:name', 'twitch:redemption:user:name'], receive.data.user.name.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable(['twitch:all:user:display', 'twitch:redemption:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
-
       set_variable('twitch:redemption:id', receive.data.reward.id, VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:redemption:status', receive.data.reward.status, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:redemption:title', receive.data.reward.title, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:redemption:prompt', receive.data.reward.prompt, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:redemption:cost', receive.data.reward.cost, VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1307,7 +1306,6 @@ const actions = {
       set_variable('twitch:reward:count', receive.data.reward.info.count, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:reward:domain', receive.data.reward.info.domain, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:reward:shared', receive.data.reward.info.gifterGiftCount, VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:reward:trigger', receive.data.reward.info.triggerType, VARIABLE_TYPE.NEXT, module_name, next_data);
 
       next();
     }
@@ -1316,8 +1314,8 @@ const actions = {
     set_variable(['twitch:all:user:id', 'twitch:ritual:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable(['twitch:all:user:name', 'twitch:ritual:user:name'], receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable(['twitch:all:user:display', 'twitch:ritual:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('twitch:ritual:name', receive.data.ritual.info.ritualName, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:ritual:message', receive.data.ritual.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
-    set_variable('twitch:ritual:ritual', receive.data.ritual.info.ritualName, VARIABLE_TYPE.NEXT, module_name, next_data);
 
     next();
   }, 'Ritual', 'user', true, () => receive.data.ritual.user),

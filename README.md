@@ -1,5 +1,7 @@
 # Scripts Manager
+
 Program grouping together a multitude of scripts to avoid redeveloping everything each time.
+<br />To know everything about how this software works, documentation is available in the `Wiki` tab at the top of the page.
 
 ![](screenshot.png)
 
@@ -10,7 +12,7 @@ Before using the commands that follow, you must install the dependencies with th
 npm install
 ```
 
-To launch the project from source _(note: add your twitch app's client_id in `addons/twitch/auth.json`)_:
+To launch the project from source _(note: add your twitch app's client_id in `addons/twitch/auth.json`, and same in spotify)_:
 ```
 npm start
 ```

@@ -1289,12 +1289,17 @@ async function get(type, msg, message, user, merge) {
     }
   }
 
+  let date = msg.date ? msg.date : (msg.redemptionDate ? msg.redemptionDate : new Date());
+  if (typeof date === 'string') {
+    date = new Date(date);
+  }
+
   return Object.assign({
     id: msg.id || msg.targetMessageId,
-    type: (is_command ? 'Command' : type),
-    date: (msg.date ? msg.date : (msg.redemptionDate ? msg.redemptionDate : (new Date()).toISOString())),
+    type: is_command ? 'Command' : type,
+    date,
     channel: Object.assign({}, channel),
-    flags: (msg.userInfo
+    flags: msg.userInfo
       ? {
         broadcaster: msg.userInfo.isBroadcaster,
         founder: msg.userInfo.isFounder,
@@ -1303,19 +1308,19 @@ async function get(type, msg, message, user, merge) {
         vip: msg.userInfo.isVip,
         follower: ((msg.userInfo && msg.userInfo.userId) ? !!(await methods.checkFollow(false, msg.userId)) : false)
       }
-      : null),
+      : null,
     user: { // type: mod, global_mod, admin, staff
-      id: (msg.userInfo ? msg.userInfo.userId : (msg.userId ? msg.userId : null)),
-      type: (msg.userInfo ? msg.userInfo.userType : null),
-      name: (msg.userInfo ? msg.userInfo.userName : (msg.userName ? msg.userName : (user || (msg.userDisplayName ? msg.userDisplayName.toLowerCase() : null)))),
-      display: (msg.userInfo ? msg.userInfo.displayName : (msg.userDisplayName ? msg.userDisplayName : null))
+      id: msg.userInfo ? msg.userInfo.userId : (msg.userId ? msg.userId : null),
+      type: msg.userInfo ? msg.userInfo.userType : null,
+      name: msg.userInfo ? msg.userInfo.userName : (msg.userName ? msg.userName : (user || (msg.userDisplayName ? msg.userDisplayName.toLowerCase() : null))),
+      display: msg.userInfo ? msg.userInfo.displayName : (msg.userDisplayName ? msg.userDisplayName : null)
     },
-    color: (msg.userInfo ? msg.userInfo.color : null),
-    message: (is_command ? message.substr(1) : message),
+    color: msg.userInfo ? msg.userInfo.color : null,
+    message: is_command ? message.substr(1) : message,
     isCheer: msg.isCheer,
     isHighlight: msg.isHighlight,
     isRedemption: msg.isRedemption,
-    badges: (msg.userInfo ? { list: msg.userInfo.badges, info: msg.userInfo.badgeInfo } : null),
+    badges: msg.userInfo ? { list: msg.userInfo.badges, info: msg.userInfo.badgeInfo } : null,
     emotes: { list: emotes, offsets: msg.emoteOffsets },
     bits: msg.bits,
     reward: {

@@ -80,6 +80,10 @@ const functions = {
     return file_path;
   },
   date_to_vars: (date, prefix, type, module_name, next_data) => {
+    if (typeof date === 'string') {
+      date = new Date(date);
+    }
+
     set_variable(`${prefix ? (prefix + ':') : ''}date`, date.toString(), type, module_name, next_data);
     set_variable(`${prefix ? (prefix + ':') : ''}date:locale`, date.toLocaleDateString(), type, module_name, next_data);
     set_variable(`${prefix ? (prefix + ':') : ''}date:year`, date.getFullYear(), type, module_name, next_data);

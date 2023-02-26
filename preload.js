@@ -404,8 +404,8 @@ class Bluetooth {
 
 ipcRenderer.on('init', (event, data) => {
   let index = 0;
-  const list = document.querySelector('.menu');
-  const iframe = document.querySelector('.content > iframe');
+  const list = document.querySelector('.menu'),
+    iframe = document.querySelector('.content > iframe');
 
   // define iframe height
   setInterval(() => {
@@ -416,8 +416,8 @@ ipcRenderer.on('init', (event, data) => {
 
   // menu generation
   const add_ul = (type, name, parent) => {
-    const li = document.createElement('li');
-    const ul = document.createElement('ul');
+    const li = document.createElement('li'),
+      ul = document.createElement('ul');
 
     li.appendChild(ul);
     parent.appendChild(li);
@@ -426,8 +426,8 @@ ipcRenderer.on('init', (event, data) => {
   };
 
   const add_li = (type, id, name, parent) => {
-    const a = document.createElement('a');
-    const li = document.createElement('li');
+    const a = document.createElement('a'),
+      li = document.createElement('li');
 
     a.innerText = name;
     a.setAttribute('data-target', `${type}:${id}`);
@@ -692,6 +692,8 @@ ipcRenderer.on('init', (event, data) => {
       // to main
       ipcRenderer.invoke('manager', target);
     }, 10);
+
+    document.body.setAttribute('mode', data.mode);
   });
 
   // click on menu link

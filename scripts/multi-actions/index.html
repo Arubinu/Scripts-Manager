@@ -465,6 +465,26 @@
       </div>
     </div>
 
+    <div class="modal edit-value">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title"></p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="content">
+            <h4><span class="value-name"></span> :</h4>
+          </div>
+          <input type="text" class="input has-text-centered" />
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button is-success">Confirm</button>
+          <button class="button" aria-label="close">Cancel</button>
+        </footer>
+      </div>
+    </div>
+
     <div class="container">
       <section class="hero is-small has-background-grey-dark">
         <div class="hero-body">
@@ -538,11 +558,12 @@
     </div>
 
     <script type="text/javascript">
-      const drawflow = document.querySelector('.box-drawflow');
-      const selector = document.querySelector('.modules');
-      const editor = new Drawflow(drawflow);
+      const drawflow = document.querySelector('.box-drawflow'),
+        selector = document.querySelector('.modules'),
+        editor = new Drawflow(drawflow);
 
       let _config = false;
+      let edit_target = false;
       window.editor = editor;
       editor.draggable_inputs = false;
 
@@ -650,8 +671,8 @@
       });
 
       document.querySelector('i.add-module').addEventListener('click', event => {
-        const elem = document.querySelector('div.add-module');
-        const input = elem.querySelector('input');
+        const elem = document.querySelector('div.add-module'),
+          input = elem.querySelector('input');
 
         elem.classList.add('is-active');
         input.value = '';
@@ -677,8 +698,8 @@
       });
 
       document.querySelector('i.edit-module').addEventListener('click', event => {
-        const elem = document.querySelector('div.edit-module');
-        const input = elem.querySelector('input');
+        const elem = document.querySelector('div.edit-module'),
+          input = elem.querySelector('input');
 
         updateDisabled();
 
@@ -725,6 +746,36 @@
           window.drawflow_save();
           window.drawflow_select();
         }
+      });
+
+      document.addEventListener('dblclick', () => {
+        const node = get_node(event.target);
+        if (node && event.target.nodeName.toLowerCase() === 'input' && event.target.getAttribute('type') === 'text') {
+          const elem = document.querySelector('div.edit-value'),
+            input = elem.querySelector('input'),
+            title = elem.querySelector('.modal-card-title'),
+            name = elem.querySelector('.value-name');
+
+          elem.classList.add('is-active');
+          title.innerText = window.get_block(node.html).title;
+          name.innerText = get_name(event.target);
+          input.value = event.target.value;
+          input.focus();
+
+          edit_target = event.target;
+        }
+      });
+
+      document.querySelector('div.edit-value .is-success').addEventListener('click', event => {
+        const node = get_node(event.target),
+          elem = document.querySelector('div.edit-value'),
+          input = elem.querySelector('input'),
+          modal = event.target.closest('.modal');
+
+        modal.classList.remove('is-active');
+        edit_target.value = input.value;
+        edit_target.dispatchEvent(new Event('change', { bubbles: true }));
+        edit_target = false;
       });
 
       const section_filter = event => {

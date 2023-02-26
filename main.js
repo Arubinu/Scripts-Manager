@@ -215,9 +215,11 @@ function create_window() {
       configs.scripts[id] = scripts[id].config;
     }
 
-    //win.webContents.openDevTools();
+    if (process.env.NODE_TOOLS) {
+      win.webContents.openDevTools();
+    }
     win.webContents.executeJavaScript('console.log("user gesture fired");', true);
-    win.webContents.send('init', { menus, configs });
+    win.webContents.send('init', { menus, configs, mode: (process.env.NODE_ENV || 'production') });
 
     if (Notification.isSupported()) {
       (new Notification({
@@ -228,6 +230,12 @@ function create_window() {
       })).show();
     }
   });
+
+  win.on('will-navigate', (event, cmd) => {
+    if (cmd === 'browser-backward' || cmd === 'browser-forward') {
+      event.preventDefault();
+    }
+  })
 
   win.on('close', event => {
     event.preventDefault();
@@ -632,6 +640,11 @@ process.on('uncaughtException', err => {
 const logpath = (process.env.PORTABLE_EXECUTABLE_DIR ? process.env.PORTABLE_EXECUTABLE_DIR : __dirname);
 elog.transports.file.resolvePath = () => path.join(logpath, 'ScriptsManager.log');
 Object.assign(console, elog.functions);
+
+const env_file = path.join(__dirname, 'env.json');
+if (fs.existsSync(env_file)) {
+  Object.assign(process.env, JSON.parse(fs.readFileSync(env_file, 'utf-8')));
+}
 
 app.whenReady().then(() => {
   // init tray

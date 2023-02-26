@@ -232,6 +232,17 @@ const methods = {
     }
 
     api_client.moderation.deleteChatMessages(user.id, user.id, messageId);
+  },
+  announce: async (userName, message, color) => {
+    const user = await getChannelUser(userName || channel.name);
+    if (!user) {
+      return false;
+    }
+
+    api_client.chat.sendAnnouncement(user.id, user.id, {
+      //color: '', // blue | green | orange | purple | primary
+      message
+    });
   }
 };
 
@@ -1216,7 +1227,6 @@ async function exec(type, name, args) {
       const prefix_channel = [
         'action',
         'addVip',
-        'announce',
         'ban',
         'clear',
         'deleteMessage',
@@ -1228,6 +1238,7 @@ async function exec(type, name, args) {
         'raid',
         'removeVip',
         'runCommercial',
+        'sendAnnouncement',
         'timeout',
         'unhostOutside',
         'unmod',
@@ -1244,6 +1255,7 @@ async function exec(type, name, args) {
       c = methods;
     }
 
+    console.log('twitch exec:', name, args);
     if (c) {
       let result;
       if (args && args.length) {

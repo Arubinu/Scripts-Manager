@@ -1,13 +1,14 @@
 {
   "name": "Scripts-Manager",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "cross-env NODE_TOOLS=1 electron .",
     "lint": "eslint --max-warnings=0 .",
     "lint-fix": "eslint --max-warnings=0 --fix .",
-    "build": "electron-builder build --win portable"
+    "prebuild": "electron-builder build --win portable",
+    "build": "electron-builder build --config.files=\"!env.json\" --win portable"
   },
   "repository": "https://github.com/electron/electron-quick-start",
   "keywords": [
@@ -21,6 +22,7 @@
   "author": "GitHub",
   "license": "CC0-1.0",
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "electron": "^19.0.6",
     "eslint": "^8.33.0"
   },

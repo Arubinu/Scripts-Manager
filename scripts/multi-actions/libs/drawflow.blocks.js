@@ -127,8 +127,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function get_name(elem) {
+    elem = level_elem(elem);
+    while (elem.previousElementSibling && elem.previousElementSibling.nodeName.toLowerCase() !== 'p') {
+      elem = elem.previousElementSibling;
+    }
+
+    if (elem && elem.previousElementSibling) {
+      return elem.previousElementSibling.innerText.trim();
+    }
+  }
+
   function set_value(elem, value) {
-    if (elem.classList.contains('no-eye')) {
+    if (elem.closest('.no-eye')) {
       return;
     }
 
@@ -809,13 +820,14 @@ document.addEventListener('DOMContentLoaded', () => {
         button_on = elem.querySelector(`${selectors.name}.button-on`),
         button_toggle = elem.querySelector(`${selectors.name}.button-toggle`),
         button_off = elem.querySelector(`${selectors.name}.button-off`),
-        change_state = (state, save, state_string) => {
+        change_state = (state, save, state_string, force) => {
           button_on.classList.toggle('is-active', (toggle ? (state === 'on') : state));
           button_off.classList.toggle('is-active', (toggle ? (state === 'off') : !state));
           if (button_toggle) {
             button_toggle.classList.toggle('is-active', (state === 'toggle'));
           }
 
+          const original = data[arg];
           if (save) {
             data[arg] = state;
             set_data(data);
@@ -835,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           set_value(inputs[0], state_string);
 
-          if (callback) {
+          if (callback && (force || original !== state)) {
             callback(state);
           }
         };
@@ -860,9 +872,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
 
-          change_state(value, undefined, name);
+          change_state(value, undefined, name, true);
         } else {
-          change_state(inputs[0].checked);
+          change_state(inputs[0].checked, undefined, undefined, true);
         }
       }
     }
@@ -1972,7 +1984,9 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Twitch - Info',
       icon: 'info',
       inputs: 1,
-      outputs: 1
+      outputs: 1,
+      body: bodys.text('Channel'),
+      update: functions.trim
     },
     'inputs-twitch-info': {
       type: 'twitch',
@@ -2602,6 +2616,12 @@ document.addEventListener('DOMContentLoaded', () => {
     delete_connections(node);
   });
 
+  function get_block(name) {
+    if (typeof blocks[name] !== 'undefined') {
+      return Object.assign({}, blocks[name]);
+    }
+  }
+
   function block_exists(name) {
     return typeof blocks[name] !== 'undefined';
   }
@@ -2905,7 +2925,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  window.get_name = get_name;
   window.get_node = get_node;
+  window.get_block = get_block;
   window.block_exists = block_exists;
   window.filter_nodes = filter_nodes;
   window.import_nodes = import_nodes;

@@ -44,6 +44,9 @@ html, body {
   width: 100%;
   min-height: 100%;
 }
+body[mode="development"] .lateral-menu > section {
+  background-color: #b70f0f;
+}
 .lateral-menu > section > .hero-body {
   flex-direction: column;
   align-items: inherit !important;

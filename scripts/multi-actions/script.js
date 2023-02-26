@@ -510,7 +510,7 @@ const actions = {
       value = value.replace(search, replace);
     }
 
-    set_variable(data.variable, apply_variables(value, module_name, next_data), scope(data), module_name, next_data);
+    set_variable(data.variable, value, scope(data), module_name, next_data);
     next();
   },
   'both-variable-setter': (module_name, receive, data, next_data, next) => {
@@ -961,7 +961,7 @@ const actions = {
   'inputs-twitch-announce': (module_name, receive, data, next_data) => {
     const message = apply_variables(data.message, module_name, next_data);
     if (message.trim().length) {
-      _sender('twitch', 'Announce', { type: 'Chat', args: [apply_variables(message, module_name, next_data)] });
+      _sender('twitch', 'Announce', { type: 'Methods', args: [false, message] });
     }
   },
   'outputs-twitch-ban': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
@@ -1178,27 +1178,28 @@ const actions = {
     }
   },
   'both-twitch-info': (module_name, receive, data, next_data, next) => {
-    _sender('twitch', 'getChannelInfo', { type: 'Methods', args: [false] })
+    const channel = apply_variables(data.channel, module_name, next_data).trim().toLowerCase();
+    _sender('twitch', 'getChannelInfo', { type: 'Methods', args: [channel] })
       .then(info => {
         if (info) {
-          set_variable('twitch:channel:name', info.name, VARIABLE_TYPE.GLOBALS);
-          set_variable('twitch:channel:display', info.displayName, VARIABLE_TYPE.GLOBALS);
-          set_variable('twitch:channel:title', info.title, VARIABLE_TYPE.GLOBALS);
-          set_variable('twitch:channel:lang', info.language, VARIABLE_TYPE.GLOBALS);
-          set_variable('twitch:channel:delay', info.delay, VARIABLE_TYPE.GLOBALS);
+          set_variable('twitch:channel:name', info.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('twitch:channel:display', info.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('twitch:channel:title', info.title, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('twitch:channel:lang', info.language, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('twitch:channel:delay', info.delay, VARIABLE_TYPE.NEXT, module_name, next_data);
 
           info.getGame()
             .then(game => {
-              set_variable('twitch:channel:game:id', game.id, VARIABLE_TYPE.GLOBALS);
-              set_variable('twitch:channel:game:name', game.name, VARIABLE_TYPE.GLOBALS);
-              set_variable('twitch:channel:game:image', game.boxArtUrl, VARIABLE_TYPE.GLOBALS);
+              set_variable('twitch:channel:game:id', game.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable('twitch:channel:game:name', game.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable('twitch:channel:game:image', game.boxArtUrl, VARIABLE_TYPE.NEXT, module_name, next_data);
 
               next();
             })
             .catch(error => {
-              set_variable('twitch:channel:game:id', info.gameId, VARIABLE_TYPE.GLOBALS);
-              set_variable('twitch:channel:game:name', info.gameName, VARIABLE_TYPE.GLOBALS);
-              set_variable('twitch:channel:game:image', '', VARIABLE_TYPE.GLOBALS);
+              set_variable('twitch:channel:game:id', info.gameId, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable('twitch:channel:game:name', info.gameName, VARIABLE_TYPE.NEXT, module_name, next_data);
+              set_variable('twitch:channel:game:image', '', VARIABLE_TYPE.NEXT, module_name, next_data);
 
               next();
             });

@@ -32,6 +32,7 @@ function update_interface() {
       'moderation:read',
       'moderator:read:chat_settings',
       'moderator:manage:automod',
+      'moderator:manage:announcements',
       'moderator:manage:banned_users',
       'moderator:manage:blocked_terms',
       'moderator:manage:chat_settings',

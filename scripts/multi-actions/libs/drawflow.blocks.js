@@ -1829,7 +1829,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state('Type', false, 'All', 'By variable'),
-      update: functions.state
+      update: (id, elem, data, set_data, receive, receive_data) => {
+        functions.state(id, elem, data, set_data, receive, receive_data, 'type');
+      }
     },
     'outputs-twitch-emote-only': {
       type: 'twitch',

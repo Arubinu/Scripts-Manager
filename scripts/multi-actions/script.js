@@ -237,7 +237,7 @@ const actions = {
 
       const now = Date.now();
       if (!value || (value + time) < now) {
-        set_variable(data.variable, now, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(data.variable, now, VARIABLE_TYPE.GLOBALS);
         next();
       }
     }
@@ -987,7 +987,7 @@ const actions = {
     }
   },
   'inputs-twitch-chat-clear': (module_name, receive, data, next_data) => {
-    _sender('twitch', 'Clear', { type: 'Chat', args: [] });
+    _sender('twitch', 'deleteMessage', { type: 'Methods', args: [false] });
   },
   'outputs-twitch-cheer': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
     set_variable('twitch:cheer:bits', receive.data.data.bits, VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1025,7 +1025,7 @@ const actions = {
   },
   'inputs-twitch-delete-message': (module_name, receive, data, next_data) => {
     const all = data.type,
-      message_id = get_variable('twitch:message-id', '', module_name, next_data);
+      message_id = get_variable('twitch:message:id', '', module_name, next_data);
 
     if (all || (typeof message_id === 'string' && message_id.trim().length)) {
       _sender('twitch', 'deleteMessage', { type: 'Methods', args: [false, (all ? undefined : message_id)] });

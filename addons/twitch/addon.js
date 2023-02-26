@@ -35,6 +35,7 @@ function update_interface() {
       'moderator:manage:announcements',
       'moderator:manage:banned_users',
       'moderator:manage:blocked_terms',
+      'moderator:manage:chat_messages',
       'moderator:manage:chat_settings',
       'whispers:read',
       'whispers:edit',

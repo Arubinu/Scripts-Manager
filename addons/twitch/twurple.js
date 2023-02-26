@@ -1255,7 +1255,6 @@ async function exec(type, name, args) {
       c = methods;
     }
 
-    console.log('twitch exec:', name, args);
     if (c) {
       let result;
       if (args && args.length) {

@@ -58,7 +58,7 @@ async function global_send(type, obj) {
 }
 
 async function connect() {
-  if (_config.connection.channel && _config.connection.token) {
+  if (_config.connection.token) {
     global_send('Connection', []);
     _connected = true;
     await twurple.connect(CLIENT_ID, _config.connection.token, obj => {

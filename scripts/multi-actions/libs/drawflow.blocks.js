@@ -11,8 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
     button_export = document.querySelector('.container .hero-body input.export'),
     button_import = document.querySelector('.container .hero-body input.import');
 
-  let global_datas = {},
+  let last_data = -1,
+    double_click = 0,
+    global_datas = {},
     radios_index = {},
+    node_selected = -1,
+    multi_move = false,
+    multi_selection = {},
     mobile_item_selec = '',
     mobile_last_move = null;
 
@@ -88,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
       elem = elem.closest('[id^="node-"]');
     }
 
-    if (!elem) {
+    if (!elem || typeof editor.drawflow.drawflow[editor.module] !== 'object') {
       return false;
     }
 
@@ -220,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
         node_elem.classList.add('helper');
         help_elem.addEventListener('mousedown', event => {
           event.stopPropagation();
-          window.parent.postMessage({ open: `https://github.com/Arubinu/Scripts-Manager/wiki/Multi-Actions#${block.help}` }, '*');
+          window.parent.postMessage({ open: `https://arubinu.github.io/Scripts-Manager/?multi-actions#${block.help}` }, '*');
         }, true);
       } else {
         help_elem.remove();
@@ -363,6 +368,13 @@ document.addEventListener('DOMContentLoaded', () => {
     type: '<p>Type of value<span class="value"></span><i class="fas fa-eye-slash"></i></p><hr /><label class="radio"><input name="type" type="radio" value="string" level="1" checked /><span>String</span></label><label class="radio"><input name="type" type="radio" value="number" level="1" /><span>Number</span></label><label class="radio"><input name="type" type="radio" value="boolean" level="1" /><span>Boolean</span></label>',
     match: '<label class="checkbox no-eye" title="The uppercase/lowercase will be taken into account" style="padding-left: 0em; width: 85%;"><input name="case" type="checkbox" level="1" /><span>Case sensitive</span></label><label class="checkbox no-eye" title="The message received contains the sentence (must be exact if unchecked)" style="padding-left: 0em; width: 85%;"><input name="contains" type="checkbox" level="1" /><span>Contains sentence</span></label>',
     command: '<p>Command</p><div class="is-command"><input name="command" type="text" class="has-text-centered" level="1" /></div>',
+    textarea: (title, name) => {
+      if (!name) {
+        name = title.toLowerCase().replace(/\s/g, '-');
+      }
+
+      return `<p>${title}</p><textarea name="${name}" style="height: 120px; resize: none;"></textarea>`;
+    },
     viewers: () => {
       return `<p>Type of viewer<i class="fas fa-eye-slash"></i></p><hr />${bodys.checkbox('Viewer', false, 1)}${bodys.checkbox('Follower', false, 1)}${bodys.checkbox('Subscriber', false, 1)}${bodys.checkbox('Founder', false, 1)}${bodys.checkbox('VIP', false, 1)}${bodys.checkbox('Moderator', false, 1)}${bodys.checkbox('Broadcaster', false, 1)}`;
     },
@@ -378,14 +390,29 @@ document.addEventListener('DOMContentLoaded', () => {
         name = title.toLowerCase().replace(/\s/g, '-');
       }
 
-      return `<p>${title}</p><div class="is-browse ${classes || ''}"><input name="${name}" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div>`;
+      return `<p>${title}</p><div class="is-browse ${classes || ''}"><input name="${name}" type="text" class="has-text-centered" level="1" readonly /><button><i class="fas fa-ellipsis"></i></button></div>`;
     },
-    text: (title, name) => {
+    text: (title, name, value, placeholder, readonly) => {
       if (!name) {
         name = title.toLowerCase().replace(/\s/g, '-');
       }
 
-      return `<p>${title}</p><input name="${name}" type="text" class="has-text-centered" level="0" />`;
+      if (placeholder) {
+        placeholder = `placeholder="${placeholder}" `;
+      }
+
+      return `<p>${title}</p><input name="${name}" type="text" class="has-text-centered" level="0" ${placeholder || ''}${readonly ? 'readonly ' : ''}/>`;
+    },
+    text_button: (title, name, icon, placeholder, readonly) => {
+      if (!name) {
+        name = title.toLowerCase().replace(/\s/g, '-');
+      }
+
+      if (placeholder) {
+        placeholder = `placeholder="${placeholder}" `;
+      }
+
+      return `<p>${title}</p><div class="is-right-button"><input name="${name}" type="text" class="has-text-centered" level="1" ${placeholder || ''}${readonly ? 'readonly ' : ''}/><button><i class="${icon || 'fas fa-xmark'}"></i></button></div>`;
     },
     number: (title, name, value, step, min, max, eye, eye_input) => {
       if (!name) {
@@ -444,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
         eye = get_eye(true, eye);
       }
 
-      return `<p>${title}${eye || ''}</p><select name="${name}" class="has-text-centered ${eye ? '' : 'no-eye'}">${list}</select>`;
+      return `<p>${title}${eye || ''}</p><select name="${name}" class="has-text-centered ${eye ? '' : 'no-eye'}" level="0">${list}</select>`;
     },
     state: (title, name, on, off) => {
       title = (title || 'State');
@@ -494,6 +521,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     number_unit: (id, elem, data, set_data, receive, receive_data, arg, min, max) => {
+      if (id instanceof HTMLElement) {
+        const elem = id,
+          index = next_index('number_unit');
+
+        elem.setAttribute('radio-number_unit', index);
+        for (const radio of elem.querySelectorAll('input[name="number_unit"]')) {
+          radio.setAttribute('name', `number_unit[${index}]`);
+        }
+
+        return;
+      }
+
       functions.number(id, elem, data, set_data, receive, receive_data, arg, min, max);
 
       if (!receive) {
@@ -616,9 +655,14 @@ document.addEventListener('DOMContentLoaded', () => {
         request(id, 'obs-studio', 'GetScenes', [true]);
       }
     },
-    source_filter: (id, elem, data, set_data, receive, receive_data, with_scenes) => {
+    source_filter: (id, elem, data, set_data, receive, receive_data, block_name, with_scenes) => {
       const selects = elem.querySelectorAll('select');
-      if (receive || global_datas.source_filter) {
+
+      if (typeof global_datas.source_filter !== 'object') {
+        global_datas.source_filter = {};
+      }
+
+      if (receive || global_datas.source_filter[block_name]) {
         if (receive) {
           if (with_scenes) {
             let tmp = { sources: [], names: [] };
@@ -649,10 +693,10 @@ document.addEventListener('DOMContentLoaded', () => {
             receive_data = tmp.sources;
           }
 
-          global_datas.source_filter = receive_data;
+          global_datas.source_filter[block_name] = receive_data;
 
-          global_datas.source_filter.sort(sort_object('sourceName'));
-          for (const source of global_datas.source_filter) {
+          global_datas.source_filter[block_name].sort(sort_object('sourceName'));
+          for (const source of global_datas.source_filter[block_name]) {
             if (source.filters) {
               source.filters.sort(sort_object('filterName'));
             }
@@ -669,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selects[1].appendChild(document.createElement('option'));
 
             let names = [];
-            for (const source of global_datas.source_filter) {
+            for (const source of global_datas.source_filter[block_name]) {
               if (source.sourceName === value) {
                 for (const filter of source.filters) {
                   names.push(filter.filterName);
@@ -709,7 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selects[0].appendChild(document.createElement('option'));
 
         let names = [];
-        for (const source of global_datas.source_filter) {
+        for (const source of global_datas.source_filter[block_name]) {
           names.push(source.sourceName);
 
           const option = document.createElement('option');
@@ -752,6 +796,44 @@ document.addEventListener('DOMContentLoaded', () => {
           request(id, 'obs-studio', 'GetScenes', [true, (selects.length > 1)]);
         } else {
           request(id, 'obs-studio', 'GetSources', ['', (selects.length > 1)]);
+        }
+      }
+    },
+    accounts: (id, elem, data, set_data, receive, receive_data) => {
+      const select = elem.querySelector('select[name="account"]');
+      if (!select.children.length) {
+        if (receive || global_datas.accounts) {
+          if (typeof receive_data === 'object') {
+            global_datas.accounts = receive_data;
+          }
+
+          const selected = select.value || data.account || 'Broadcaster';
+
+          select.innerHTML = '';
+
+          let names = [];
+          for (const type in global_datas.accounts) {
+            const account = type[0].toUpperCase() + type.substring(1).toLowerCase();
+            names.push(account);
+
+            const option = document.createElement('option');
+            option.value = account;
+            option.innerText = account;
+            select.appendChild(option);
+          }
+
+          if (selected && names.indexOf(selected) < 0) {
+            const option = document.createElement('option');
+            option.classList.add('disabled');
+            option.value = selected;
+            option.innerText = 'Not Found';
+
+            select.appendChild(option);
+          }
+
+          select.value = selected;
+        } else if (!receive) {
+          request(id, 'twitch', 'GetAccounts', { type: 'Methods', args: [] });
         }
       }
     },
@@ -957,12 +1039,15 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.file('Application', 'program', 'app-status') + bodys.state(false, false, 'Launch', 'Closing'),
-      update: [functions.state, (id, elem, data, set_data, receive, receive_data) => {
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
           elem.classList.add('block-init');
           browse_fas(id, 'file', elem.querySelector('.app-status button'), 'program', false, 'exe');
         }
-      }]
+      }
     },
     'inputs-audio-play': {
       title: 'Audio Play',
@@ -1040,21 +1125,59 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'cooldown',
       inputs: 1,
       outputs: 1,
-      body: bodys.text('Variable name', 'variable') + bodys.number_unit('Time', 'seconds', 10, 1, 1, undefined, ['Milliseconds', 'Seconds', 'Minutes']),
+      body: bodys.text('Variable name', 'variable') + bodys.number_unit('Time', 'seconds', 1000, 100, 1, undefined, ['Milliseconds', 'Seconds', 'Minutes']),
       init: (id, elem, data, set_data, first) => {
         if (!data.variable) {
           data.variable = Date.now().toString();
           set_data(data);
         }
 
-        const index = next_index('number_unit');
-        elem.setAttribute('radio-number_unit', index);
-        for (const radio of elem.querySelectorAll('input[name="number_unit"]')) {
-          radio.setAttribute('name', `number_unit[${index}]`);
-        }
+        functions.number_unit(elem);
       },
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         functions.number_unit(id, elem, data, set_data, receive, receive_data, 'seconds', 1);
+      }]
+    },
+    'both-download-file': {
+      title: 'Download File',
+      help: 'download-file',
+      icon: 'download',
+      inputs: 1,
+      outputs: 1,
+      body: bodys.text('URL') + bodys.text('File name', 'name') + bodys.file('Folder', false, 'download-file'),
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (!elem.classList.contains('block-init')) {
+          elem.classList.add('block-init');
+          browse_fas(id, 'folder', elem.querySelector('.download-file button'), 'folder');
+        }
+      }]
+    },
+    'both-file-read': {
+      title: 'File Read',
+      help: 'file-read',
+      icon: 'file',
+      inputs: 1,
+      outputs: 1,
+      body: bodys.file('File', false, 'file-read'),
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (!elem.classList.contains('block-init')) {
+          elem.classList.add('block-init');
+          browse_fas(id, 'file', elem.querySelector('.file-read button'), 'file');
+        }
+      }]
+    },
+    'inputs-file-write': {
+      title: 'File Write',
+      help: 'file-write',
+      icon: 'file',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.file('File', false, 'file-write') + bodys.textarea('Content', false) + bodys.checkbox('Separator', false, 1) + bodys.checkbox('Add at the end', 'append', 1),
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (!elem.classList.contains('block-init')) {
+          elem.classList.add('block-init');
+          browse_fas(id, 'file', elem.querySelector('.file-write button'), 'file', 'file.txt');
+        }
       }]
     },
     'both-http-request': {
@@ -1066,13 +1189,58 @@ document.addEventListener('DOMContentLoaded', () => {
       body: bodys.text('URL') + bodys.text('Method'),
       update: functions.trim
     },
+    'outputs-keyboard-shortcut': {
+      title: 'Keyboard Shortcut',
+      help: 'keyboard-shortcut',
+      icon: 'button',
+      inputs: 0,
+      outputs: 1,
+      body: bodys.text_button('Keys', false, false, 'Click on the button ➡️', true) + bodys.select('State', false, ['down', 'up']),
+      init: (id, elem, data, set_data, first) => {
+        const input = elem.querySelector('input[name="keys"]'),
+          button = elem.querySelector('button'),
+          placeholder = input.getAttribute('placeholder');
+
+        elem.addEventListener('blur', () => {
+          if (!input.value.length) {
+            last_data = null;
+            input.setAttribute('placeholder', placeholder);
+          }
+        });
+        input.addEventListener('keypress', event => {
+          event.preventDefault();
+          if (input.value.length) {
+            input.setAttribute('placeholder', placeholder);
+          }
+        });
+        button.addEventListener('click', event => {
+          last_data = { id, data: [] };
+          input.value = '';
+          input.setAttribute('placeholder', 'Press the keys');
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      },
+      register: [['manager', 'keyboard']],
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (receive && node_selected === id && !document.querySelector('.edit-value.is-active')) {
+          const keys = receive_data.down.normal,
+            input = elem.querySelector('input[name="keys"]');
+
+          if (typeof last_data === 'object' && last_data.id === id && Array.isArray(last_data.data) && keys.length >= last_data.data.length) {
+            last_data.data = keys;
+            input.value = keys.join(' ');
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      }]
+    },
     'inputs-kill-app': {
       title: 'Kill App',
       help: 'kill-app',
       icon: 'kill',
       inputs: 1,
       outputs: 0,
-      body: bodys.file('Application', 'program', 'kill-app'),
+      body: bodys.file('Application', 'program', 'kill-app') + bodys.checkbox('Kill children', 'children', 1),
       update: (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
           elem.classList.add('block-init');
@@ -1112,11 +1280,16 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.text('Title') + bodys.text('Message') + bodys.file('Icon', 'icon', 'notif-icon') + bodys.number_unit('Duration', false, 1000, 100, 1, undefined, ['Milliseconds', 'Seconds', 'Minutes']),
+      init: (id, elem, data, set_data, first) => {
+        functions.number_unit(elem);
+      },
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
           elem.classList.add('block-init');
           browse_fas(id, 'file', elem.querySelector('.notif-icon button'), 'icon', false, 'png');
         }
+
+        functions.number_unit(id, elem, data, set_data, receive, receive_data, 'duration', 1);
       }]
     },
     'inputs-open-url': {
@@ -1148,6 +1321,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const radio of elem.querySelectorAll('input[name="number_unit"]')) {
           radio.setAttribute('name', `number_unit[${index}]`);
         }
+
+        functions.number_unit(elem);
       },
       update: (id, elem, data, set_data, receive, receive_data) => functions.number_unit(id, elem, data, set_data, receive, receive_data, 'millis', 1)
     },
@@ -1169,7 +1344,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.number('Block ID', 'id', 0, 1, 0) + bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-toggle-block': {
       title: 'Toggle Block',
@@ -1178,9 +1355,12 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.number('Block ID', 'id', 0, 1, 0) + bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
-      update: [functions.state, (id, elem, data, set_data, receive, receive_data) => {
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: (id, elem, data, set_data, receive, receive_data) => {
         functions.number(id, elem, data, set_data, receive, receive_data, 'id', 0);
-      }]
+      }
     },
     'outputs-usb-detection': {
       title: 'USB Detection',
@@ -1190,7 +1370,10 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 1,
       body: bodys.select('Device') + bodys.state(false, false, 'Connection', 'Disconnection'),
       register: [['manager', 'usb:devices']],
-      update: [functions.usb_devices, functions.state]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: functions.usb_devices
     },
     'both-variable-condition': {
       title: 'Variable Condition',
@@ -1198,8 +1381,8 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'variable-condition',
       inputs: 1,
       outputs: 1,
-      body: bodys.text('Value 1') + bodys.select('Condition') + bodys.text('Value 2', 'string') + bodys.select('Value 2', 'boolean', ['false', 'true']) + bodys.number('Value 2', 'number', 0) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number'),
-      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+      body: bodys.text('Value 1') + bodys.select('Condition') + bodys.text('Value 2', 'string') + bodys.text('Value 2', 'number', '0') + bodys.select('Value 2', 'boolean', ['false', 'true']) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number'),
+      init: (id, elem, data, set_data, first) => {
         const conditions = {
             'string': [
               'Equal',
@@ -1256,9 +1439,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           };
 
-        functions.state(id, elem, data, set_data, receive, receive_data, 'type', change_state);
-        functions.number(id, elem, data, set_data, receive, receive_data, 'number');
-      }]
+        functions.state(id, elem, data, set_data, false, false, 'type', change_state);
+      },
+      update: functions.trim
     },
     'both-variable-increment': {
       title: 'Variable Increment',
@@ -1267,9 +1450,11 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 1,
       body: bodys.text('Variable name', 'variable') + bodys.number('Increment', 'number', 0, false, false, false, true) + bodys.state_toggle('Scope', false, 'Global', 'Next', 'Local'),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data, false, false, 'scope');
+      },
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         functions.number(id, elem, data, set_data, receive, receive_data, 'number');
-        functions.state(id, elem, data, set_data, receive, receive_data, 'scope');
       }]
     },
     'both-variable-remove': {
@@ -1279,9 +1464,10 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 1,
       body: bodys.text('Variable name', 'variable') + bodys.state_toggle('Scope', false, 'Global', 'Next', 'Local'),
-      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
-        functions.state(id, elem, data, set_data, receive, receive_data, 'scope');
-      }]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data, false, false, 'scope');
+      },
+      update: functions.trim
     },
     'both-variable-replace': {
       title: 'Variable Replace',
@@ -1290,9 +1476,10 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 1,
       body: bodys.text('Variable name', 'variable') + bodys.text('Value') + bodys.text('Search') + bodys.text('Replace') + bodys.checkbox('Replace all', 'all', 1) + bodys.state_toggle('Scope', false, 'Global', 'Next', 'Local'),
-      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
-        functions.state(id, elem, data, set_data, receive, receive_data, 'scope');
-      }]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data, false, false, 'scope');
+      },
+      update: functions.trim
     },
     'both-variable-setter': {
       title: 'Variable Setter',
@@ -1301,7 +1488,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 1,
       body: bodys.text('Variable name', 'variable') + bodys.text('Value', 'string') + bodys.number('Value', 'number', 0) + bodys.select('Value', 'boolean', ['false', 'true']) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number') + bodys.state_toggle('Scope', false, 'Global', 'Next', 'Local'),
-      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+      init: (id, elem, data, set_data, first) => {
         const change_state = state => {
           const names = { on: 'string', toggle: 'number', off: 'boolean' };
           state = names[state];
@@ -1315,9 +1502,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         };
 
-        functions.state(id, elem, data, set_data, receive, receive_data, 'type', change_state);
-        functions.state(id, elem, data, set_data, receive, receive_data, 'scope');
-      }]
+        functions.state(id, elem, data, set_data, false, false, 'type', change_state);
+        functions.state(id, elem, data, set_data, false, false, 'scope');
+      },
+      update: functions.trim
     },
     'both-websocket-request': {
       title: 'WebSocket Request',
@@ -1328,7 +1516,7 @@ document.addEventListener('DOMContentLoaded', () => {
       body: bodys.text('URL') + bodys.text('Data'),
       update: functions.trim
     },
-    'inputs-discord-webhook-embed': {
+    'both-discord-webhook-embed': {
       type: 'discord',
       title: 'Webhook Embed',
       help: 'discord---webhook-embed',
@@ -1336,8 +1524,8 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'webhook',
       width: 500,
       inputs: 1,
-      outputs: 0,
-      body: '<div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL<i class="fas fa-circle-info is-pulled-right"></i></p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div></div><p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><input name="message" type="text" class="has-text-centered" /><p>Inline 1<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
+      outputs: 1,
+      body: '<div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL<i class="fas fa-circle-info is-pulled-right"></i></p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div></div><p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea><p>Inline 1<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
           elem.classList.add('block-init');
@@ -1346,12 +1534,12 @@ document.addEventListener('DOMContentLoaded', () => {
           browse_fas(id, 'file', elem.querySelector('.discord-big-image button'), 'big-image');
 
           elem.querySelector('.box .fa-circle-info').addEventListener('click', () => {
-            display_image('guide.png', 'Discord Publication - Guide');
+            display_image('guide.webp', 'Discord Publication - Guide');
           }, false);
         }
       }]
     },
-    'inputs-discord-webhook-message': {
+    'both-discord-webhook-message': {
       type: 'discord',
       title: 'Webhook Message',
       help: 'discord---webhook-message',
@@ -1359,7 +1547,7 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'webhook',
       width: 500,
       inputs: 1,
-      outputs: 0,
+      outputs: 1,
       body: '<p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea>',
       update: functions.trim
     },
@@ -1372,7 +1560,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state(false, false, 'Opened', 'Closed'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'outputs-obs-studio-exit': {
       type: 'obs-studio',
@@ -1393,7 +1583,10 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 1,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state(false, false, 'On', 'Off'),
       register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-      update: [ functions.scene_source, functions.state ]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: functions.scene_source
     },
     'inputs-obs-studio-lock-source': {
       type: 'obs-studio',
@@ -1405,7 +1598,10 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 0,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
       register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-      update: [ functions.scene_source, functions.state ]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: functions.scene_source
     },
     'outputs-obs-studio-recording': {
       type: 'obs-studio',
@@ -1416,7 +1612,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state(),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-obs-studio-recording': {
       type: 'obs-studio',
@@ -1427,7 +1625,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state_toggle(false),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'outputs-obs-studio-replay': {
       type: 'obs-studio',
@@ -1438,7 +1638,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state(),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-obs-studio-replay': {
       type: 'obs-studio',
@@ -1449,7 +1651,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state_toggle(false),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'outputs-obs-studio-save-replay': {
       type: 'obs-studio',
@@ -1469,6 +1673,82 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
     },
+    'inputs-obs-studio-set-browser': {
+      type: 'obs-studio',
+      title: 'Set Browser',
+      help: 'obs-studio---set-browser',
+      tooltip: 'OBS Studio - Set browser',
+      icon: 'request',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.select('Source name', 'source') + bodys.text('URL'),
+      register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (receive && Array.isArray(receive_data)) {
+          for (let i = (receive_data.length - 1); i >= 0; --i) {
+            if (!receive_data[i].inputKind || receive_data[i].inputKind.indexOf('browser_source')) {
+              receive_data.splice(i, 1);
+            }
+          }
+        }
+
+        functions.source_filter(id, elem, data, set_data, receive, receive_data, 'obs-studio-set-browser');
+      }]
+    },
+    'inputs-obs-studio-set-image': {
+      type: 'obs-studio',
+      title: 'Set Image',
+      help: 'obs-studio---set-image',
+      tooltip: 'OBS Studio - Set image',
+      icon: 'picture',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.select('Source name', 'source') + bodys.file('File', false, 'image-file'),
+      register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (!elem.classList.contains('block-init')) {
+          elem.classList.add('block-init');
+          browse_fas(id, 'file', elem.querySelector('.image-file button'), 'file', false, 'bmp,tga,png,jpeg,jpg,jxr,gif,psd,webp');
+        }
+
+        if (receive && Array.isArray(receive_data)) {
+          for (let i = (receive_data.length - 1); i >= 0; --i) {
+            if (!receive_data[i].inputKind || receive_data[i].inputKind.indexOf('image_source')) {
+              receive_data.splice(i, 1);
+            }
+          }
+        }
+
+        functions.source_filter(id, elem, data, set_data, receive, receive_data, 'obs-studio-set-image');
+      }]
+    },
+    'inputs-obs-studio-set-media': {
+      type: 'obs-studio',
+      title: 'Set Media',
+      help: 'obs-studio---set-media',
+      tooltip: 'OBS Studio - Set media',
+      icon: 'play',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.select('Source name', 'source') + bodys.file('File', false, 'media-file'),
+      register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (!elem.classList.contains('block-init')) {
+          elem.classList.add('block-init');
+          browse_fas(id, 'file', elem.querySelector('.media-file button'), 'file', false, 'mp4,m4v,ts,mov,mxf,flv,mkv,avi,mp3,ogg,acc,wav,gif,webm');
+        }
+
+        if (receive && Array.isArray(receive_data)) {
+          for (let i = (receive_data.length - 1); i >= 0; --i) {
+            if (!receive_data[i].inputKind || receive_data[i].inputKind.indexOf('ffmpeg_source')) {
+              receive_data.splice(i, 1);
+            }
+          }
+        }
+
+        functions.source_filter(id, elem, data, set_data, receive, receive_data, 'obs-studio-set-media');
+      }]
+    },
     'inputs-obs-studio-set-text': {
       type: 'obs-studio',
       title: 'Set Text',
@@ -1487,7 +1767,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         }
-      }, functions.source_filter]
+
+        functions.source_filter(id, elem, data, set_data, receive, receive_data, 'obs-studio-set-text');
+      }]
     },
     'outputs-obs-studio-source-selected': {
       type: 'obs-studio',
@@ -1510,7 +1792,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state(),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-obs-studio-streaming': {
       type: 'obs-studio',
@@ -1521,7 +1805,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state_toggle(false),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'outputs-obs-studio-switch-scene': {
       type: 'obs-studio',
@@ -1557,9 +1843,12 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 1,
       body: bodys.select('Source name', 'source') + bodys.select('Filter name', 'filter') + bodys.state(false, false, 'Show', 'Hide'),
       register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-      update: [ (id, elem, data, set_data, receive, receive_data) => {
-        functions.source_filter(id, elem, data, set_data, receive, receive_data, true);
-      }, functions.state ]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: (id, elem, data, set_data, receive, receive_data) => {
+        functions.source_filter(id, elem, data, set_data, receive, receive_data, 'obs-studio-toggle-filter', true);
+      }
     },
     'inputs-obs-studio-toggle-filter': {
       type: 'obs-studio',
@@ -1571,9 +1860,12 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 0,
       body: bodys.select('Source name', 'source') + bodys.select('Filter name', 'filter') + bodys.state_toggle(false, false, 'Show', 'Hide'),
       register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-      update: [ (id, elem, data, set_data, receive, receive_data) => {
-        functions.source_filter(id, elem, data, set_data, receive, receive_data, true);
-      }, functions.state ]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: (id, elem, data, set_data, receive, receive_data) => {
+        functions.source_filter(id, elem, data, set_data, receive, receive_data, 'obs-studio-toggle-filter', true);
+      }
     },
     'outputs-obs-studio-toggle-source': {
       type: 'obs-studio',
@@ -1585,7 +1877,10 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 1,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state(false, false, 'Show', 'Hide'),
       register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-      update: [ functions.scene_source, functions.state ]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: functions.scene_source
     },
     'inputs-obs-studio-toggle-source': {
       type: 'obs-studio',
@@ -1597,7 +1892,10 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 0,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'Show', 'Hide'),
       register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
-      update: [ functions.scene_source, functions.state ]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: functions.scene_source
     },
     'outputs-obs-studio-virtualcam': {
       type: 'obs-studio',
@@ -1608,7 +1906,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state(),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-obs-studio-virtualcam': {
       type: 'obs-studio',
@@ -1619,7 +1919,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state_toggle(false),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-spotify-add-to-queue': {
       type: 'spotify',
@@ -1632,6 +1934,24 @@ document.addEventListener('DOMContentLoaded', () => {
       body: bodys.text('Track'),
       update: functions.trim
     },
+    'both-spotify-current-queue': {
+      type: 'spotify',
+      title: 'Current Queue',
+      help: 'spotify---current-queue',
+      tooltip: 'Spotify - Current Queue',
+      icon: 'playlist',
+      inputs: 1,
+      outputs: 1
+    },
+    'both-spotify-currently-playing': {
+      type: 'spotify',
+      title: 'Currently Playing',
+      help: 'spotify---currently-playing',
+      tooltip: 'Spotify - Currently Playing',
+      icon: 'music',
+      inputs: 1,
+      outputs: 1
+    },
     'inputs-spotify-play-pause': {
       type: 'spotify',
       title: 'Play/Pause',
@@ -1641,7 +1961,10 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.text('Track') + bodys.state_toggle(false, false, 'Play', 'Pause', 'Toggle'),
-      update: [ functions.trim, functions.state ]
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: functions.trim
     },
     'inputs-spotify-prev-next': {
       type: 'spotify',
@@ -1652,7 +1975,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state(false, false, 'Previous', 'Next'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-spotify-repeat': {
       type: 'spotify',
@@ -1663,7 +1988,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state_toggle(false, false, 'Off', 'Context', 'Track'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'both-spotify-search': {
       type: 'spotify',
@@ -1685,7 +2012,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-spotify-volume': {
       type: 'spotify',
@@ -1695,9 +2024,22 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'volume',
       inputs: 1,
       outputs: 0,
-      body: bodys.number('Volume', false, 100, 1, 0, 100),
+      body: bodys.number('Volume', false, 100, 1, 0, 100, { suffix: '%' }),
       update: (id, elem, data, set_data, receive, receive_data) => {
         functions.number(id, elem, data, set_data, receive, receive_data, 'volume', 0, 100);
+      }
+    },
+    'outputs-streamdeck-action': {
+      type: 'streamdeck',
+      title: 'Action',
+      help: 'stream-deck---touch-portal---action',
+      tooltip: 'Stream Deck / Touch Portal - Action',
+      icon: 'button',
+      inputs: 0,
+      outputs: 1,
+      body: '<p class="pb-0">Block ID</p><div class="is-size-5 has-text-centered block-id"></div>',
+      init: (id, elem, data, set_data, first) => {
+        elem.querySelector('.block-id').innerText = id;
       }
     },
     'outputs-twitch-action': {
@@ -1719,8 +2061,11 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'action',
       inputs: 1,
       outputs: 0,
-      body: bodys.text('Message'),
-      update: functions.trim
+      body: bodys.text('Message') + bodys.select('Account', false, false, false, true),
+      register: [['twitch', 'GetAccounts']],
+      update: [functions.trim, functions.accounts, (id, elem, data, set_data, receive, receive_data) => {
+        functions.select(id, elem, data, set_data, receive, receive_data, 'account');
+      }]
     },
     'outputs-twitch-announcement': {
       type: 'twitch',
@@ -1741,8 +2086,12 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'announce',
       inputs: 1,
       outputs: 0,
-      body: bodys.text('Message'),
-      update: functions.trim
+      body: bodys.text('Message') + bodys.select('Color', false, ['Primary', 'Blue', 'Green', 'Orange', 'Purple'], false, true) + bodys.select('Account', false, false, false, true),
+      register: [['twitch', 'GetAccounts']],
+      update: [functions.trim, functions.accounts, (id, elem, data, set_data, receive, receive_data) => {
+        functions.select(id, elem, data, set_data, receive, receive_data, 'color');
+        functions.select(id, elem, data, set_data, receive, receive_data, 'account');
+      }]
     },
     'outputs-twitch-ban': {
       type: 'twitch',
@@ -1842,7 +2191,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-twitch-emote-only': {
       type: 'twitch',
@@ -1853,7 +2204,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state(false, false, 'On', 'Off'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'outputs-twitch-first-message': {
       type: 'twitch',
@@ -1864,7 +2217,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.command + bodys.text('Message') + bodys.state('Type', false, 'Command', 'Message') + bodys.select('For all viewers', 'all', ['false', 'true'], false, true) + bodys.match + bodys.viewers(),
-      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+      init: (id, elem, data, set_data, first) => {
         const change_state = state => {
           const names = ['command', 'message'];
           state = names[state ? 0 : 1];
@@ -1882,7 +2235,9 @@ document.addEventListener('DOMContentLoaded', () => {
           elem.querySelector('[name="contains"]').disabled = is_command;
         };
 
-        functions.state(id, elem, data, set_data, receive, receive_data, 'type', change_state);
+        functions.state(id, elem, data, set_data, false, false, 'type', change_state);
+      },
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         functions.select(id, elem, data, set_data, receive, receive_data, 'all');
       }]
     },
@@ -1904,7 +2259,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-twitch-followers-only': {
       type: 'twitch',
@@ -1915,7 +2272,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state(false, false, 'On', 'Off'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'both-twitch-game': {
       type: 'twitch',
@@ -1936,39 +2295,6 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'subscribers',
       inputs: 0,
       outputs: 1
-    },
-    'outputs-twitch-host': {
-      type: 'twitch',
-      title: 'Host',
-      help: 'twitch---host',
-      tooltip: 'Twitch - Host',
-      icon: 'host',
-      inputs: 0,
-      outputs: 1,
-      body: bodys.text('Channel'),
-      update: functions.trim
-    },
-    'inputs-twitch-host': {
-      type: 'twitch',
-      title: 'Host',
-      help: 'twitch---host',
-      tooltip: 'Twitch - Host',
-      icon: 'host',
-      inputs: 1,
-      outputs: 0,
-      body: bodys.text('Channel'),
-      update: functions.trim
-    },
-    'outputs-twitch-hosted': {
-      type: 'twitch',
-      title: 'Hosted',
-      help: 'twitch---hosted',
-      tooltip: 'Twitch - Hosted',
-      icon: 'host',
-      inputs: 0,
-      outputs: 1,
-      body: bodys.text('Channel'),
-      update: functions.trim
     },
     'outputs-twitch-info': {
       type: 'twitch',
@@ -2020,8 +2346,11 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'message',
       inputs: 1,
       outputs: 0,
-      body: bodys.text('Message'),
-      update: functions.trim
+      body: bodys.text('Message') + bodys.select('Account', false, false, false, true),
+      register: [['twitch', 'GetAccounts']],
+      update: [functions.trim, functions.accounts, (id, elem, data, set_data, receive, receive_data) => {
+        functions.select(id, elem, data, set_data, receive, receive_data, 'account');
+      }]
     },
     'inputs-twitch-message-delay': {
       type: 'twitch',
@@ -2031,10 +2360,13 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'slow',
       inputs: 1,
       outputs: 0,
-      body: bodys.number('Delay', false, 5, 1, 1, 100) + bodys.state(false, false, 'On', 'Off'),
-      update: [functions.state, (id, elem, data, set_data, receive, receive_data) => {
-        functions.number(id, elem, data, set_data, receive, receive_data, 'delay', 1);
-      }]
+      body: bodys.number('Delay', false, 5, 1, 1, 100, { suffix: ' sec' }) + bodys.state(false, false, 'On', 'Off'),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: (id, elem, data, set_data, receive, receive_data) => {
+        functions.number(id, elem, data, set_data, receive, receive_data, 'delay', 1, 100);
+      }
     },
     'outputs-twitch-message-remove': {
       type: 'twitch',
@@ -2114,7 +2446,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Reward'),
-      register: [['twitch', 'getAllRewards']],
+      register: [['twitch', 'GetAllRewards']],
       update: (id, elem, data, set_data, receive, receive_data) => {
         const select = elem.querySelector('select');
         if (!select.children.length) {
@@ -2149,7 +2481,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             select.value = selected;
           } else if (!receive) {
-            request(id, 'twitch', 'getAllRewards', { type: 'Methods:convert', args: [ false, false ] });
+            request(id, 'twitch', 'GetAllRewards', { type: 'Methods:convert', args: [false, false] });
           }
         }
       }
@@ -2172,6 +2504,17 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1
     },
+    'inputs-twitch-shoutout': {
+      type: 'twitch',
+      title: 'Shoutout',
+      help: 'twitch---shoutout',
+      tooltip: 'Twitch - Shoutout',
+      icon: 'shoutout',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.text('User'),
+      update: functions.trim
+    },
     'outputs-twitch-slow': {
       type: 'twitch',
       title: 'Slow Mode',
@@ -2181,7 +2524,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-twitch-slow': {
       type: 'twitch',
@@ -2191,10 +2536,13 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'slow',
       inputs: 1,
       outputs: 0,
-      body: bodys.number('Delay', false, 5, 1, 1, 100) + bodys.state(false, false, 'On', 'Off'),
-      update: [functions.state, (id, elem, data, set_data, receive, receive_data) => {
-        functions.number(id, elem, data, set_data, receive, receive_data, 'delay', 1);
-      }]
+      body: bodys.number('Delay', false, 5, 1, 1, 100, { suffix: ' sec' }) + bodys.state(false, false, 'On', 'Off'),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: (id, elem, data, set_data, receive, receive_data) => {
+        functions.number(id, elem, data, set_data, receive, receive_data, 'delay', 1, 100);
+      }
     },
     'outputs-twitch-standard-pay-forward': {
       type: 'twitch',
@@ -2250,7 +2598,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-twitch-subs-only': {
       type: 'twitch',
@@ -2261,7 +2611,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state(false, false, 'On', 'Off'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'outputs-twitch-timeout': {
       type: 'twitch',
@@ -2280,28 +2632,13 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'timeout',
       inputs: 1,
       outputs: 0,
-      body: bodys.text('User') + bodys.text('Reason') + bodys.number('Duration', false, 300, 10),
+      body: bodys.text('User') + bodys.text('Reason') + bodys.number_unit('Duration', false, 300000, 10000, 1, undefined, ['Milliseconds', 'Seconds', 'Minutes']),
+      init: (id, elem, data, set_data, first) => {
+        functions.number_unit(elem);
+      },
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
-        functions.number(id, elem, data, set_data, receive, receive_data, 'duration', 1);
+        functions.number_unit(id, elem, data, set_data, receive, receive_data, 'duration', 1);
       }]
-    },
-    'outputs-twitch-unhost': {
-      type: 'twitch',
-      title: 'Unhost',
-      help: 'twitch---unhost',
-      tooltip: 'Twitch - Unhost',
-      icon: 'unhost',
-      inputs: 0,
-      outputs: 1
-    },
-    'inputs-twitch-unhost': {
-      type: 'twitch',
-      title: 'Unhost',
-      help: 'twitch---unhost',
-      tooltip: 'Twitch - Unhost',
-      icon: 'unhost',
-      inputs: 1,
-      outputs: 0
     },
     'outputs-twitch-unique-message': {
       type: 'twitch',
@@ -2312,7 +2649,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.state_toggle(false, false, 'On', 'Off', 'Both'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'inputs-twitch-unique-message': {
       type: 'twitch',
@@ -2323,7 +2662,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.state(false, false, 'On', 'Off'),
-      update: functions.state
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
     },
     'outputs-twitch-whisper': {
       type: 'twitch',
@@ -2412,7 +2753,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   for (const name in blocks) {
     const block_data = blocks[name],
-      block_icon = `./icons/${block_data.icon}.png`,
+      block_icon = `./icons/${block_data.icon}.webp`,
       block = document.querySelector('#template .block-drawflow').cloneNode(true),
       button = document.querySelector('#template .drag-drawflow').cloneNode(true),
       title = block.querySelector('.title-box span'),
@@ -2424,7 +2765,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     icon.setAttribute('src', block_icon);
     icon.addEventListener('error', () => {
-      const block_icon = `./icons/empty.png`;
+      const block_icon = `./icons/empty.webp`;
       icon.setAttribute('src', block_icon);
       button.querySelector('.icon img').setAttribute('src', block_icon);
     }, false);
@@ -2485,6 +2826,9 @@ document.addEventListener('DOMContentLoaded', () => {
       event.stopPropagation();
 
       const node = get_node(event.target);
+      node.elem.dispatchEvent(new Event('mousedown', { bubbles: true }));
+      node.elem.dispatchEvent(new Event('mouseup', { bubbles: true }));
+
       options_toggle.querySelector('.far, .fas').classList.add((typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled) ? 'fas' : 'far');
       options_toggle.querySelector('.far, .fas').classList.remove((typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled) ? 'far' : 'fas');
       if (!Object.keys(node.inputs).length) {
@@ -2566,7 +2910,7 @@ document.addEventListener('DOMContentLoaded', () => {
       elem = document.querySelector('div.delete-blocks');
 
     elem.classList.add('is-active');
-    elem.querySelector('.block-name').innerText = node.title;
+    elem.querySelector('.block-name').innerText = blocks[node.html].title;
 
     options.style.display = 'none';
   }, false);
@@ -2757,9 +3101,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  let double_click = 0;
-  let node_selected = -1;
   const reset_selection = () => {
+    const node = get_node(node_selected);
+    if (node) {
+      node.elem.dispatchEvent(new Event('blur', { bubbles: true }));
+    }
+
+    last_data = null;
     node_selected = -1;
   };
 
@@ -2865,8 +3213,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  let multi_move = false;
-  let multi_selection = {};
   document.addEventListener('mousedown', event => {
     const node = get_node(event.target);
     if (node && node_selected !== node.id && event.target.closest('input, select')) {
@@ -2920,7 +3266,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     multi_move = false;
-  });
+  }, true);
   editor.on('nodeSelected', id => {
     for (const node of Object.values(multi_selection)) {
       node.elem.classList.add('selected');

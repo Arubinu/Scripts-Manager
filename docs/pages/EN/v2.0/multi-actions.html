@@ -1,0 +1,2103 @@
+<p>
+  This script allows you to program automatisms related to all available <span class="text-orange">Addons</span>.
+  <br />It is possible to react to a <span class="text-orange">Twitch</span> message, or even when changing the <span class="text-orange">OBS Studio</span> scene, but I let you discover all this via the following blocks.
+</p>
+
+<h2>
+  <a id="presentation" class="anchor" href="#presentation"><span class="octicon octicon-link"></span></a>
+  Presentation
+</h2>
+
+<p>
+  Here we will discuss the different possibilities and how to use a block.
+  <br /><u>Some details:</u>
+</p>
+
+<ul>
+  <li>A right click on a block displays a cross to delete this block.</li>
+  <li>A double right click on a block creates a perfect copy.</li>
+  <li>It is possible to move blocks, but to move several at the same time you must first select them by holding down the <code>Shift</code> key.</li>
+</ul>
+
+<h2>
+  <a id="header" class="anchor" href="#header"><span class="octicon octicon-link"></span></a>
+  Header
+</h2>
+
+<p>
+  The <span class="text-orange">Toggle Blocks</span> button shows and hides the blocks you can use by swiping in the current module.
+  <br />The drop-down list gives access to the different modules that you can via the following icons, create, import, and export.
+  <br />The gear allows you to activate, deactivate, rename or delete a module.
+</p>
+
+<h2>
+  <a id="id---title" class="anchor" href="#id---title"><span class="octicon octicon-link"></span></a>
+  ID / Title
+</h2>
+
+<p>
+  The upper part of a block includes an icon, its title, as well as an arrow which opens a contextual menu providing access to various options.
+  <br />By hovering over the title, a tooltip appears indicating the identifier of the block (reusable in some blocks), as well as its section followed by its title.
+  <br />Here are the available options:
+</p>
+
+<ul>
+  <li><u>Enable:</u> makes it possible to deactivate the block, if you don't want it to be operated by an <span class="text-orange">Addon</span> or another connected block (enabled by default),</li>
+  <li><u>Test:</u> activates the block as well as all the active blocks connected to it (it will not have the variables coming from the blocks connected as input),</li>
+  <li><u>Export:</u> allows you to export only this block and the blocks connected to it,</li>
+  <li><u>Delete all:</u> removes the block and all blocks connected to it.</li>
+</ul>
+
+<h2>
+  <a id="hidden-elements" class="anchor" href="#hidden-elements"><span class="octicon octicon-link"></span></a>
+  Hidden elements
+</h2>
+
+<p>
+  Some parts of the blocks are hidden so that the block is as small as possible.
+  <br />Click on the eye to show or hide these settings again.
+</p>
+
+<h2>
+  <a id="connections" class="anchor" href="#connections"><span class="octicon octicon-link"></span></a>
+  Connections
+</h2>
+
+<p>
+  The connections are made between the outputs and the inputs of the blocks and only in this direction.
+  <br />Three types of blocks are available:
+</p>
+
+<ul>
+  <li><u>Green:</u> they are activated for example by an <span class="text-orange">Addons</span> and often return information,</li>
+  <li><u>Orange:</u> they are activated by the blocks connected to their input,</li>
+  <li><u>Violet:</u> same as orange blocks, but can return one more data.</li>
+</ul>
+
+<p>
+  <u>Some details:</u>
+</p>
+
+<ul>
+  <li>A right click on a connection displays a cross to delete this connection.</li>
+</ul>
+
+<h2>
+  <a id="variables" class="anchor" href="#variables"><span class="octicon octicon-link"></span></a>
+  Variables
+</h2>
+
+<p>
+  Blocks have many of their own variables that you can use in many ways.
+  <br />But the following variables are available for all blocks:
+</p>
+
+<ul>
+  <li><u class="underline-gray">date <span class="text-lime"><i>(type: String)</i></span>:</u> complete date including all information such as time zone,</li>
+  <li><u class="underline-gray">date:locale <span class="text-lime"><i>(type: String)</i></span>:</u> day, month, and year presented in local format (as is usually written for you),</li>
+  <li><u class="underline-gray">date:year <span class="text-lime"><i>(type: Number)</i></span>:</u> current year,</li>
+  <li><u class="underline-gray">date:month <span class="text-lime"><i>(type: Number)</i></span>:</u> current month,</li>
+  <li><u class="underline-gray">date:day <span class="text-lime"><i>(type: Number)</i></span>:</u> current day,</li>
+  <li><u class="underline-gray">date:utc:year <span class="text-lime"><i>(type: Number)</i></span>:</u> year in UTC format (without your time zone),</li>
+  <li><u class="underline-gray">date:utc:month <span class="text-lime"><i>(type: Number)</i></span>:</u> month in UTC format (without your time zone),</li>
+  <li><u class="underline-gray">date:utc:day <span class="text-lime"><i>(type: Number)</i></span>:</u> day in UTC format (without your time zone),</li>
+  <li><u class="underline-gray">time <span class="text-lime"><i>(type: Number)</i></span>:</u> a number representing the time elapsed since January 1, 1970 (expressed in seconds),</li>
+  <li><u class="underline-gray">time:timezone:offset <span class="text-lime"><i>(type: Number)</i></span>:</u> time offset from UTC (expressed in minutes),</li>
+  <li><u class="underline-gray">time:locale <span class="text-lime"><i>(type: String)</i></span>:</u> hours, minutes, and seconds presented in local format (as is usually written for you),</li>
+  <li><u class="underline-gray">time:hours <span class="text-lime"><i>(type: Number)</i></span>:</u> current hours,</li>
+  <li><u class="underline-gray">time:minutes <span class="text-lime"><i>(type: Number)</i></span>:</u> current minutes,</li>
+  <li><u class="underline-gray">time:seconds <span class="text-lime"><i>(type: Number)</i></span>:</u> current seconds,</li>
+  <li><u class="underline-gray">time:utc:hours <span class="text-lime"><i>(type: Number)</i></span>:</u> hours in UTC format (without your time zone),</li>
+  <li><u class="underline-gray">time:utc:minutes <span class="text-lime"><i>(type: Number)</i></span>:</u> minutes in UTC format (without your time zone, normally the same as yours),</li>
+  <li><u class="underline-gray">time:utc:seconds <span class="text-lime"><i>(type: Number)</i></span>:</u> seconds in UTC format (without your time zone, normally the same as yours),</li>
+  <li><u class="underline-gray">block:id <span class="text-lime"><i>(type: Number)</i></span>:</u> the identifier of the block where you use the variable (also available when hovering over the title with the mouse),</li>
+  <li><u class="underline-gray">block:type <span class="text-lime"><i>(type: String)</i></span>:</u> the name of the section corresponding to the block (ex. <span class="text-orange">Spotify</span>),</li>
+  <li><u class="underline-gray">block:name <span class="text-lime"><i>(type: String)</i></span>:</u> the name of the block,</li>
+  <li><u class="underline-gray">block:title <span class="text-lime"><i>(type: String)</i></span>:</u> the title of the block (often composed of the entire <code>section</code> and the <code>name</code> of the block),</li>
+  <li><u class="underline-gray">block:input:exists <span class="text-lime"><i>(type: Boolean)</i></span>:</u> if the block has inputs (which should always be the case where you will use the variable),</li>
+  <li><u class="underline-gray">block:output:exists <span class="text-lime"><i>(type: Boolean)</i></span>:</u> if the block has outputs,</li>
+  <li><u class="underline-gray">block:input:connections <span class="text-lime"><i>(type: Number)</i></span>:</u> the number of blocks connected to the input of the block,</li>
+  <li><u class="underline-gray">block:output:connections <span class="text-lime"><i>(type: Number)</i></span>:</u> the number of blocks connected to the output of the block.</li>
+  <li><u class="underline-gray">block:previous:id <span class="text-lime"><i>(type: Number)</i></span>:</u> the identifier of the block which led to the one where you are using the variable (also available when hovering over the title with the mouse),</li>
+  <li><u class="underline-gray">block:previous:type <span class="text-lime"><i>(type: String)</i></span>:</u> the name of the section corresponding to the block that led to this one (ex. <span class="text-orange">Spotify</span>),</li>
+  <li><u class="underline-gray">block:previous:name <span class="text-lime"><i>(type: String)</i></span>:</u> the name of the previous block,</li>
+  <li><u class="underline-gray">block:previous:title <span class="text-lime"><i>(type: String)</i></span>:</u> the title of the previous block (often composed of the entire <code>section</code> and the <code>name</code> of the block),</li>
+  <li><u class="underline-gray">block:previous:input:exists <span class="text-lime"><i>(type: Boolean)</i></span>:</u> if the previous block has inputs,</li>
+  <li><u class="underline-gray">block:previous:output:exists <span class="text-lime"><i>(type: Boolean)</i></span>:</u> if the previous block has outputs (which should always be the case where you will use the variable),</li>
+  <li><u class="underline-gray">block:previous:input:connections <span class="text-lime"><i>(type: Number)</i></span>:</u> the number of blocks connected to the input of the previous block,</li>
+  <li><u class="underline-gray">block:previous:output:connections <span class="text-lime"><i>(type: Number)</i></span>:</u> the number of blocks connected to the output of the previous block.</li>
+</ul>
+
+<p>
+  <span class="text-lightblue">*</span>: This star symbolizes that the input box supports variables (e.g. <code>${twitch:user:display}</code> for the variable <code>twitch:user:display</code>, the characters before and after are important).
+</p>
+
+<h1>
+  <a id="blocks" class="anchor" href="#blocks"><span class="octicon octicon-link"></span></a>
+  Blocks
+</h1>
+
+<h2>
+  <a id="functionality" class="anchor" href="#functionality"><span class="octicon octicon-link"></span></a>
+  Functionality
+</h2>
+
+<p>
+  <a href="#app-status"><img src="./images/multi-actions/blocks/app-status.webp" alt="App Status" title="App Status" /></a>
+  <a href="#audio-play"><img src="./images/multi-actions/blocks/audio-play.webp" alt="Audio Play" title="Audio Play" /></a>
+  <a href="#audio-stop"><img src="./images/multi-actions/blocks/audio-stop.webp" alt="Audio Stop" title="Audio Stop" /></a>
+  <a href="#cooldown"><img src="./images/multi-actions/blocks/cooldown.webp" alt="Cooldown" title="Cooldown" /></a>
+  <a href="#http-request"><img src="./images/multi-actions/blocks/http-request.webp" alt="HTTP Request" title="HTTP Request" /></a>
+  <a href="#kill-app"><img src="./images/multi-actions/blocks/kill-app.webp" alt="Kill App" title="Kill App" /></a>
+  <a href="#launch-app"><img src="./images/multi-actions/blocks/launch-app.webp" alt="Launch App" title="Launch App" /></a>
+  <a href="#notification"><img src="./images/multi-actions/blocks/notification.webp" alt="Notification" title="Notification" /></a>
+  <a href="#open-url"><img src="./images/multi-actions/blocks/open-url.webp" alt="Open URL" title="Open URL" /></a>
+  <a href="#scripts-manager-launch"><img src="./images/multi-actions/blocks/launch.webp" alt="Scripts Manager Launch" title="Scripts Manager Launch" /></a>
+  <a href="#self-timer"><img src="./images/multi-actions/blocks/self-timer.webp" alt="Self-Timer" title="Self-Timer" /></a>
+  <a href="#socket-request"><img src="./images/multi-actions/blocks/socket-request.webp" alt="Socket Request" title="Socket Request" /></a>
+  <a href="#toggle-block"><img src="./images/multi-actions/blocks/toggle-block.webp" alt="Toggle Block" title="Toggle Block" /></a>
+  <a href="#usb-detection"><img src="./images/multi-actions/blocks/usb-detection.webp" alt="USB Detection" title="USB Detection" /></a>
+  <a href="#variable-condition"><img src="./images/multi-actions/blocks/variable-condition.webp" alt="Variable Condition" title="Variable Condition" /></a>
+  <a href="#variable-increment"><img src="./images/multi-actions/blocks/variable-increment.webp" alt="Variable Increment" title="Variable Increment" /></a>
+  <a href="#variable-remove"><img src="./images/multi-actions/blocks/variable-remove.webp" alt="Variable Remove" title="Variable Remove" /></a>
+  <a href="#variable-setter"><img src="./images/multi-actions/blocks/variable-setter.webp" alt="Variable Setter" title="Variable Setter" /></a>
+  <a href="#websocket-request"><img src="./images/multi-actions/blocks/websocket-request.webp" alt="WebSocket Request" title="WebSocket Request" /></a>
+</p>
+
+<h3>
+  <a id="app-status" class="anchor" href="#app-status"><span class="octicon octicon-link"></span></a>
+  App Status
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-app-status.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-app-status.webp" alt="" /></a></td>
+    <td>Checks every 5 seconds if an application has started or stopped.
+      <br /><br /><u>Application:</u> by clicking on the ellipsis, a dialog box will open asking for the targeted program.
+      <br /><u>State:</u>
+      <ul>
+        <li><u>Launch:</u> when the application is launched.</li>
+        <li><u>Closing:</u> when the application has stopped.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">app-status:id <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> identifier of the detected process.</li>
+        <li><u class="underline-gray">app-status:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of the detected process (without the program extension).</li>
+        <li><u class="underline-gray">app-status:path <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> application file path.</li>
+        <li><u class="underline-gray">app-status:lanched <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the application has just started or stopped.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="audio-play" class="anchor" href="#audio-play"><span class="octicon octicon-link"></span></a>
+  Audio Play
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-audio-play.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-audio-play.webp" alt="" /></a></td>
+    <td>Play media files of your choice.
+      <br /><br /><u>File:</u> by clicking on the ellipsis, a dialog box will open asking you for the audio file to play.
+      <br /><u>Volume:</u> adjusts the volume of the sound in percentage.
+      <br /><u>Device:</u> specifies the device on which the file must be read (leaving empty, it will be output on the default device).
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="audio-stop" class="anchor" href="#audio-stop"><span class="octicon octicon-link"></span></a>
+  Audio Stop
+</h3>
+
+<table width="100%">
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-audio-stop.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-audio-stop.webp" alt="" /></a></td>
+    <td>Stops playing all current sounds, played by the <span class="text-orange">Audio Play</span> block.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="cooldown" class="anchor" href="#cooldown"><span class="octicon octicon-link"></span></a>
+  Cooldown
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-cooldown.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-cooldown.webp" alt="" /></a></td>
+    <td>Uses the variable system to prevent the activation of the following blocks as long as the delay between two activations is not respected.
+      <br /><br /><u>Variable name:</u> a variable name is automatically generated, but you can choose a more convenient name.
+      <br /><u>Time:</u> minimum delay before letting the action pass to the next block. 
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="http-request" class="anchor" href="#http-request"><span class="octicon octicon-link"></span></a>
+  HTTP Request
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-http-request.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-http-request.webp" alt="" /></a></td>
+    <td>Send a request (like a web browser) to the given address.
+      <br /><br /><u>URL <span class="text-lightblue">*</span>:</u> the internet address to which to make the request.
+      <br /><u>Method:</u> the method can have several values such as GET, POST, PUT, DELETE, and many others.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">http-request:status <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the HTTP code returned by the targeted site (e.g. 404).</li>
+        <li><u class="underline-gray">http-request:body <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the data returned by the site in question (often in HTML or JSON format).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="kill-app" class="anchor" href="#kill-app"><span class="octicon octicon-link"></span></a>
+  Kill App
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-kill-app.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-kill-app.webp" alt="" /></a></td>
+    <td>Closes the selected program (forced close).
+      <br /><br /><u>Application:</u> by clicking on the ellipsis, a dialog box will open asking for the program to close.
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="launch-app" class="anchor" href="#launch-app"><span class="octicon octicon-link"></span></a>
+  Launch App
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-launch-app.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-launch-app.webp" alt="" /></a></td>
+    <td>Launches the selected program.
+      <br /><br /><u>Application:</u> by clicking on the ellipsis, a dialog box will open asking for the program to launch.
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="notification" class="anchor" href="#notification"><span class="octicon octicon-link"></span></a>
+  Notification
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-notification.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-notification.webp" alt="" /></a></td>
+    <td>Opens a small notification box at the bottom right of the screen.
+      <br /><br /><u>Title <span class="text-lightblue">*</span>:</u> bold text noted above the message (leaving empty, it will be replaced by <span class="text-orange">Scripts Manager</span>).
+      <br /><u>Message <span class="text-lightblue">*</span>:</u> it indicates the intention of the notification (e.g. Launch of the current stream...).
+      <br /><u>Icon:</u> by clicking on the ellipsis, a dialog box will open asking for the icon to be displayed to the left of the title and message (leaving empty, it will be replaced by the <span class="text-orange">Scripts Manager</span> icon).
+      <br /><br /><img src="./images/multi-actions/input.webp" width="12" alt="" /> This block receives the following variables:
+      <ul>
+        <li><u class="underline-gray">notification:icon <span class="text-lime"><i>(type: String)</i></span>:</u> replaces notification icon if not set.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="open-url" class="anchor" href="#open-url"><span class="octicon octicon-link"></span></a>
+  Open URL
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-open-url.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-open-url.webp" alt="" /></a></td>
+    <td>Opens the requested web address directly in the default browser.
+      <br /><br /><u>Address <span class="text-lightblue">*</span>:</u> address of the web page to open in the browser.
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="scripts-manager-launch" class="anchor" href="#scripts-manager-launch"><span class="octicon octicon-link"></span></a>
+  Scripts Manager Launch
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-launch.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-launch.webp" alt="" /></a></td>
+    <td>Activated only when launching <span class="text-orange">Scripts Manager</span>.
+      <br />It can be used for example to launch an infinite loop (if the program is already launched, use the <span class="text-orange">Test</span> option to launch the action once).
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="self-timer" class="anchor" href="#self-timer"><span class="octicon octicon-link"></span></a>
+  Self-Timer
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-self-timer.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-self-timer.webp" alt="" /></a></td>
+    <td>Ideal for waiting before doing an action.
+      <br />Often used in parallel with another action (e.g. displaying a <span class="text-orange">Twitch</span> source and in parallel waiting 5 seconds then hiding the source).
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="socket-request" class="anchor" href="#socket-request"><span class="octicon octicon-link"></span></a>
+  Socket Request
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-socket-request.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-socket-request.webp" alt="" /></a></td>
+    <td>Sending data to a socket server.
+      <br /><br /><u>IPv4 <span class="text-lightblue">*</span>:</u> IP address of the server receiving the request.
+      <br /><u>Port:</u> the port is a number which also makes it possible to deduce where to send the request (depending on the server in question).
+      <br /><u>Data <span class="text-lightblue">*</span>:</u> written data is sent as is.
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="toggle-block" class="anchor" href="#toggle-block"><span class="octicon octicon-link"></span></a>
+  Toggle Block
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-toggle-block.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-toggle-block.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-toggle-block.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-toggle-block.webp" alt="" /></a>
+    </td>
+    <td>Reacts like or depending on the <span class="text-orange">Enable</span> option.
+      <br /><br /><u>Block ID:</u> the identifier of the block which is going to be or to activate/deactivate (it can be found by hovering over the title of the blocks).
+      <br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> reacts when activated for green block or active for orange block.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">On</span>, it will change to <span class="text-orange">Off</span>, and vice versa.</li>
+        <li><u>Off:</u> reacts when deactivated for green block or deactivated for orange block.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="usb-detection" class="anchor" href="#usb-detection"><span class="octicon octicon-link"></span></a>
+  USB Detection
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-usb-detection.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-usb-detection.webp" alt="" /></a></td>
+    <td>Detects the connection as well as the disconnection of a USB peripheral.
+      <br /><br /><u>Device:</u> peripheral name to wait for (if left blank, will wait for all peripheral).
+      <br /><u>State:</u>
+      <ul>
+        <li><u>Connection:</u> when connecting a peripheral.</li>
+        <li><u>Disconnection:</u> when disconnecting a peripheral.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">usb-detection:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> peripheral name given by the manufacturer.</li>
+        <li><u class="underline-gray">usb-detection:manufacturer <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of the manufacturer of this peripheral.</li>
+        <li><u class="underline-gray">usb-detection:serial <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> serial number, if there is one.</li>
+        <li><u class="underline-gray">usb-detection:connected <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the device is connected or disconnected.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="variable-condition" class="anchor" href="#variable-condition"><span class="octicon octicon-link"></span></a>
+  Variable Condition
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-variable-condition.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-variable-condition.webp" alt="" /></a></td>
+    <td>Prevents going to the next action if the configured terms are not respected (take the variable of the first scope that is available: <span class="text-orange">Next</span>, then <span class="text-orange">Local</span>, and finally <span class="text-orange">Global</span>).
+      <br /><br /><u>Value 1 <span class="text-lightblue">*</span>:</u> the input value to compare.
+      <br /><u>Condition:</u> the condition depends on the type of variable, by choosing <code>Equal</code>, <span class="text-orange">Value 1</span> must be identical to <span class="text-orange">Value 2</span> to activate the following connected blocks.
+      <br /><u>Value 2 <span class="text-lightblue">*</span>:</u> will be compared to <span class="text-orange">Value 1</span> depending on the <span class="text-orange">Condition</span> you choose.
+      <br /><u>Variable type:</u>
+      <ul>
+        <li><u>String:</u> is just a text.</li>
+        <li><u>Number:</u> only accepts a number.</li>
+        <li><u>Boolean:</u> is like a switch (on or off represented by <code>true</code> and <code>false</code> respectively).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="variable-increment" class="anchor" href="#variable-increment"><span class="octicon octicon-link"></span></a>
+  Variable Increment
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-variable-increment.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-variable-increment.webp" alt="" /></a></td>
+    <td>Adds or removes the chosen number to the variable (consider the variable at 0 if it is not defined).
+      <br />Can be used to count for example the number of <span class="text-orange">Twitch</span> messages received.
+      <br /><br /><u>Variable name:</u> name of the numeric variable that will be incremented or decremented.
+      <br /><u>Increment:</u> number to add or subtract from the variable.
+      <br /><u>Scope:</u>
+      <ul>
+        <li><u>Global:</u> will make the variable available for all <span class="text-orange">Multi Actions</span>.</li>
+        <li><u>Local:</u> will only be accessible for the module where the block is located.</li>
+        <li><u>Next:</u> will give the variable to the blocks connected at the output of this block.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="variable-remove" class="anchor" href="#variable-remove"><span class="octicon octicon-link"></span></a>
+  Variable Remove
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-variable-remove.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-variable-remove.webp" alt="" /></a></td>
+    <td>Deletes a variable in the chosen scope.
+      <br /><br /><u>Variable name:</u> name of the variable that will be deleted.
+      <br /><u>Scope:</u>
+      <ul>
+        <li><u>Global:</u> will make the variable available for all <span class="text-orange">Multi Actions</span>.</li>
+        <li><u>Local:</u> will only be accessible for the module where the block is located.</li>
+        <li><u>Next:</u> will give the variable to the blocks connected at the output of this block.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="variable-replace" class="anchor" href="#variable-replace"><span class="octicon octicon-link"></span></a>
+  Variable Replace
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-variable-replace.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-variable-replace.webp" alt="" /></a></td>
+    <td>Replaces a term contained one or more times in the given value.
+      <br /><br /><u>Variable name:</u> name of the variable that will receive the modification.
+      <br /><u>Value <span class="text-lightblue">*</span>:</u> the input value in which to search.
+      <br /><u>Search <span class="text-lightblue">*</span>:</u> the search term in <span class="text-orange">Value</span> which will be replaced.
+      <br /><u>Replace <span class="text-lightblue">*</span>:</u> term by which <span class="text-orange">Search</span> will be replaced.
+      <br /><u>Replace all:</u> replaces all terms found (if unchecked, only replaces the first one found).
+      <br /><u>Scope:</u>
+      <ul>
+        <li><u>Global:</u> will make the variable available for all <span class="text-orange">Multi Actions</span>.</li>
+        <li><u>Local:</u> will only be accessible for the module where the block is located.</li>
+        <li><u>Next:</u> will give the variable to the blocks connected at the output of this block.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="variable-setter" class="anchor" href="#variable-setter"><span class="octicon octicon-link"></span></a>
+  Variable Setter
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-variable-setter.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-variable-setter.webp" alt="" /></a></td>
+    <td>Gives the value given to a variable by specifying its scope.
+      <br /><br /><u>Variable name:</u> name of the variable that will receive the value.
+      <br /><u>Value <span class="text-lightblue">*</span>:</u> the input value that will be stored in the variable.
+      <br /><u>Variable type:</u>
+      <ul>
+        <li><u>String:</u> is just a text.</li>
+        <li><u>Number:</u> only accepts a number.</li>
+        <li><u>Boolean:</u> is like a switch (on or off represented by <code>true</code> and <code>false</code> respectively).</li>
+      </ul>
+      <u>Scope:</u>
+      <ul>
+        <li><u>Global:</u> will make the variable available for all <span class="text-orange">Multi Actions</span>.</li>
+        <li><u>Local:</u> will only be accessible for the module where the block is located.</li>
+        <li><u>Next:</u> will give the variable to the blocks connected at the output of this block.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="websocket-request" class="anchor" href="#websocket-request"><span class="octicon octicon-link"></span></a>
+  Websocket Request
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-websocket-request.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-websocket-request.webp" alt="" /></a></td>
+    <td>Sending data to a websocket server.
+      <br /><br /><u>URL <span class="text-lightblue">*</span>:</u> address often including the communication port to the server.
+      <br /><u>Data <span class="text-lightblue">*</span>:</u> written data is sent as is.
+    </td>
+  </tr>
+</table>
+
+<h2>
+  <a id="discord" class="anchor" href="#discord"><span class="octicon octicon-link"></span></a>
+  Discord
+</h2>
+
+<p>
+  <a href="#discord---webhook-embed"><img src="./images/multi-actions/blocks/discord-webhook-embed.webp" alt="Webhook Embed" title="Discord - Webhook Embed" /></a>
+  <a href="#discord---webhook-message"><img src="./images/multi-actions/blocks/discord-webhook-message.webp" alt="Webhook Message" title="Discord - Webhook Message" /></a>
+</p>
+
+<h3>
+  <a id="discord---webhook-embed" class="anchor" href="#discord---webhook-embed"><span class="octicon octicon-link"></span></a>
+  Discord - Webhook Embed
+</h3>
+
+<table>
+  <tr>
+    <td width="300"><a href="./images/multi-actions/visuals/v2.0/inputs-discord-webhook-embed.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-discord-webhook-embed.webp" alt="" /></a></td>
+    <td>Allows you to send a block message in a <span class="text-orange">Discord</span> channel.
+      <br />You must first go to the settings of the channel in question in <span class="text-orange">Integrations</span> &gt; <span class="text-orange">Create a webhooks</span>.
+      <br />All you have to do is <span class="text-orange">Copy the webhook URL</span> of the bot you just created, and enter it in the appropriate field of the block.
+      <br /><br /><u>Title <span class="text-lightblue">*</span>:</u> published title.
+      <br /><u>URL <span class="text-lightblue">*</span>:</u> click redirect address.
+      <br /><u>Thumbnail:</u> small image in the upper right corner.
+      <br /><u>Big Image:</u> large image placed below the block information.
+      <br /><u>Webhook:</u> URL retrieved from <span class="text-orange">Discord</span> room settings.
+      <br /><u>Message <span class="text-lightblue">*</span>:</u> placed above the block (can contain <span class="text-orange">@everyone</span> if needed).
+      <br /><u>Inline 1 <span class="text-lightblue">*</span>:</u> title and text of the first column of information.
+      <br /><u>Inline 2 <span class="text-lightblue">*</span>:</u> title and text of the second column of information.
+      <br /><br /><img src="./images/multi-actions/input.webp" width="12" alt="" /> This block receives the following variables:
+      <ul>
+        <li><u class="underline-gray">discord:thumbnail <span class="text-lime"><i>(type: String)</i></span>:</u> replace message thumbnail if not set.</li>
+        <li><u class="underline-gray">discord:big-image <span class="text-lime"><i>(type: String)</i></span>:</u> replaces the large message image if not set.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="discord---webhook-message" class="anchor" href="#discord---webhook-message"><span class="octicon octicon-link"></span></a>
+  Discord - Webhook Message
+</h3>
+
+<table>
+  <tr>
+    <td width="300"><a href="./images/multi-actions/visuals/v2.0/inputs-discord-webhook-message.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-discord-webhook-message.webp" alt="" /></a></td>
+    <td>Allows you to send a message in a <span class="text-orange">Discord</span> channel.
+      <br />You must first go to the settings of the channel in question in <span class="text-orange">Integrations</span> &gt; <span class="text-orange">Create a webhooks</span>.
+      <br />All you have to do is <span class="text-orange">Copy the webhook URL</span> of the bot you just created, and enter it in the appropriate field of the block.
+      <br /><br /><u>Webhook:</u> URL retrieved from <span class="text-orange">Discord</span> channel settings.
+      <br /><u>Message <span class="text-lightblue">*</span>:</u> message published on the webhook channel (can contain <span class="text-orange">@everyone</span> if needed).
+    </td>
+  </tr>
+</table>
+
+<h2>
+  <a id="obs-studio" class="anchor" href="#obs-studio"><span class="octicon octicon-link"></span></a>
+  OBS Studio
+</h2>
+
+<p>
+  <a href="#obs-studio---connection"><img src="./images/multi-actions/blocks/obs-studio-connection.webp" alt="Connection" title="OBS Studio - Connection" /></a>
+  <a href="#obs-studio---exit"><img src="./images/multi-actions/blocks/obs-studio-exit.webp" alt="Exit" title="OBS Studio - Exit" /></a>
+  <a href="#obs-studio---lock-source"><img src="./images/multi-actions/blocks/obs-studio-lock-source.webp" alt="Lock Source" title="OBS Studio - Lock Source" /></a>
+  <a href="#obs-studio---recording"><img src="./images/multi-actions/blocks/obs-studio-recording.webp" alt="Recording" title="OBS Studio - Recording" /></a>
+  <a href="#obs-studio---replay"><img src="./images/multi-actions/blocks/obs-studio-replay.webp" alt="Replay" title="OBS Studio - Replay" /></a>
+  <a href="#obs-studio---save-replay"><img src="./images/multi-actions/blocks/obs-studio-save-replay.webp" alt="Save Replay" title="OBS Studio - Save Replay" /></a>
+  <a href="#obs-studio---set-text"><img src="./images/multi-actions/blocks/obs-studio-set-text.webp" alt="Set Text" title="OBS Studio - Set Text" /></a>
+  <a href="#obs-studio---source-selected"><img src="./images/multi-actions/blocks/obs-studio-source-selected.webp" alt="Source Selected" title="OBS Studio - Source Selected" /></a>
+  <a href="#obs-studio---streaming"><img src="./images/multi-actions/blocks/obs-studio-streaming.webp" alt="Streaming" title="OBS Studio - Streaming" /></a>
+  <a href="#obs-studio---switch-scene"><img src="./images/multi-actions/blocks/obs-studio-switch-scene.webp" alt="Switch Scene" title="OBS Studio - Switch Scene" /></a>
+  <a href="#obs-studio---toggle-filter"><img src="./images/multi-actions/blocks/obs-studio-toggle-filter.webp" alt="Toggle Filter" title="OBS Studio - Toggle Filter" /></a>
+  <a href="#obs-studio---toggle-source"><img src="./images/multi-actions/blocks/obs-studio-toggle-source.webp" alt="Toggle Source" title="OBS Studio - Toggle Source" /></a>
+  <a href="#obs-studio---virtual-camera"><img src="./images/multi-actions/blocks/obs-studio-virtualcam.webp" alt="Virtual Camera" title="OBS Studio - Virtual Camera" /></a>
+</p>
+
+<h3>
+  <a id="obs-studio---connection" class="anchor" href="#obs-studio---connection"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Connection
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-connection.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-connection.webp" alt="" /></a></td>
+    <td>When attempting to connect or disconnect from <span class="text-orange">OBS Studio</span>.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>Opened:</u> when connecting to the websocket.</li>
+        <li><u>Closed:</u> when disconnecting the websocket.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:connection <span class="text-lime"><i>(scope: Global, type: Boolean)</i></span>:</u> allows to know if <span class="text-orange">OBS Studio</span> is connected to <span class="text-orange">Scripts Manager</span>.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---exit" class="anchor" href="#obs-studio---exit"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Exit
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-exit.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-exit.webp" alt="" /></a></td>
+    <td>Specifies that <span class="text-orange">OBS Studio</span> has been closed.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---lock-source" class="anchor" href="#obs-studio---lock-source"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Lock Source
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-lock-source.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-lock-source.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-lock-source.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-lock-source.webp" alt="" /></a>
+    </td>
+    <td>When a source is locked or unlocked (small padlock) in the list of sources in <span class="text-orange">OBS Studio</span>.
+      <br /><br /><u>Scene name:</u> list all existing scenes (if left blank, reacts for everyone).
+      <br /><u>Source name:</u> list all existing sources (if left blank, reacts for everyone).
+      <br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> reacts when activated for green block or active for orange block.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">On</span>, it will change to <span class="text-orange">Off</span>, and vice versa.</li>
+        <li><u>Off:</u> reacts when deactivated for green block or deactivated for orange block.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:lock-source:id <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> source id locked or unlocked.</li>
+        <li><u class="underline-gray">obs-studio:lock-source:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> source name locked or unlocked.</li>
+        <li><u class="underline-gray">obs-studio:lock-source:locked <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the source is locked or unlocked.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---recording" class="anchor" href="#obs-studio---recording"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Recording
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-recording.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-recording.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-recording.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-recording.webp" alt="" /></a>
+    </td>
+    <td>When recording starts or stops, or to choose what to do.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> reacts when activated for green block or active for orange block.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">On</span>, it will change to <span class="text-orange">Off</span>, and vice versa.</li>
+        <li><u>Off:</u> reacts when deactivated for green block or deactivated for orange block.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:recording <span class="text-lime"><i>(scope: Global, type: Boolean)</i></span>:</u> allows you to know if a recording is in progress or not.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---replay" class="anchor" href="#obs-studio---replay"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Replay
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-replay.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-replay.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-replay.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-replay.webp" alt="" /></a>
+    </td>
+    <td>When replay starts or stops, or to choose what to do.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> reacts when activated for green block or active for orange block.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">On</span>, it will change to <span class="text-orange">Off</span>, and vice versa.</li>
+        <li><u>Off:</u> reacts when deactivated for green block or deactivated for orange block.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:replay <span class="text-lime"><i>(scope: Global, type: Boolean)</i></span>:</u> allows you to know if a replay is in progress or not.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---save-replay" class="anchor" href="#obs-studio---save-replay"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Save Replay
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-save-replay.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-save-replay.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-save-replay.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-save-replay.webp" alt="" /></a>
+    </td>
+    <td>When the recording is saved or to save it.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---set-text" class="anchor" href="#obs-studio---set-text"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Set Text
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-set-text.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-set-text.webp" alt="" /></a></td>
+    <td>Changes the content of a text source.
+      <br /><br /><u>Source name:</u> list all existing text sources.
+      <br /><u>Text <span class="text-lightblue">*</span>:</u> the input value to put in the source.
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---source-selected" class="anchor" href="#obs-studio---source-selected"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Source Selected
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-source-selected.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-source-selected.webp" alt="" /></a></td>
+    <td>When a source is selected in the source list of <span class="text-orange">OBS Studio</span>.
+      <br /><br /><u>Scene name:</u> list all existing scenes (if left blank, reacts for everyone).
+      <br /><u>Source name:</u> list all existing sources (if left blank, reacts for everyone).
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:source-selected:id <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> identifier of the selected source.</li>
+        <li><u class="underline-gray">obs-studio:source-selected:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> selected source name.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---streaming" class="anchor" href="#obs-studio---streaming"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Streaming
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-streaming.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-streaming.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-streaming.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-streaming.webp" alt="" /></a>
+    </td>
+    <td>When streaming starts or stops, or to choose what to do.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> reacts when activated for green block or active for orange block.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">On</span>, it will change to <span class="text-orange">Off</span>, and vice versa.</li>
+        <li><u>Off:</u> reacts when deactivated for green block or deactivated for orange block.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:streaming <span class="text-lime"><i>(scope: Global, type: Boolean)</i></span>:</u> allows you to know if a streaming is in progress or not.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---switch-scene" class="anchor" href="#obs-studio---switch-scene"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Switch Scene
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-switch-scene.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-switch-scene.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-switch-scene.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-switch-scene.webp" alt="" /></a>
+    </td>
+    <td>When changing scene or to change scene (green block reacts to all changes if no scene is selected).
+      <br /><br /><u>Scene name:</u> list all existing scenes (if left blank, reacts for everyone).
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:switch-scene <span class="text-lime"><i>(scope: Global, type: String)</i></span>:</u> gives the name of the currently displayed scene.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---toggle-filter" class="anchor" href="#obs-studio---toggle-filter"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Toggle Filter
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-toggle-filter.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-toggle-filter.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-toggle-filter.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-toggle-filter.webp" alt="" /></a>
+    </td>
+    <td>When the filter of a source is activated or deactivated (small eye) in the list of filters of this source on <span class="text-orange">OBS Studio</span>.
+      <br /><br /><u>Source name:</u> list all existing sources (if left blank, reacts for everyone).
+      <br /><u>Filter name:</u> lists the filters present on the selected source (if left blank, reacts for everyone).
+      <br /><u>State:</u>
+      <ul>
+        <li><u>Show:</u> reacts when activated for green block or active for orange block.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">Show</span>, it will change to <span class="text-orange">Hide</span>, and vice versa.</li>
+        <li><u>Hide:</u> reacts when deactivated for green block or deactivated for orange block.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:toggle-filter:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> filter name.</li>
+        <li><u class="underline-gray">obs-studio:toggle-filter:source <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> source name of this filter.</li>
+        <li><u class="underline-gray">obs-studio:toggle-filter:enabled <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the filter is activated or deactivated.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---toggle-source" class="anchor" href="#obs-studio---toggle-source"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Toggle Source
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-toggle-source.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-toggle-source.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-toggle-source.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-toggle-source.webp" alt="" /></a>
+    </td>
+    <td>When a source is enabled or disabled (little eye) in the source list of <span class="text-orange">OBS Studio</span>.
+      <br /><br /><u>Scene name:</u> list all existing scenes (if left blank, reacts for everyone).
+      <br /><u>Source name:</u> list all existing sources (if left blank, reacts for everyone).
+      <br /><u>State:</u>
+      <ul>
+        <li><u>Show:</u> reacts when activated for green block or active for orange block.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">Show</span>, it will change to <span class="text-orange">Hide</span>, and vice versa.</li>
+        <li><u>Hide:</u> reacts when deactivated for green block or deactivated for orange block.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:toggle-source:id <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> source id.</li>
+        <li><u class="underline-gray">obs-studio:toggle-source:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> source name.</li>
+        <li><u class="underline-gray">obs-studio:toggle-source:scene <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of the scene where the source is located.</li>
+        <li><u class="underline-gray">obs-studio:toggle-source:enabled <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the source is activated or deactivated.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="obs-studio---virtual-camera" class="anchor" href="#obs-studio---virtual-camera"><span class="octicon octicon-link"></span></a>
+  OBS Studio - Virtual Camera
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/outputs-obs-studio-virtualcam.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-obs-studio-virtualcam.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/inputs-obs-studio-virtualcam.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-obs-studio-virtualcam.webp" alt="" /></a>
+    </td>
+    <td>When the virtual camera is enabled or disabled.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>Start:</u> reacts when activated for green block or active for orange block.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">Start</span>, it will change to <span class="text-orange">Stop</span>, and vice versa.</li>
+        <li><u>Stop:</u> reacts when deactivated for green block or deactivated for orange block.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">obs-studio:virtualcam <span class="text-lime"><i>(scope: Global, type: Boolean)</i></span>:</u> allows you to know if the virtual camera is in progress or not.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h2>
+  <a id="spotify" class="anchor" href="#spotify"><span class="octicon octicon-link"></span></a>
+  Spotify
+</h2>
+
+<p>
+  <a href="#spotify---add-to-queue"><img src="./images/multi-actions/blocks/spotify-add-to-queue.webp" alt="Add To Queue" title="Spotify - Add To Queue" /></a>
+  <a href="#spotify---playpause"><img src="./images/multi-actions/blocks/spotify-play-pause.webp" alt="Play/Pause" title="Spotify - Play/Pause" /></a>
+  <a href="#spotify---prevnext"><img src="./images/multi-actions/blocks/spotify-prev-next.webp" alt="Prev/Next" title="Spotify - Prev/Next" /></a>
+  <a href="#spotify---repeat"><img src="./images/multi-actions/blocks/spotify-repeat.webp" alt="Repeat" title="Spotify - Repeat" /></a>
+  <a href="#spotify---search"><img src="./images/multi-actions/blocks/spotify-search.webp" alt="Search" title="Spotify - Search" /></a>
+  <a href="#spotify---shuffle"><img src="./images/multi-actions/blocks/spotify-shuffle.webp" alt="Shuffle" title="Spotify - Shuffle" /></a>
+  <a href="#spotify---volume"><img src="./images/multi-actions/blocks/spotify-volume.webp" alt="Volume" title="Spotify - Volume" /></a>
+</p>
+
+<h3>
+  <a id="spotify---add-to-queue" class="anchor" href="#spotify---add-to-queue"><span class="octicon octicon-link"></span></a>
+  Spotify - Add To Queue
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-spotify-add-to-queue.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-spotify-add-to-queue.webp" alt="" /></a></td>
+    <td>Adds the first track found to the play queue.
+      <br /><br /><u>Track <span class="text-lightblue">*</span>:</u> specifies the song/music to add to the list.
+      <br /><br /><img src="./images/multi-actions/input.webp" width="12" alt="" /> This block receives the following variables:
+      <ul>
+        <li><u class="underline-gray">spotify:search[0]:uri <span class="text-lime"><i>(type: String)</i></span>:</u> add the track (returned by other <span class="text-orange">Spotify</span> blocks) to the queue.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="spotify---playpause" class="anchor" href="#spotify---playpause"><span class="octicon octicon-link"></span></a>
+  Spotify - Play/Pause
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-spotify-play-pause.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-spotify-play-pause.webp" alt="" /></a></td>
+    <td>Play a title, play the current title, or pause.
+      <br /><br /><u>Track <span class="text-lightblue">*</span>:</u> specifies the song/music to play (leaving empty, just do the action below).
+      <br /><u>State:</u>
+      <ul>
+        <li><u>Play:</u> plays, and launches the track if specified.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">Play</span>, it will change to <span class="text-orange">Pause</span>, and vice versa.</li>
+        <li><u>Pause:</u> pauses the current listening.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/input.webp" width="12" alt="" /> This block receives the following variables:
+      <ul>
+        <li><u class="underline-gray">spotify:search[0]:uri <span class="text-lime"><i>(type: String)</i></span>:</u> add the track (returned by other <span class="text-orange">Spotify</span> blocks) to the queue.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="spotify---prevnext" class="anchor" href="#spotify---prevnext"><span class="octicon octicon-link"></span></a>
+  Spotify - Prev/Next
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-spotify-prev-next.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-spotify-prev-next.webp" alt="" /></a></td>
+    <td>Skips to the next track, or back to the previous one.
+      <br /><u>State:</u>
+      <ul>
+        <li><u>Prev:</u> back to the previous one.</li>
+        <li><u>Next:</u> skips to the next track.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="spotify---repeat" class="anchor" href="#spotify---repeat"><span class="octicon octicon-link"></span></a>
+  Spotify - Repeat
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-spotify-repeat.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-spotify-repeat.webp" alt="" /></a></td>
+    <td>Changes the repeat mode of tracks.
+      <br /><u>State:</u>
+      <ul>
+        <li><u>Off:</u> turn off repeat.</li>
+        <li><u>Track:</u> repeats the currently playing track.</li>
+        <li><u>Context:</u> repeats the playlist currently playing.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="spotify---search" class="anchor" href="#spotify---search"><span class="octicon octicon-link"></span></a>
+  Spotify - Search
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-spotify-search.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-spotify-search.webp" alt="" /></a></td>
+    <td>Look for the tracks you are looking for.
+      <br /><br /><u>Track <span class="text-lightblue">*</span>:</u> specifies the song/music to search for.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">spotify:search:total <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> number of results returned by the search.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> track name number <span class="text-cyan">i</span> (starts at 0).</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> type of the result number <span class="text-cyan">i</span> which is for this there <code>track</code>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:uri <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> spotify-specific string (representing the result) of track number <span class="text-cyan">i</span>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:link <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> web page address of track number <span class="text-cyan">i</span>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:image <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> cover of track number <span class="text-cyan">i</span>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:duration <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> duration in milliseconds of track number <span class="text-cyan">i</span>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:artist[<span class="text-cyan">j</span>]:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of artist number <span class="text-cyan">j</span> of track number <span class="text-cyan">i</span>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:artist[<span class="text-cyan">j</span>]:uri <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> spotify-specific string (representing the result) of artist number <span class="text-cyan">j</span> of track number <span class="text-cyan">i</span>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:artist[<span class="text-cyan">j</span>]:link <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> web page address of artist number <span class="text-cyan">j</span> of track number <span class="text-cyan">i</span>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:artists:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of artists (separated by a comma) of track number <span class="text-cyan">i</span>.</li>
+        <li><u class="underline-gray">spotify:search[<span class="text-cyan">i</span>]:artists:total <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> number of artists of track number <span class="text-cyan">i</span>.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="spotify---shuffle" class="anchor" href="#spotify---shuffle"><span class="octicon octicon-link"></span></a>
+  Spotify - Shuffle
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-spotify-shuffle.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-spotify-shuffle.webp" alt="" /></a></td>
+    <td>Enables or disables shuffle track mode.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> activate shuffle mode.</li>
+        <li><u>Toggle:</u> if the state is <span class="text-orange">On</span>, it will change to <span class="text-orange">Off</span>, and vice versa.</li>
+        <li><u>Off:</u> deactivate shuffle mode.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="spotify---volume" class="anchor" href="#spotify---volume"><span class="octicon octicon-link"></span></a>
+  Spotify - Volume
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-spotify-volume.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-spotify-volume.webp" alt="" /></a></td>
+    <td>Changes the volume of the player that is currently playing.
+      <br /><br /><u>Volume:</u> the volume to apply in percentage.
+    </td>
+  </tr>
+</table>
+
+<h2>
+  <a id="twitch" class="anchor" href="#twitch"><span class="octicon octicon-link"></span></a>
+  Twitch
+</h2>
+
+<p>
+  <a href="#twitch---action"><img src="./images/multi-actions/blocks/twitch-action.webp" alt="Action" title="Twitch - Action" /></a>
+  <a href="#twitch---announce"><img src="./images/multi-actions/blocks/twitch-announce.webp" alt="Announce" title="Twitch - Announce" /></a>
+  <a href="#twitch---ban"><img src="./images/multi-actions/blocks/twitch-ban.webp" alt="Ban" title="Twitch - Ban" /></a>
+  <a href="#twitch---chat-clear"><img src="./images/multi-actions/blocks/twitch-chat-clear.webp" alt="Chat Clear" title="Twitch - Chat Clear" /></a>
+  <a href="#twitch---cheer"><img src="./images/multi-actions/blocks/twitch-cheer.webp" alt="Cheer" title="Twitch - Cheer" /></a>
+  <a href="#twitch---command"><img src="./images/multi-actions/blocks/twitch-command.webp" alt="Command" title="Twitch - Command" /></a>
+  <a href="#twitch---community-pay-forward"><img src="./images/multi-actions/blocks/twitch-community-pay-forward.webp" alt="Community Pay Forward" title="Twitch - Community Pay Forward" /></a>
+  <a href="#twitch---community-sub"><img src="./images/multi-actions/blocks/twitch-community-sub.webp" alt="Community Sub" title="Twitch - Community Sub" /></a>
+  <a href="#twitch---delete-message"><img src="./images/multi-actions/blocks/twitch-delete-message.webp" alt="Delete Message" title="Twitch - Delete Message" /></a>
+  <a href="#twitch---emote-only"><img src="./images/multi-actions/blocks/twitch-emote-only.webp" alt="Emote Only" title="Twitch - Emote Only" /></a>
+  <a href="#twitch---first-message"><img src="./images/multi-actions/blocks/twitch-first-message.webp" alt="First Message" title="Twitch - First Message" /></a>
+  <a href="#twitch---followers-only"><img src="./images/multi-actions/blocks/twitch-followers-only.webp" alt="Followers Only" title="Twitch - Followers Only" /></a>
+  <a href="#twitch---game"><img src="./images/multi-actions/blocks/twitch-game.webp" alt="Game" title="Twitch - Game" /></a>
+  <a href="#twitch---gift-paid-upgrade"><img src="./images/multi-actions/blocks/twitch-gift-paid-upgrade.webp" alt="Gift Paid Upgrade" title="Twitch - Gift Paid Upgrade" /></a>
+  <a href="#twitch---host"><img src="./images/multi-actions/blocks/twitch-host.webp" alt="Host" title="Twitch - Host" /></a>
+  <a href="#twitch---hosted"><img src="./images/multi-actions/blocks/twitch-hosted.webp" alt="Hosted" title="Twitch - Hosted" /></a>
+  <a href="#twitch---info"><img src="./images/multi-actions/blocks/twitch-info.webp" alt="Info" title="Twitch - Info" /></a>
+  <a href="#twitch---message"><img src="./images/multi-actions/blocks/twitch-message.webp" alt="Message" title="Twitch - Message" /></a>
+  <a href="#twitch---message-delay"><img src="./images/multi-actions/blocks/twitch-message-delay.webp" alt="Message Delay" title="Twitch - Message Delay" /></a>
+  <a href="#twitch---message-remove"><img src="./images/multi-actions/blocks/twitch-message-remove.webp" alt="Message Remove" title="Twitch - Message Remove" /></a>
+  <a href="#twitch---prime-community-gift"><img src="./images/multi-actions/blocks/twitch-prime-community-gift.webp" alt="Prime Community Gift" title="Twitch - Prime Community Gift" /></a>
+  <a href="#twitch---prime-paid-upgrade"><img src="./images/multi-actions/blocks/twitch-prime-paid-upgrade.webp" alt="Prime Paid Upgrade" title="Twitch - Prime Paid Upgrade" /></a>
+  <a href="#twitch---raid"><img src="./images/multi-actions/blocks/twitch-raid.webp" alt="Raid" title="Twitch - Raid" /></a>
+  <a href="#twitch---raid-cancel"><img src="./images/multi-actions/blocks/twitch-raid-cancel.webp" alt="Raid Cancel" title="Twitch - Raid Cancel" /></a>
+  <a href="#twitch---redemption"><img src="./images/multi-actions/blocks/twitch-redemption.webp" alt="Redemption" title="Twitch - Redemption" /></a>
+  <a href="#twitch---reward-gift"><img src="./images/multi-actions/blocks/twitch-reward-gift.webp" alt="Reward Gift" title="Twitch - Reward Gift" /></a>
+  <a href="#twitch---ritual"><img src="./images/multi-actions/blocks/twitch-ritual.webp" alt="Ritual" title="Twitch - Ritual" /></a>
+  <a href="#twitch---slow-mode"><img src="./images/multi-actions/blocks/twitch-slow.webp" alt="Slow Mode" title="Twitch - Slow Mode" /></a>
+  <a href="#twitch---standard-pay-forward"><img src="./images/multi-actions/blocks/twitch-standard-pay-forward.webp" alt="Standard Pay Forward" title="Twitch - Standard Pay Forward" /></a>
+  <a href="#twitch---sub"><img src="./images/multi-actions/blocks/twitch-sub.webp" alt="Subscribe" title="Twitch - Subscribe" /></a>
+  <a href="#twitch---resub"><img src="./images/multi-actions/blocks/twitch-resub.webp" alt="Subscribe Again" title="Twitch - Subscribe Again" /></a>
+  <a href="#twitch---sub-extend"><img src="./images/multi-actions/blocks/twitch-sub-extend.webp" alt="Subscribe Extend" title="Twitch - Subscribe Extend" /></a>
+  <a href="#twitch---sub-gift"><img src="./images/multi-actions/blocks/twitch-sub-gift.webp" alt="Subscribe Gift" title="Twitch - Subscribe Gift" /></a>
+  <a href="#twitch---subs-only"><img src="./images/multi-actions/blocks/twitch-subs-only.webp" alt="Subscribers Only" title="Twitch - Subscribers Only" /></a>
+  <a href="#twitch---timeout"><img src="./images/multi-actions/blocks/twitch-timeout.webp" alt="Timeout" title="Twitch - Timeout" /></a>
+  <a href="#twitch---unhost"><img src="./images/multi-actions/blocks/twitch-unhost.webp" alt="Unhost" title="Twitch - Unhost" /></a>
+  <a href="#twitch---unique-message"><img src="./images/multi-actions/blocks/twitch-unique-message.webp" alt="Unique Message" title="Twitch - Unique Message" /></a>
+  <a href="#twitch---whisper"><img src="./images/multi-actions/blocks/twitch-whisper.webp" alt="Whisper" title="Twitch - Whisper" /></a>
+</p>
+
+<h3>
+  <a id="twitch---action" class="anchor" href="#twitch---action"><span class="octicon octicon-link"></span></a>
+  Twitch - Action
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-action.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-action.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-action.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-action.webp" alt="" /></a>
+    </td>
+    <td>Corresponds to the <code>/me</code> command sent in the chat.
+      <br /><br /><u>Message <span class="text-lightblue">*</span>:</u> message sent for orange block, or message received from a user for green block (if left blank, reacts to all messages).
+      <br /><u>Case sensitive:</u> must have the same upper and lower case if the box is checked, otherwise <code>GooD</code> and <code>good</code> are considered identical.
+      <br /><u>Contains sentence:</u> the word can be anywhere in the message if the box is checked, otherwise the message must be exactly as entered.
+      <br /><u>Type of viewer:</u> check the boxes corresponding to the types of viewers who can operate the block.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent by the user on the chat.</li>
+        <li><u class="underline-gray">twitch:message:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> identifier of the received message.</li>
+        <li><u class="underline-gray">twitch:message:date and twitch:message:time:</u> date of receipt of the action (refer to date and time variables which are presented in the same way).</li>
+        <li><u class="underline-gray">twitch:message:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> returns <code>Action</code> in this case.</li>
+        <li><u class="underline-gray">twitch:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique user identifier.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> lowercase username.</li>
+        <li><u class="underline-gray">twitch:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> user name including the capitals chosen by the user.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---announce" class="anchor" href="#twitch---announce"><span class="octicon octicon-link"></span></a>
+  Twitch - Announce
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-announce.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-announce.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-announce.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-announce.webp" alt="" /></a>
+    </td>
+    <td>Highlighted announcements in chat.
+      <br /><br /><u>Message <span class="text-lightblue">*</span>:</u> message sent for orange block, or message received from a user for green block (if left blank, reacts to all messages).
+      <br /><u>Case sensitive:</u> must have the same upper and lower case if the box is checked, otherwise <code>GooD</code> and <code>good</code> are considered identical.
+      <br /><u>Contains sentence:</u> the word can be anywhere in the message if the box is checked, otherwise the message must be exactly as entered.
+      <br /><u>Type of viewer:</u> check the boxes corresponding to the types of viewers who can operate the block.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent by the user on the chat.</li>
+        <li><u class="underline-gray">twitch:message:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> identifier of the received message.</li>
+        <li><u class="underline-gray">twitch:message:date and twitch:message:time:</u> date of receipt of the announcement (refer to date and time variables which are presented in the same way).</li>
+        <li><u class="underline-gray">twitch:message:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> returns <code>Announce</code> in this case.</li>
+        <li><u class="underline-gray">twitch:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique user identifier.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> lowercase username.</li>
+        <li><u class="underline-gray">twitch:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> user name including the capitals chosen by the user.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---ban" class="anchor" href="#twitch---ban"><span class="octicon octicon-link"></span></a>
+  Twitch - Ban
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-ban.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-ban.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-ban.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-ban.webp" alt="" /></a>
+    </td>
+    <td>Reacts to ban a user or to ban one.
+      <br /><br /><u>User <span class="text-lightblue">*</span>:</u> targeted user.
+      <br /><u>Reason <span class="text-lightblue">*</span>:</u> the reason why the ban took place.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:ban:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:ban:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:ban:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:ban:reason <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the reason why the ban took place.</li>
+        <li><u class="underline-gray">twitch:ban:start:date and twitch:ban:start:time:</u> start date of the ban (refer to date and time variables which are presented in the same way).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---chat-clear" class="anchor" href="#twitch---chat-clear"><span class="octicon octicon-link"></span></a>
+  Twitch - Chat Clear
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-chat-clear.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-chat-clear.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-chat-clear.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-chat-clear.webp" alt="" /></a>
+    </td>
+    <td>Clear all chat messages or clear chat.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---cheer" class="anchor" href="#twitch---cheer"><span class="octicon octicon-link"></span></a>
+  Twitch - Cheer
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-cheer.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-cheer.webp" alt="" /></a></td>
+    <td>When bits are sent by a viewer.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:cheer:bits <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> number of bits received.</li>
+        <li><u class="underline-gray">twitch:cheer:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message including bit emotes.</li>
+        <li><u class="underline-gray">twitch:cheer:anonymous <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the sending of bits is done anonymously.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---command" class="anchor" href="#twitch---command"><span class="octicon octicon-link"></span></a>
+  Twitch - Command
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-command.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-command.webp" alt="" /></a></td>
+    <td>When a command is written in the chat (a command is a keyword preceded by an exclamation mark).
+      <br /><br /><u>Command:</u> name of the command to capture, do not put the exclamation mark before (if left blank, reacts to all messages).
+      <br /><u>Type of viewer:</u> check the boxes corresponding to the types of viewers who can operate the block.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:command <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> command used (without the exclamation point).</li>
+        <li><u class="underline-gray">twitch:command:arguments <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the following words the name of the command.</li>
+        <li><u class="underline-gray">twitch:command:argument[<span class="text-cyan">i</span>] <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> each word following the command name separately (replace the <span class="text-cyan">i</span> with a number starting with zero).</li>
+        <li><u class="underline-gray">twitch:message:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> identifier of the received message.</li>
+        <li><u class="underline-gray">twitch:message:date and twitch:message:time:</u> date command received (refer to date and time variables which are presented in the same way).</li>
+        <li><u class="underline-gray">twitch:message:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> returns <code>Command</code> in this case.</li>
+        <li><u class="underline-gray">twitch:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique user identifier.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> lowercase username.</li>
+        <li><u class="underline-gray">twitch:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> user name including the capitals chosen by the user.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---community-pay-forward" class="anchor" href="#twitch---community-pay-forward"><span class="octicon octicon-link"></span></a>
+  Twitch - Community Pay Forward
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-community-pay-forward.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-community-pay-forward.webp" alt="" /></a></td>
+    <td>Fires when a user pays forward a subscription that was gifted to them to the community.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:community-pay-forward:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:community-pay-forward:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:community-pay-forward:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+        <li><u class="underline-gray">twitch:community-pay-forward:original:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the user ID of the original gifter.</li>
+        <li><u class="underline-gray">twitch:community-pay-forward:original:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the name of the original gifter.</li>
+        <li><u class="underline-gray">twitch:community-pay-forward:original:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the display name of the original gifter.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---community-sub" class="anchor" href="#twitch---community-sub"><span class="octicon octicon-link"></span></a>
+  Twitch - Community Sub
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-community-sub.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-community-sub.webp" alt="" /></a></td>
+    <td>Fires when a user gifts random subscriptions to the community of a channel.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:community-sub:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:community-sub:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:community-sub:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+        <li><u class="underline-gray">twitch:community-sub:original:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the user ID of the user that gifted the subscription(s).</li>
+        <li><u class="underline-gray">twitch:community-sub:original:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the name of the user that gifted the subscription(s).</li>
+        <li><u class="underline-gray">twitch:community-sub:original:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the display name of the user that gifted the subscription(s).</li>
+        <li><u class="underline-gray">twitch:community-sub:count <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> number of subscriptions offered.</li>
+        <li><u class="underline-gray">twitch:community-sub:plan:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the plan ID of the subscription(s).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---delete-message" class="anchor" href="#twitch---delete-message"><span class="octicon octicon-link"></span></a>
+  Twitch - Delete Message
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-twitch-delete-message.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-delete-message.webp" alt="" /></a></td>
+    <td>Allows you to delete a chat message.
+      <br /><br /><u>Type:</u>
+      <ul>
+        <li><u>All:</u> delete all chat messages.</li>
+        <li><u>By variable:</u> Will delete the message received by another <span class="text-orange">Twitch</span> block.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/input.webp" width="12" alt="" /> This block receives the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:message-id <span class="text-lime"><i>(type: String)</i></span>:</u> delete the message with its id (returned by other <span class="text-orange">Twitch</span> blocks).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---emote-only" class="anchor" href="#twitch---emote-only"><span class="octicon octicon-link"></span></a>
+  Twitch - Emote Only
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-emote-only.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-emote-only.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-emote-only.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-emote-only.webp" alt="" /></a>
+    </td>
+    <td>Make chat not accept anything other than emotes, or react when changing this option.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> activate emote only mode.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Off:</u> deactivate emote only mode.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:emote-only:enabled <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the option is enabled or not.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---first-message" class="anchor" href="#twitch---first-message"><span class="octicon octicon-link"></span></a>
+  Twitch - First Message
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-first-message.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-first-message.webp" alt="" /></a></td>
+    <td>Know when the first message occurs after the launch of the live, or at the first message of each user.
+      <br /><br /><u>Type:</u>
+      <ul>
+        <li><u>Command:</u> name of the command to capture, do not put the exclamation mark before (if left blank, reacts to all messages).</li>
+        <li><u>Message:</u> message sent for orange block, or message received from a user for green block (if left blank, reacts to all messages).</li>
+      </ul>
+      <u>Case sensitive <em>(in message type)</em>:</u> must have the same upper and lower case if the box is checked, otherwise <code>GooD</code> and <code>good</code> are considered identical.
+      <br /><u>Contains sentence <em>(in message type)</em>:</u> the word can be anywhere in the message if the box is checked, otherwise the message must be exactly as entered.
+      <br /><u>Type of viewer:</u> check the boxes corresponding to the types of viewers who can operate the block.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:users[<span class="text-cyan">i</span>] <span class="text-lime"><i>(scope: Global, type: Array)</i></span>:</u> checks for users who have already spoken (reset by setting the variable to <code>false</code> with the <span class="text-orange">Variable Setter</span> block).</li>
+        <li><u class="underline-gray">twitch:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent by the user on the chat.</li>
+        <li><u class="underline-gray">twitch:message:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> identifier of the received message.</li>
+        <li><u class="underline-gray">twitch:message:date and twitch:message:time:</u> date message received (refer to date and time variables which are presented in the same way).</li>
+        <li><u class="underline-gray">twitch:message:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> returns <code>Message</code> in this case.</li>
+        <li><u class="underline-gray">twitch:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique user identifier.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> lowercase username.</li>
+        <li><u class="underline-gray">twitch:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> user name including the capitals chosen by the user.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/input.webp" width="12" alt="" /> This block receives the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:users[<span class="text-cyan">i</span>] <span class="text-lime"><i>(type: Array)</i></span>:</u> list of all users who spoke, <span class="text-cyan">i</span> must be replaced by the block ID (displayed when hovering over its title).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---follow" class="anchor" href="#twitch---follow"><span class="octicon octicon-link"></span></a>
+  Twitch - Follow
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-follow.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-follow.webp" alt="" /></a></td>
+    <td>When a user starts following your channel.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:follow:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:follow:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:follow:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---followers-only" class="anchor" href="#twitch---followers-only"><span class="octicon octicon-link"></span></a>
+  Twitch - Followers Only
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-followers-only.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-followers-only.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-followers-only.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-followers-only.webp" alt="" /></a>
+    </td>
+    <td>Make sure that only people who follow the channel can talk in the chat, or react when changing this option.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> activate followers only mode.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Off:</u> deactivate followers only mode.</li>
+      </ul>
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:follower-only:enabled <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the option is enabled or not.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---game" class="anchor" href="#twitch---game"><span class="octicon octicon-link"></span></a>
+  Twitch - Game
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-twitch-game.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-twitch-game.webp" alt="" /></a></td>
+    <td>Searches for information about the game or category.
+      <br /><br /><u>Game:</u> game or category for which information will be retrieved.
+      <br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:game:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique number representing the game or category.</li>
+        <li><u class="underline-gray">twitch:game:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name written as featured by <span class="text-orange">Twitch</span>.</li>
+        <li><u class="underline-gray">twitch:game:image <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> game or category image (includes two values to replace <code>{width}</code> and <code>{height}</code>).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---gift-paid-upgrade" class="anchor" href="#twitch---gift-paid-upgrade"><span class="octicon octicon-link"></span></a>
+  Twitch - Gift Paid Upgrade
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-gift-paid-upgrade.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-gift-paid-upgrade.webp" alt="" /></a></td>
+    <td>Fires when a user upgrades their gift subscription to a paid subscription in a channel.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:gift-paid-upgrade:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:gift-paid-upgrade:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:gift-paid-upgrade:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+        <li><u class="underline-gray">twitch:gift-paid-upgrade:original:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the name of the user that gifted the original subscription.</li>
+        <li><u class="underline-gray">twitch:gift-paid-upgrade:original:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the display name of the user that gifted the original subscription.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---host" class="anchor" href="#twitch---host"><span class="octicon octicon-link"></span></a>
+  Twitch - Host
+  <img src="./images/multi-actions/deprecated.webp" width="20" alt="" />
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-host.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-host.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-host.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-host.webp" alt="" /></a>
+    </td>
+    <td>Share someone else's live directly to their own channel, or react when sharing a channel's live (this feature was announced as deprecated).
+      <br /><br /><u>Channel <span class="text-lightblue">*</span>:</u> name of the channel to take into account.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:host:channel <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of the channel to take into account.</li>
+        <li><u class="underline-gray">twitch:host:count <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> number of users viewing this share.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---hosted" class="anchor" href="#twitch---hosted"><span class="octicon octicon-link"></span></a>
+  Twitch - Hosted
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-hosted.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-hosted.webp" alt="" /></a></td>
+    <td>React when shared to another channel (this feature was announced as deprecated).
+      <br /><br /><u>Channel:</u> name of the channel to take into account.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:hosted:channel <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of the channel to take into account (so your channel).</li>
+        <li><u class="underline-gray">twitch:hosted:count <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> number of users viewing this share.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---info" class="anchor" href="#twitch---info"><span class="octicon octicon-link"></span></a>
+  Twitch - Info
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-info.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-info.webp" alt="" /></a>
+      <a href="./images/multi-actions/visuals/v2.0/both-twitch-info.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-twitch-info.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-info.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-info.webp" alt="" /></a>
+    </td>
+    <td>Triggers when channel information changes, retrieves channel information, or changes channel information.
+      <br /><br /><u>Status <span class="text-lightblue">*</span>:</u> channel live title.
+      <br /><u>Game <span class="text-lightblue">*</span>:</u> game or category of live.
+      <br /><u>Channel <span class="text-lightblue">*</span>:</u> twitch channel for which to retrieve the information.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:channel:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:channel:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:channel:title <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> channel live title.</li>
+        <li><u class="underline-gray">twitch:channel:lang <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> channel language.</li>
+        <li><u class="underline-gray">twitch:channel:game:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique number representing the game or category.</li>
+        <li><u class="underline-gray">twitch:channel:game:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name written as featured by <span class="text-orange">Twitch</span>.</li>
+        <li><u class="underline-gray">twitch:channel:game:image <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> game or category image (includes two values to replace <code>{width}</code> and <code>{height}</code>).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---message" class="anchor" href="#twitch---message"><span class="octicon octicon-link"></span></a>
+  Twitch - Message
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-message.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-message.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-message.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-message.webp" alt="" /></a>
+    </td>
+    <td>Send a message on the chat or react to these messages.
+      <br /><br /><u>Message <span class="text-lightblue">*</span>:</u> message sent for orange block, or message received from a user for green block (if left blank, reacts to all messages).
+      <br /><u>Case sensitive:</u> must have the same upper and lower case if the box is checked, otherwise <code>GooD</code> and <code>good</code> are considered identical.
+      <br /><u>Contains sentence:</u> the word can be anywhere in the message if the box is checked, otherwise the message must be exactly as entered.
+      <br /><u>Type of viewer:</u> check the boxes corresponding to the types of viewers who can operate the block.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent by the user on the chat.</li>
+        <li><u class="underline-gray">twitch:message:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> identifier of the received message.</li>
+        <li><u class="underline-gray">twitch:message:date and twitch:message:time:</u> date message received (refer to date and time variables which are presented in the same way).</li>
+        <li><u class="underline-gray">twitch:message:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> returns <code>Message</code> in this case.</li>
+        <li><u class="underline-gray">twitch:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique user identifier.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> lowercase username.</li>
+        <li><u class="underline-gray">twitch:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> user name including the capitals chosen by the user.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---message-delay" class="anchor" href="#twitch---message-delay"><span class="octicon octicon-link"></span></a>
+  Twitch - Message Delay
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/inputs-twitch-message-delay.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-message-delay.webp" alt="" /></a></td>
+    <td>Configures the chat message delay, which allows messages to be moderated before they appear for viewers (does not affect moderators).
+      <br /><br /><u>Delay:</u> duration before the message is visible to everyone (in seconds).
+      <br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> activate message delay.</li>
+        <li><u>Off:</u> deactivate message delay.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---message-remove" class="anchor" href="#twitch---message-remove"><span class="octicon octicon-link"></span></a>
+  Twitch - Message Remove
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-message-remove.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-message-remove.webp" alt="" /></a></td>
+    <td>Fires when a single message is removed from a channel.
+      <br /><br /><u>Message:</u> message sent for orange block, or message received from a user for green block (if left blank, reacts to all messages).
+      <br /><u>Case sensitive:</u> must have the same upper and lower case if the box is checked, otherwise <code>GooD</code> and <code>good</code> are considered identical.
+      <br /><u>Contains sentence:</u> the word can be anywhere in the message if the box is checked, otherwise the message must be exactly as entered.
+      <br /><u>Type of viewer:</u> check the boxes corresponding to the types of viewers who can operate the block.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent by the user on the chat.</li>
+        <li><u class="underline-gray">twitch:message:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> identifier of the received message.</li>
+        <li><u class="underline-gray">twitch:message:date and twitch:message:time:</u> date the message was deleted (refer to date and time variables which are presented in the same way).</li>
+        <li><u class="underline-gray">twitch:message:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> returns <code>MessageRemove</code> in this case.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> lowercase username.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---prime-community-gift" class="anchor" href="#twitch---prime-community-gift"><span class="octicon octicon-link"></span></a>
+  Twitch - Prime Community Gift
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-prime-community-gift.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-prime-community-gift.webp" alt="" /></a></td>
+    <td>Fires when a user gifts a Twitch Prime benefit to the channel.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:prime-community-gift:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:prime-community-gift:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:prime-community-gift:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---prime-paid-upgrade" class="anchor" href="#twitch---prime-paid-upgrade"><span class="octicon octicon-link"></span></a>
+  Twitch - Prime Paid Upgrade
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-prime-paid-upgrade.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-prime-paid-upgrade.webp" alt="" /></a></td>
+    <td>Fires when a user upgrades their Prime subscription to a paid subscription in a channel.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:prime-paid-upgrade:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:prime-paid-upgrade:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:prime-paid-upgrade:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:prime-paid-upgrade:plan:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the plan ID of the subscription.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---raid" class="anchor" href="#twitch---raid"><span class="octicon octicon-link"></span></a>
+  Twitch - Raid
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-raid.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-raid.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-raid.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-raid.webp" alt="" /></a>
+    </td>
+    <td>Allows you to raid (which brings viewers to another channel), or reacts when another channel sends their viewers to your channel.
+      <br /><br /><u>Channel <span class="text-lightblue">*</span>:</u> name of the channel to take into account (if left blank, reacts to all channels).
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:raid:channel <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of the channel to take into account.</li>
+        <li><u class="underline-gray">twitch:raid:count <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> number of users viewing this share.</li>
+        <li><u class="underline-gray">twitch:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique user identifier.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> lowercase username.</li>
+        <li><u class="underline-gray">twitch:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> user name including the capitals chosen by the user.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---raid-cancel" class="anchor" href="#twitch---raid-cancel"><span class="octicon octicon-link"></span></a>
+  Twitch - Raid Cancel
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-raid-cancel.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-raid-cancel.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-raid-cancel.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-raid-cancel.webp" alt="" /></a>
+    </td>
+    <td>Triggers when the raid in progress is canceled before the countdown ends.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---redemption" class="anchor" href="#twitch---redemption"><span class="octicon octicon-link"></span></a>
+  Twitch - Redemption
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-redemption.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-redemption.webp" alt="" /></a></td>
+    <td>Triggers when a viewer activates a reward using their channel points.
+      <br /><br /><u>Reward:</u> relevant reward (if left blank, reacts to all rewards).
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:redemption:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:redemption:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:redemption:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent by the user (if requested).</li>
+        <li><u class="underline-gray">twitch:redemption:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique reward identifier.</li>
+        <li><u class="underline-gray">twitch:redemption:title <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> reward title.</li>
+        <li><u class="underline-gray">twitch:redemption:prompt <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> reward comment.</li>
+        <li><u class="underline-gray">twitch:redemption:cost <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> how many points the reward costs.</li>
+        <li><u class="underline-gray">twitch:redemption:queued <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the reward gets added to the request queue.</li>
+        <li><u class="underline-gray">twitch:redemption:images:1x <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> web address of the reduced size image.</li>
+        <li><u class="underline-gray">twitch:redemption:images:2x <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> web address of the medium size image.</li>
+        <li><u class="underline-gray">twitch:redemption:images:4x <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> web address of the large image.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---reward-gift" class="anchor" href="#twitch---reward-gift"><span class="octicon octicon-link"></span></a>
+  Twitch - Reward Gift
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-reward-gift.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-reward-gift.webp" alt="" /></a></td>
+    <td>Fires when a user gifts rewards during a special event.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:reward:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:reward:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:reward:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:reward:original:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the user ID of the gifter.</li>
+        <li><u class="underline-gray">twitch:reward:original:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the name of the gifter.</li>
+        <li><u class="underline-gray">twitch:reward:original:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the display name of the gifter.</li>
+        <li><u class="underline-gray">twitch:reward:count <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the amount of rewards that were shared.</li>
+        <li><u class="underline-gray">twitch:reward:domain <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the domain of the reward, i.e. an identifier of the special event that caused these rewards.</li>
+        <li><u class="underline-gray">twitch:reward:shared <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the amount of total rewards the user shared.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---ritual" class="anchor" href="#twitch---ritual"><span class="octicon octicon-link"></span></a>
+  Twitch - Ritual
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-ritual.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-ritual.webp" alt="" /></a></td>
+    <td>Fires when a user performs a "ritual" in a channel (new user).
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:ritual:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> ritual name (here <code>new_chatter</code>).</li>
+        <li><u class="underline-gray">twitch:ritual:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> ritual message.</li>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:ritual:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:ritual:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:ritual:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---slow-mode" class="anchor" href="#twitch---slow-mode"><span class="octicon octicon-link"></span></a>
+  Twitch - Slow Mode
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-slow.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-slow.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-slow.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-slow.webp" alt="" /></a>
+    </td>
+    <td>Adds a delay between each message from the same viewer, giving you more time to read, or react when changing this option.
+      <br /><br /><u>Delay:</u> time between each message (in seconds).
+      <br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> activate slow mode.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Off:</u> deactivate slow mode.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---standard-pay-forward" class="anchor" href="#twitch---standard-pay-forward"><span class="octicon octicon-link"></span></a>
+  Twitch - Standard Pay Forward
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-standard-pay-forward.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-standard-pay-forward.webp" alt="" /></a></td>
+    <td>Fires when a user pays forward a subscription that was gifted to them to a specific user.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---subscribe" class="anchor" href="#twitch---subscribe"><span class="octicon octicon-link"></span></a>
+  Twitch - Subscribe
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-sub.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-sub.webp" alt="" /></a></td>
+    <td>Fires when a user subscribes to a channel.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---subscribe-again" class="anchor" href="#twitch---subscribe-again"><span class="octicon octicon-link"></span></a>
+  Twitch - Subscribe Again
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-resub.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-resub.webp" alt="" /></a></td>
+    <td>Fires when a user resubscribes to a channel.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:subscribe:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:subscribe:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:subscribe:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+        <li><u class="underline-gray">twitch:subscribe:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent with this subscription notification.</li>
+        <li><u class="underline-gray">twitch:subscribe:months <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the number of total months of subscriptions for the channel.</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the plan ID of the subscription.</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the plan name of the subscription.</li>
+        <li><u class="underline-gray">twitch:subscribe:streak <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the number of consecutive months of subscriptions for the channel.</li>
+        <li><u class="underline-gray">twitch:subscribe:prime <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the subscription was "paid" for with Twitch Prime.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---subscribe-extend" class="anchor" href="#twitch---subscribe-extend"><span class="octicon octicon-link"></span></a>
+  Twitch - Subscribe Extend
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-extend.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-extend.webp" alt="" /></a></td>
+    <td>Fires when a user extends their subscription using a Sub Token.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---subscribe-gift" class="anchor" href="#twitch---subscribe-gift"><span class="octicon octicon-link"></span></a>
+  Twitch - Subscribe Gift
+</h3>
+
+<table>
+  <tr>
+    <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-gift.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-gift.webp" alt="" /></a></td>
+    <td>Fires when a user gifts a subscription to a channel to another user.</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---subscribers-only" class="anchor" href="#twitch---subscribers-only"><span class="octicon octicon-link"></span></a>
+  Twitch - Subscribers Only
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-subs-only.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-subs-only.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-subs-only.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-subs-only.webp" alt="" /></a>
+    </td>
+    <td>Make sure that only people who are subscribed to the channel can talk in the chat, or react when changing this option.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> activate subscribers only mode.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Off:</u> deactivate subscribers only mode.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---timeout" class="anchor" href="#twitch---timeout"><span class="octicon octicon-link"></span></a>
+  Twitch - Timeout
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-timeout.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-timeout.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-timeout.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-timeout.webp" alt="" /></a>
+    </td>
+    <td>Temporarily ban a user or react to a temporary ban.
+      <br /><br /><u>User <span class="text-lightblue">*</span>:</u> targeted user.
+      <br /><u>Reason <span class="text-lightblue">*</span>:</u> the reason the temporary ban occurred.
+      <br /><u>Duration:</u> duration after which the ban will end automatically (in seconds).
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:timeout:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:timeout:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:timeout:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:timeout:reason <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the reason the temporary ban occurred.</li>
+        <li><u class="underline-gray">twitch:timeout:start:date and twitch:timeout:start:time:</u> start date of the temporary ban (refer to date and time variables which are presented in the same way).</li>
+        <li><u class="underline-gray">twitch:timeout:end:date and twitch:timeout:end:time:</u> end date of the temporary ban (refer to date and time variables which are presented in the same way).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---unhost" class="anchor" href="#twitch---unhost"><span class="octicon octicon-link"></span></a>
+  Twitch - Unhost
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-unhost.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-unhost.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-unhost.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-unhost.webp" alt="" /></a>
+    </td>
+    <td>Triggers when the channel stops sharing content from another channel (this feature was announced as deprecated).</td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---unique-message" class="anchor" href="#twitch---unique-message"><span class="octicon octicon-link"></span></a>
+  Twitch - Unique Message
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-unique-message.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-unique-message.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-unique-message.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-unique-message.webp" alt="" /></a>
+    </td>
+    <td>Enables/disables the fact that a user cannot send the same message twice, or react when changing this option.
+      <br /><br /><u>State:</u>
+      <ul>
+        <li><u>On:</u> activate unique message mode.</li>
+        <li><u>Both:</u> reacts as much to activation as to deactivation.</li>
+        <li><u>Off:</u> deactivate unique message mode.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>
+  <a id="twitch---whisper" class="anchor" href="#twitch---whisper"><span class="octicon octicon-link"></span></a>
+  Twitch - Whisper
+</h3>
+
+<table>
+  <tr>
+    <td width="200">
+      <a href="./images/multi-actions/visuals/v2.0/inputs-twitch-whisper.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/inputs-twitch-whisper.webp" alt="" /></a>
+      <br /><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-whisper.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-whisper.webp" alt="" /></a>
+    </td>
+    <td>Reacts when a private message is received.
+      <br /><br /><u>User <span class="text-lightblue">*</span>:</u> targeted user.
+      <br /><u>Message <span class="text-lightblue">*</span>:</u> message sent for orange block, or message received from a user for green block (if left blank, reacts to all messages).
+      <br /><u>Case sensitive:</u> must have the same upper and lower case if the box is checked, otherwise <code>GooD</code> and <code>good</code> are considered identical.
+      <br /><u>Contains sentence:</u> the word can be anywhere in the message if the box is checked, otherwise the message must be exactly as entered.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent by the user on the chat.</li>
+        <li><u class="underline-gray">twitch:message:date and twitch:message:time:</u> date message received (refer to date and time variables which are presented in the same way).</li>
+        <li><u class="underline-gray">twitch:message:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> returns <code>Whisper</code> in this case.</li>
+        <li><u class="underline-gray">twitch:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique user identifier.</li>
+        <li><u class="underline-gray">twitch:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> lowercase username.</li>
+        <li><u class="underline-gray">twitch:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> user name including the capitals chosen by the user.</li>
+      </ul>
+    </td>
+  </tr>
+</table>

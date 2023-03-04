@@ -1,38 +1,53 @@
 {
-  "name": "Scripts-Manager",
-  "version": "2.0.4",
-  "description": "A minimal Electron application",
+  "name": "scripts-manager",
+  "version": "2.1.0",
+  "description": "Scripts Manager is a tool for streamers, developers, but also anyone who wants to automate actions on their computer.",
   "main": "main.js",
   "scripts": {
     "start": "cross-env NODE_TOOLS=1 electron .",
     "lint": "eslint --max-warnings=0 .",
-    "lint-fix": "eslint --max-warnings=0 --fix .",
-    "prebuild": "electron-builder build --win portable",
-    "build": "electron-builder build --config.files=\"!env.json\" --win portable"
+    "lint:fix": "eslint --max-warnings=0 --fix .",
+    "build": "npm run build:nsis && npm run build:portable",
+    "build:dev": "npm run build:nsis:dev && npm run build:portable:dev",
+    "build:nsis": "npm run remove-unpacked && electron-builder build --config.files=\"!env.json\" --win nsis",
+    "build:nsis:dev": "npm run remove-unpacked && electron-builder build --win nsis",
+    "build:portable": "npm run remove-unpacked && electron-builder build --config.files=\"!env.json\" --win portable",
+    "build:portable:dev": "npm run remove-unpacked && electron-builder build --win portable",
+    "remove-unpacked": "node -e \"require('node:fs').rmSync('./dist/win-unpacked', { force: true, recursive: true });\""
   },
-  "repository": "https://github.com/electron/electron-quick-start",
+  "repository": "https://github.com/Arubinu/Scripts-Manager",
   "keywords": [
     "Scripts",
     "Manager",
     "Addons",
+    "Scripts",
+    "OBS",
+    "Studio",
+    "Touch",
+    "Portal",
+    "Spotify",
     "Stream",
     "Twitch",
-    "OBS"
+    "Multi",
+    "Actions",
+    "Flash",
+    "Widget"
   ],
-  "author": "GitHub",
-  "license": "CC0-1.0",
+  "author": "Alvin Pergens",
+  "license": "GPL-3.0",
   "devDependencies": {
     "cross-env": "^7.0.3",
     "electron": "^19.0.6",
+    "electron-builder": "^23.6.0",
     "eslint": "^8.33.0"
   },
   "dependencies": {
-    "@twurple/api": "^5.1.6",
-    "@twurple/auth": "^5.1.6",
-    "@twurple/chat": "^5.1.6",
-    "@twurple/eventsub-ws": "^5.3.3",
-    "@twurple/pubsub": "^5.1.6",
-    "discord.js": "^13.8.0",
+    "@twurple/api": "^6.0.6",
+    "@twurple/auth": "^6.0.6",
+    "@twurple/chat": "^6.0.6",
+    "@twurple/eventsub-ws": "^6.0.6",
+    "@twurple/pubsub": "^6.0.6",
+    "discord.js": "^14.8.0",
     "electron-custom-notifications": "github:Arubinu/electron-custom-notifications",
     "electron-log": "^4.4.7",
     "electron-store": "^8.0.1",
@@ -41,6 +56,7 @@
     "read-ini-file": "^3.0.1",
     "spotify-web-api-node": "^5.0.2",
     "temp": "^0.9.4",
+    "touchportal-api": "github:Arubinu/touchportal-node-api",
     "undici": "^5.5.1",
     "uniqid": "^5.4.0",
     "usb": "^2.4.3",
@@ -48,30 +64,62 @@
     "write-ini-file": "^3.0.2"
   },
   "build": {
-    "appId": "fr.arubinu.scripts-manager",
-    "productName": "Scripts Manager",
+    "appId": "fr.arubinu42.scripts-manager",
+    "productName": "Scripts-Manager",
     "copyright": "",
-    "mac": {
-      "target": [
-        "zip"
-      ]
-    },
+    "asar": true,
+    "files": [
+      "!docs{,/**/*}",
+      "!screenshot.png",
+      "!**/*.{md,log,pfx,afphoto,code-workspace}"
+    ],
+    "extraFiles": [
+      {
+        "from": "node_modules/file-type",
+        "to": "node_modules/file-type",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/strtok3",
+        "to": "node_modules/strtok3",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/token-types",
+        "to": "node_modules/token-types",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/peek-readable",
+        "to": "node_modules/peek-readable",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/ieee754",
+        "to": "node_modules/ieee754",
+        "filter": ["**/*"]
+      }
+    ],
+    "afterPack": "./build/afterPack.js",
     "win": {
       "publisherName": "Arubinu",
+      "artifactName": "${productName}_v${version}_installer.${ext}",
       "target": [
-        "nsis"
-      ]
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "tar.gz"
+        "nsis",
+        "portable"
       ]
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": false
+      "allowElevation": false,
+      "packElevateHelper": false,
+      "allowToChangeInstallationDirectory": true,
+      "license": "build/license.txt",
+      "uninstallDisplayName": "Scripts Manager v${version}"
+    },
+    "portable": {
+      "artifactName": "${productName}_v${version}_portable.${ext}"
     }
   },
   "gitHooks": {

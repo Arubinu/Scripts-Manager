@@ -19,6 +19,13 @@ function get_target(target = _target) {
   return { type, id, name, target };
 }
 
+function load_manager() {
+  let target = get_target();
+  target.name = 'load';
+
+  ipcRenderer.invoke('manager', target);
+}
+
 class AudioPlayer {
   constructor() {
     this._element = document.createElement('audio');
@@ -461,14 +468,14 @@ ipcRenderer.on('init', (event, data) => {
   for (const type in data.configs) {
     const list = document.querySelector(`.${type}-list`);
     for (const id in data.configs[type]) {
-      let name = data.configs[type][id].default.name;
-      let li = add_li(type, id, name, list);
+      const name = data.configs[type][id].default.name,
+        li = add_li(type, id, name, list);
 
       if (type === 'scripts') {
         const menu = data.menus[id];
         if (menu.length) {
-          let ul = add_ul(name, li, list);
-          for (let submenu of menu) {
+          const ul = add_ul(name, li, list);
+          for (const submenu of menu) {
             add_li(type, `${id}:${submenu.id}`, submenu.name, ul);
           }
         }
@@ -478,7 +485,28 @@ ipcRenderer.on('init', (event, data) => {
 
   // from main
   ipcRenderer.on('manager', (event, data) => {
-    if (data.name === 'bluetooth:scan') {
+    if (data.name === 'enabled') {
+      const elem = document.querySelector(`[data-target="scripts:${data.data.name}"]`);
+      if (elem) {
+        const state = elem.parentElement.querySelector('[type="checkbox"]').checked;
+        if (data.data.state !== state) {
+          elem.parentElement.querySelector('.slider').click();
+        }
+      }
+
+      return;
+    } else if (data.name === 'state') {
+      const elem = document.querySelector(`[data-target="${data.type}:${data.id}"]`);
+      if (elem) {
+        if (data.data) {
+          elem.setAttribute('state', data.data);
+        } else {
+          elem.removeAttribute('state');
+        }
+      }
+
+      return;
+    } else if (data.name === 'bluetooth:scan') {
       _bluetooth[data.id] = new Bluetooth(data.id, data.type, data.data);
       return;
     } else if (data.name === 'bluetooth:connect') {
@@ -558,17 +586,38 @@ ipcRenderer.on('init', (event, data) => {
       const iframe_doc = iframe.contentWindow.document;
 
       if (data.name === 'load') {
-        if (data.target === 'general:about') {
+        if (['general:about', 'general:settings'].indexOf(data.target) >= 0) {
           _manager = data.data;
-          if (typeof _manager === 'object' && typeof _manager.default === 'object') {
-            let browse = iframe_doc.querySelector('.browse input');
+        }
+
+        if (data.target === 'general:settings') {
+          const check = typeof _manager === 'object' && typeof _manager.default === 'object',
+            browse = iframe_doc.querySelector('.browse input'),
+            button_action = key => {
+              const buttons = iframe_doc.querySelectorAll(`.${key} .button`),
+                state = (check && _manager.default[key] === true) ? 'on' : 'off';
+
+              for (const button of buttons) {
+                const selected = button.getAttribute('name') === state;
+                button.classList.toggle('is-selected', selected);
+                if (selected) {
+                  button.dispatchEvent(new Event('update', { bubbles: true, cancelable: true }));
+                }
+              }
+            };
+
+          if (check) {
             if (typeof _manager.default.all === 'string') {
               browse.value = _manager.default.all;
+              browse.dispatchEvent(new Event('update', { bubbles: true, cancelable: true }));
             }
           }
+
+          button_action('startup');
+          button_action('systray');
         }
       } else if (!data.name.indexOf('browse:')) {
-        let elem = iframe_doc.querySelector(data.data.elem);
+        const elem = iframe_doc.querySelector(data.data.elem);
         elem.value = data.result.filePath || data.result.filePaths[0];
         elem.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
       }
@@ -600,7 +649,7 @@ ipcRenderer.on('init', (event, data) => {
 
       const config_stylesheet = iframe_doc.querySelector(`#config_stylesheet`);
       if (config_stylesheet) {
-        config_stylesheet.setAttribute('href', path.join(__dirname, 'public/css/config.css'));
+        config_stylesheet.setAttribute('href', path.join(__dirname, 'public', 'css', 'config.css'));
       }
 
       // get new target
@@ -608,46 +657,152 @@ ipcRenderer.on('init', (event, data) => {
       target.name = 'show';
       target.data = true;
 
-      // display versions
-      if (target.target === 'general:about') {
-        const this_ = iframe_doc.querySelector('.this-version');
-        const this_file = path.join(__dirname, 'package.json');
-        if (fs.existsSync(this_file)) {
-          const pkg = require(this_file);
-          this_.innerText = pkg.version;
-          this_.parentElement.children[0].innerText = pkg.name;
-        } else
-          this_.parentElement.remove();
+      // pages
+      if (target.target === 'general:settings') {
+        const browse = iframe_doc.querySelector('.browse input'),
+          import_input = iframe_doc.querySelector('.import input'),
+          export_input = iframe_doc.querySelector('.export input'),
+          reset = iframe_doc.querySelector('.reset-app .is-success'),
+          reload_dialog = iframe_doc.querySelector('div.reload-app'),
+          reset_dialog = iframe_doc.querySelector('div.reset-app'),
+          settings = {
+            all: browse.value,
+            startup: false,
+            systray: false
+          },
+          button_action = key => {
+            const buttons = iframe_doc.querySelectorAll(`.${key} .button`),
+              callback = event => {
+                for (const button of buttons) {
+                  button.classList.remove('is-selected');
+                }
 
-        let browse = iframe_doc.querySelector('.browse input');
+                const on = event.target.getAttribute('name') === 'on';
+                event.target.classList.add('is-selected');
+
+                settings[key] = on;
+                if (event.type !== 'update') {
+                  save_settings();
+                }
+              };
+
+            for (const button of buttons) {
+              button.addEventListener('click', callback, false);
+              button.addEventListener('update', callback, false);
+            }
+          },
+          get_save_target = () => {
+            let target = get_target();
+            target.name = 'save';
+            target.data = { default: settings };
+
+            return target;
+          },
+          save_settings = () => {
+            ipcRenderer.invoke('manager', get_save_target());
+          };
+
+        browse.addEventListener('update', () => {
+          settings.all = browse.value;
+        }, false);
+
         browse.addEventListener('change', () => {
-          let target = get_target();
-          target.name = 'save';
-          target.data = { default: { all: browse.value } };
+          if (browse.value === settings.all) {
+            return;
+          }
 
+          const target = get_save_target();
+
+          let dialog = false;
           if (target.data.default.all.trim().length) {
             const addons_path = path.join(target.data.default.all, 'addons');
             if (!fs.existsSync(addons_path)) {
               fs.mkdir(addons_path, () => {});
+            } else {
+              dialog = true;
             }
 
             const scripts_path = path.join(target.data.default.all, 'scripts');
             if (!fs.existsSync(scripts_path)) {
               fs.mkdir(scripts_path, () => {});
+            } else {
+              dialog = true;
             }
           }
 
+          settings.all = browse.value;
+          save_settings();
+
+          if (dialog) {
+            reload_dialog.classList.add('is-active');
+          }
+        }, false);
+
+        button_action('startup');
+        button_action('systray');
+
+        import_input.addEventListener('change', event => {
+          let target = get_target();
+          target.name = 'import';
+          target.data = import_input.value;
+
           ipcRenderer.invoke('manager', target);
         }, false);
+
+        export_input.addEventListener('change', event => {
+          let target = get_target();
+          target.name = 'export';
+          target.data = export_input.value;
+
+          ipcRenderer.invoke('manager', target);
+        }, false);
+
+        reset.addEventListener('click', () => {
+          let target = get_target();
+          target.name = 'reset';
+
+          ipcRenderer.invoke('manager', target);
+        }, false);
+
+        iframe_doc.querySelectorAll('[aria-label="close"]').forEach(elem => {
+          elem.addEventListener('click', () => {
+            const modal = elem.closest('.modal');
+            if (modal) {
+              modal.classList.remove('is-active');
+            }
+          }, false);
+        });
+
+        iframe_doc.querySelector('.reset').addEventListener('click', () => {
+          reset_dialog.classList.add('is-active');
+        }, false);
+
+        load_manager();
+      } else if (target.target === 'general:about') {
+        const this_file = path.join(__dirname, 'package.json');
+        const this_version = iframe_doc.querySelector('.this-version');
+        if (fs.existsSync(this_file)) {
+          const pkg = require(this_file);
+          this_version.innerText = pkg.version + (data.mode === 'development' ? 'a' : '');
+          this_version.parentElement.children[0].innerText = pkg.name;
+
+          fetch('https://api.github.com/repos/Arubinu/Scripts-Manager/releases/latest').then(async res => {
+            const data = await res.json();
+            if (data.tag_name !== `v${pkg.version}`) {
+              const elem = iframe_doc.querySelector('.new-version');
+              elem.classList.remove('is-hidden');
+              elem.querySelector('span').innerText = data.tag_name.substring(1);
+            }
+          });
+        } else {
+          this_version.parentElement.remove();
+        }
 
         iframe_doc.querySelector('.node-version').innerText = process.versions.node;
         iframe_doc.querySelector('.chrome-version').innerText = process.versions.chrome;
         iframe_doc.querySelector('.electron-version').innerText = process.versions.electron;
 
-        let target = get_target();
-        target.name = 'load';
-
-        ipcRenderer.invoke('manager', target);
+        load_manager();
       }
 
       // open links in default browser and open dialog
@@ -693,6 +848,12 @@ ipcRenderer.on('init', (event, data) => {
       ipcRenderer.invoke('manager', target);
     }, 10);
 
+    // force show/hide content right margin
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize', { bubbles: true }));
+    }, 1000);
+
+    // production/development
     document.body.setAttribute('mode', data.mode);
   });
 
@@ -766,4 +927,10 @@ ipcRenderer.on('init', (event, data) => {
     _target = elem.getAttribute('data-target');
     elem.click();
   }, 10);
+
+  // show/hide content right margin
+  window.addEventListener('resize', () => {
+    const elem = document.querySelector('.content');
+    elem.classList.toggle('is-scrollbar', (elem.scrollHeight > elem.clientHeight));
+  });
 });

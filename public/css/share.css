@@ -1,3 +1,28 @@
+/* Scrollbar */
+
+* {
+  scrollbar-width: auto;
+  scrollbar-color: rgb(42, 42, 42);
+}
+
+*::-webkit-scrollbar {
+  margin-top: 3px;
+  margin-bottom: 3px;
+  width: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(42, 42, 42);
+  border-radius: 0;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  outline: 2px solid rgb(255, 255, 255, .2);
+}
+
 /* Checkbox */
 .switch {
   display: inline-block;

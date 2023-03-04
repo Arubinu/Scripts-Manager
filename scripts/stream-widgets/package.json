@@ -8,6 +8,9 @@
   },
   "author": "Arubinu",
   "license": "ISC",
+  "devDependencies": {
+    "electron": "^19.0.6"
+  },
   "dependencies": {
     "node-global-key-listener": "^0.1.1"
   }

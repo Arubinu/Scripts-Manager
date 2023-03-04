@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+
+    <title>Settings</title>
+
+    <link rel="stylesheet" href="./css/config.css" />
+  </head>
+
+  <body>
+    <div class="modal reload-app">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Information</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body has-text-centered">
+          You need to restart Scripts Manager!
+          <br />For Addons and Scripts in the folder to be loaded.
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button" aria-label="close">Cancel</button>
+        </footer>
+      </div>
+    </div>
+
+    <div class="modal reset-app">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Information</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body has-text-centered">
+          Scripts Manager will restart to take the changes into account.
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button is-success">Confirm</button>
+          <button class="button" aria-label="close">Cancel</button>
+        </footer>
+      </div>
+    </div>
+
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <p class="subtitle is-size-6 has-text-white-ter">Some basic Scripts Manager settings can be found here.</p>
+        </div>
+      </section>
+
+      <div class="m-5">
+        <div class="columns is-horizontal mt-5">
+          <div class="column is-one-fifth">
+            <label class="label">All folder:</label>
+          </div>
+          <div class="column has-text-right">
+            <div class="field has-addons browse">
+              <div class="control ml-6 pl-6 is-expanded">
+                <input class="input has-text-centered is-two-thirds" type="text" readonly />
+              </div>
+              <div class="control">
+                <a class="button is-dark" browse-folder=".browse input">
+                  Browse
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns is-horizontal">
+          <div class="column is-four-fifths">
+            <label class="label">Run on startup:</label>
+          </div>
+          <div class="column has-text-right">
+            <div class="is-inline-block startup">
+              <div class="buttons has-addons">
+                <button class="button" name="on">On</button>
+                <button class="button" name="off">Off</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns is-horizontal">
+          <div class="column is-four-fifths">
+            <label class="label">System Tray on launch:</label>
+          </div>
+          <div class="column has-text-right">
+            <div class="is-inline-block systray">
+              <div class="buttons has-addons">
+                <button class="button" name="on">On</button>
+                <button class="button" name="off">Off</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns is-horizontal">
+          <div class="column is-four-fifths">
+            <label class="label">Import (replace all in Scripts Manager):</label>
+          </div>
+          <div class="column has-text-right">
+            <div class="is-inline-block import">
+              <input type="text" class="is-hidden" />
+              <button class="button" browse-file=".import input" browse-file-ext="sms">Import</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns is-horizontal">
+          <div class="column is-four-fifths">
+            <label class="label">Export (all datas of Scripts Manager):</label>
+          </div>
+          <div class="column has-text-right">
+            <div class="is-inline-block export">
+              <input type="text" class="is-hidden" />
+              <button class="button" browse-file=".export input" browse-file-name="settings" browse-file-ext="sms">Export</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-4 has-text-centered is-narrow-top is-italic">
+          <div>Attention, the following button completely resets Scripts Manager!</div>
+        </div>
+
+        <div class="is-horizontal mt-2 mb-5 has-text-centered">
+          <button class="button reset">Reset Scripts Manager</button>
+        </div>
+      </div>
+    </div>
+  </body>
+
+</html>

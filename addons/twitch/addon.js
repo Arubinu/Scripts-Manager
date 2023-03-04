@@ -1,55 +1,66 @@
 const querystring = require('node:querystring'),
   twurple = require('./twurple');
 
-const CLIENT_ID = require('./auth.json').client_id;
+const {
+  client_id: CLIENT_ID,
+  scopes: SCOPES,
+} = require('./auth.json');
 
 let _logs = [],
   _vars = {},
   _config = {},
   _sender = null,
   _changes = false,
-  _connected = false;
+  _refresh = false,
+  _accounts = false,
+  _connected = false,
+  _wait_bot_token = false;
 
 function update_interface() {
-  const scope = [
-      'bits:read',
-      'chat:read',
-      'chat:edit',
-      'channel:read:goals',
-      'channel:read:polls',
-      'channel:read:charity',
-      'channel:read:hype_train',
-      'channel:read:predictions',
-      'channel:read:redemptions',
-      'channel:read:subscriptions',
-      'channel:edit:commercial',
-      'channel:manage:polls',
-      'channel:manage:raids',
-      'channel:manage:broadcast',
-      'channel:manage:predictions',
-      'channel:manage:redemptions',
-      'channel:moderate',
-      'moderation:read',
-      'moderator:read:chat_settings',
-      'moderator:manage:automod',
-      'moderator:manage:announcements',
-      'moderator:manage:banned_users',
-      'moderator:manage:blocked_terms',
-      'moderator:manage:chat_messages',
-      'moderator:manage:chat_settings',
-      'whispers:read',
-      'whispers:edit',
-      'user:read:follows',
-    ],
-    token_data = {
+  const token_data = {
       client_id: CLIENT_ID,
       redirect_uri: `${_vars.http}/twitch/authorize`,
-      scope: scope.join('+'),
+      scope: SCOPES.join('+'),
       response_type: 'token'
     },
     authorize = 'https://id.twitch.tv/oauth2/authorize?' + querystring.stringify(token_data);
 
-  _sender('message', 'config', Object.assign({ authorize: authorize.replace(/%2B/g, '+') }, _config));
+  _sender('message', 'config', Object.assign({
+    account_broadcaster: _accounts ? _accounts.broadcaster.display : '',
+    account_bot: _accounts ? _accounts.bot.display : '',
+    authorize: authorize.replace(/%2B/g, '+'),
+    refresh: _refresh,
+    wait: _wait_bot_token
+  }, _config));
+}
+
+function update_refresh() {
+  let scopes = {
+    saved: _config.connection.scopes,
+    bot_saved : _config.connection.bot_scopes,
+    current: SCOPES
+  };
+  scopes.current.sort();
+  if (Array.isArray(scopes.saved)) {
+    scopes.saved.sort();
+  }
+  if (Array.isArray(scopes.bot_saved)) {
+    scopes.bot_saved.sort();
+  }
+
+  const bad_scopes = _config.connection.token && JSON.stringify(scopes.saved) !== JSON.stringify(scopes.current),
+    bot_bad_scopes = _config.connection.bot_token && JSON.stringify(scopes.bot_saved) !== JSON.stringify(scopes.current);
+
+  if (bad_scopes) console.log('bad_scopes:', JSON.stringify(scopes.saved), JSON.stringify(scopes.current));
+  if (bot_bad_scopes) console.log('bot_bad_scopes:', JSON.stringify(scopes.bot_saved), JSON.stringify(scopes.current));
+
+  if (bad_scopes || bot_bad_scopes) {
+    _refresh = (bad_scopes && bot_bad_scopes) ? 3 : (bad_scopes ? 1 : 2);
+    _sender('manager', 'state', 'warning');
+  } else {
+    _refresh = false;
+    _sender('manager', 'state');
+  }
 }
 
 async function global_send(type, obj) {
@@ -58,10 +69,13 @@ async function global_send(type, obj) {
 }
 
 async function connect() {
-  if (_config.connection.channel && _config.connection.token) {
+  if (_config.connection.token) {
     global_send('Connection', []);
+    _sender('manager', 'state', (_refresh ? 'warning' : 'connected'));
+
+    _changes = false;
     _connected = true;
-    await twurple.connect(CLIENT_ID, _config.connection.token, obj => {
+    _accounts = await twurple.connect(CLIENT_ID, _config.connection.token, _config.connection.bot_token, obj => {
       _logs.unshift(obj);
       for (let i = (_logs.length - 1); i >= 20; --i) {
         delete _logs[i];
@@ -70,18 +84,22 @@ async function connect() {
       _sender('message', 'logs', obj);
       global_send(obj.type, JSON.parse(JSON.stringify(obj)));
     });
+
+    update_interface();
   }
 }
 
 async function reconnect() {
   await disconnect(false);
+  await new Promise(resolve => setTimeout(resolve, 1000));
   await connect();
 }
 
 async function disconnect(broadcast) {
   if (_connected) {
-    _changes = false;
     _connected = false;
+
+    _sender('manager', 'state', (_refresh ? 'warning' : 'disconnected'));
     await twurple.disconnect();
 
     const obj = {
@@ -110,6 +128,10 @@ module.exports = {
     _config = config;
   },
   initialized: () => {
+    if (_config.connection.token) {
+      update_refresh();
+    }
+
     if (_config.default.enabled) {
       connect().then();
     }
@@ -118,11 +140,10 @@ module.exports = {
     if (id === 'manager') {
       if (name === 'show') {
         if (!data && _changes && _config.default.enabled) {
-          try {
-            await reconnect();
-          } catch (e) {}
+          await reconnect();
         }
 
+        _wait_bot_token = false;
         _sender('message', 'logs', _logs);
         update_interface();
       } else if (name === 'enabled') {
@@ -139,10 +160,13 @@ module.exports = {
       if (typeof data === 'object') {
         const name = Object.keys(data)[0];
         if (name === 'refresh') {
-          if (_config.default.enabled) {
+          if (_config.default.enabled && _changes) {
             await reconnect();
           }
 
+          return;
+        } else if (name === 'bot') {
+          _wait_bot_token = data[name];
           return;
         }
 
@@ -178,10 +202,21 @@ module.exports = {
             const hash = querystring.parse(data.data.substr(1));
 
             if (typeof hash.access_token === 'string') {
-              _config.connection.token = hash.access_token;
+              if (_wait_bot_token) {
+                _config.connection.bot_token = hash.access_token;
+                _config.connection.bot_scopes = SCOPES;
+              } else {
+                _config.connection.token = hash.access_token;
+                _config.connection.scopes = SCOPES;
+              }
+
+              update_refresh();
+              update_interface();
               _sender('manager', 'config', _config);
 
-              update_interface();
+              if (_config.default.enabled) {
+                await reconnect();
+              }
             }
 
             return true;

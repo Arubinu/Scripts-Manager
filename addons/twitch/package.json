@@ -9,6 +9,10 @@
   "author": "Arubinu",
   "license": "ISC",
   "dependencies": {
-    "comfy.js": "^1.1.15"
+    "@twurple/api": "^5.1.6",
+    "@twurple/auth": "^5.1.6",
+    "@twurple/chat": "^5.1.6",
+    "@twurple/eventsub-ws": "^5.3.3",
+    "@twurple/pubsub": "^5.1.6"
   }
 }

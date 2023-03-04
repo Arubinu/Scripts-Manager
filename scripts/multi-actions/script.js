@@ -1,13 +1,14 @@
 const fs = require('node:fs'),
   path = require('node:path'),
   https = require('node:https'),
+  child_process = require('node:child_process'),
+  StreamTransform = require('node:stream').Transform,
   ws = require('ws'),
   temp = require('temp'),
   socket = require('dgram'),
+  keyevents = require('node-global-key-listener').GlobalKeyboardListener,
   { request } = require('undici'),
-  child_process = require('child_process'),
-  StreamTransform = require('stream').Transform,
-  { MessageEmbed, MessageAttachment, WebhookClient } = require('discord.js');
+  { EmbedBuilder, AttachmentBuilder, WebhookClient } = require('discord.js');
 
 const VARIABLE_TYPE = Object.freeze({
   GLOBALS: 0,
@@ -17,11 +18,13 @@ const VARIABLE_TYPE = Object.freeze({
 
 let _cmd = '',
   _apps = { launched: {}, init: false },
+  _keys = [],
   _config = {},
   _sender = null,
   _variables = {
     globals: {},
-    locals: {}
+    locals: {},
+    temp: []
   };
 
 const functions = {
@@ -57,21 +60,68 @@ const functions = {
         resolve(apps);
       });
   }),
-  load_file: (name, data) => new Promise((resolve, reject) => {
-    https.request(data, response => {
-      const sdata = new StreamTransform();
+  sort_keys: data => {
+    const is_array = Array.isArray(data),
+      prefixes = ['LEFT', 'RIGHT', 'NUMPAD', 'NUM', 'SCROLL'],
+      sort = (a, b) => {
+        if (a.toUpperCase().indexOf('CTRL') >= 0) {
+          return -1;
+        } else if (b.toUpperCase().indexOf('CTRL') >= 0) {
+          return +1;
+        }
 
-      response.on('data', chunk => {
-        sdata.push(chunk);
-      });
+        return b.length - a.length;
+      };
 
-      response.on('end', () => {
-        const file_path = path.join(temp.mkdirSync(), (name + '.' + response.headers['content-type'].split('/')[1]));
-        fs.writeFileSync(file_path, sdata.read());
+    if (!is_array) {
+      data = data.split(' ').filter(Boolean);
+    }
 
-        resolve(file_path);
-      });
-    }).end();
+    data = data.join(' ');
+
+    for (const prefix of prefixes) {
+      data = data.replaceAll(`${prefix} `, `${prefix}_`);
+    }
+
+    data = data.split(' ').sort(sort).join(' ');
+
+    for (const prefix of prefixes) {
+      data = data.replaceAll(`${prefix}_`, `${prefix} `);
+    }
+
+    data = data.split(' ');
+
+    return data;
+  },
+  load_file: (name, data, output) => new Promise((resolve, reject) => {
+    const request = (url, follow) => {
+        https
+          .request(url, res => {
+            if (!res.headers.location) {
+              download(res);
+            } else if (!follow) {
+              request(res.headers.location, true);
+            }
+          })
+          .on('error', reject)
+          .end();
+      },
+      download = res => {
+        const sdata = new StreamTransform();
+
+        res.on('data', chunk => {
+          sdata.push(chunk);
+        });
+
+        res.on('end', () => {
+          const file_path = output ? name : path.join(temp.mkdirSync(), (name + '.' + res.headers['content-type'].split('/')[1]));
+          fs.writeFileSync(file_path, sdata.read());
+
+          resolve(file_path);
+        });
+      };
+
+    request(data);
   }),
   copy_file: (name, data) => {
     const file_path = path.join(temp.mkdirSync(), (name + path.extname(data)));
@@ -102,6 +152,94 @@ const functions = {
     set_variable(`${prefix ? (prefix + ':') : ''}time:utc:hours`, date.getUTCHours(), type, module_name, next_data);
     set_variable(`${prefix ? (prefix + ':') : ''}time:utc:minutes`, date.getUTCMinutes(), type, module_name, next_data);
     set_variable(`${prefix ? (prefix + ':') : ''}time:utc:seconds`, date.getUTCSeconds(), type, module_name, next_data);
+  },
+  discord_next: (message, module_name, next_data, next) => {
+    set_variable('discord:webhook:id', message.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('discord:webhook:content', message.content, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('discord:webhook:channel:id', message.channel_id, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('discord:webhook:author:id', message.author.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('discord:webhook:author:username', message.author.username, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('discord:webhook:author:avatar', message.author.avatar || '', VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable('discord:webhook:mention:everyone', message.mention_everyone, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+    if (message.timestamp) {
+      functions.date_to_vars(message.timestamp, 'discord:webhook:create', VARIABLE_TYPE.NEXT, module_name, next_data);
+    }
+
+    if (message.edited_timestamp) {
+      functions.date_to_vars(message.edited_timestamp, 'discord:webhook:edit', VARIABLE_TYPE.NEXT, module_name, next_data);
+    }
+
+    if (Array.isArray(message.embeds)) {
+      set_variable('discord:webhook:embeds:count', message.embeds.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+      for (let i = 0; i < message.embeds.length; ++i) {
+        const embed = message.embeds[i];
+
+        set_variable(`discord:webhook:embed[${i}]:url`, (embed.url || ''), VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`discord:webhook:embed[${i}]:title`, embed.title, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`discord:webhook:embed[${i}]:image`, (embed.image ? (embed.image.url || '') : ''), VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`discord:webhook:embed[${i}]:thumbnail`, (embed.thumbnail ? (embed.thumbnail.url || '') : ''), VARIABLE_TYPE.NEXT, module_name, next_data);
+
+        if (Array.isArray(embed.fields)) {
+          set_variable(`discord:webhook:embed[${i}]:fields:count`, embed.fields.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+          for (let j = 0; j < embed.fields.length; ++j) {
+            const field = embed.fields[j];
+
+            set_variable(`discord:webhook:embed[${i}]:field[${j}]:inline`, field.inline, VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable(`discord:webhook:embed[${i}]:field[${j}]:name`, field.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+            set_variable(`discord:webhook:embed[${i}]:field[${j}]:value`, field.value, VARIABLE_TYPE.NEXT, module_name, next_data);
+          }
+        } else {
+          set_variable(`discord:webhook:embed[${i}]:fields:count`, 0, VARIABLE_TYPE.NEXT, module_name, next_data);
+        }
+      }
+    } else {
+      set_variable('discord:webhook:embeds:count', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
+    }
+
+    next();
+  },
+  spotify_next: (prefix, tracks, module_name, next_data, next) => {
+    set_variable(`${prefix}:count`, tracks.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+    if (tracks.length) {
+      for (let i = 0; i < tracks.length; ++i) {
+        const track = tracks[i];
+
+        set_variable(`${prefix}[${i}]:name`, track.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`${prefix}[${i}]:type`, track.type, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`${prefix}[${i}]:uri`, track.uri, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`${prefix}[${i}]:link`, track.external_urls.spotify, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`${prefix}[${i}]:image`, track.preview_url, VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`${prefix}[${i}]:duration`, track.duration_ms, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+        let artists = [];
+        for (let j = 0; j < track.artists.length; ++j) {
+          artists.push(track.artists[j].name);
+          set_variable(`${prefix}[${i}]:artist[${j}]:name`, track.artists[j].name, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`${prefix}[${i}]:artist[${j}]:uri`, track.artists[j].uri, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`${prefix}[${i}]:artist[${j}]:link`, track.artists[j].external_urls.spotify, VARIABLE_TYPE.NEXT, module_name, next_data);
+        }
+        set_variable(`${prefix}[${i}]:artists:name`, artists.join(', '), VARIABLE_TYPE.NEXT, module_name, next_data);
+        set_variable(`${prefix}[${i}]:artists:count`, artists.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+      }
+    } else {
+      set_variable(`${prefix}[0]:name`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:type`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:uri`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:link`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:image`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:duration`, 0, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:artist[0]:name`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:artist[0]:uri`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:artist[0]:link`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:artists:name`, '', VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(`${prefix}[0]:artists:count`, 0, VARIABLE_TYPE.NEXT, module_name, next_data);
+    }
+
+    next();
   },
   twitch_compare: (module_name, receive, data, next_data, next, name, arg, simple, force_receive) => {
     if (receive.id === 'twitch' && receive.name === name && typeof data !== 'undefined') {
@@ -187,7 +325,6 @@ const specials = [
   'obs-studio-virtualcam',
   'twitch-emote-only',
   'twitch-followers-only',
-  'twitch-host',
   'twitch-info',
   'twitch-slow',
   'twitch-subs-only',
@@ -213,12 +350,14 @@ const actions = {
       }
     }
   },
-  'inputs-audio-play': (module_name, receive, data, next_data, next) => {
-    if (data.file) {
+  'inputs-audio-play': (module_name, receive, data, next_data) => {
+    const file = apply_variables(data.file, module_name, next_data);
+    if (file.trim().length) {
+      data.file = file.trim();
       _sender('manager', 'audio:play', data);
     }
   },
-  'inputs-audio-stop': (module_name, receive, data, next_data, next) => {
+  'inputs-audio-stop': (module_name, receive, data, next_data) => {
     _sender('manager', 'audio:stop');
   },
   'both-cooldown': (module_name, receive, data, next_data, next) => {
@@ -228,18 +367,67 @@ const actions = {
         value = 0;
       }
 
-      let time = data.seconds;
-      if (data.number_unit === 'seconds') {
-        time *= 1000;
-      } else if (data.number_unit === 'minutes') {
-        time *= 60000;
-      }
+      let time = parseInt(data.seconds);
+      if (!isNaN(time) && time > 0) {
+        if (data.number_unit === 'seconds') {
+          time *= 1000;
+        } else if (data.number_unit === 'minutes') {
+          time *= 60000;
+        }
 
-      const now = Date.now();
-      if (!value || (value + time) < now) {
-        set_variable(data.variable, now, VARIABLE_TYPE.GLOBALS);
-        next();
+        const now = Date.now();
+        if (!value || (value + time) < now) {
+          set_variable(data.variable, now, VARIABLE_TYPE.GLOBALS);
+          next();
+        }
       }
+    }
+  },
+  'both-download-file': async (module_name, receive, data, next_data, next) => {
+    const url = apply_variables(data.url, module_name, next_data),
+      name = apply_variables(data.name, module_name, next_data),
+      folder = apply_variables(data.folder, module_name, next_data);
+
+    if (url.trim().length && folder.trim().length && fs.existsSync(folder)) {
+      functions.load_file(path.join(folder, name), url, true)
+        .then(next)
+        .catch(error => {
+          console.error('download-file error:', error);
+        });
+    }
+  },
+  'both-file-read': (module_name, receive, data, next_data, next) => {
+    const file = apply_variables(data.file, module_name, next_data);
+    if (file.trim().length) {
+      fs.readFile(file, 'utf8', (error, data) => {
+        if (error) {
+          return console.error('file-read error:', error);
+        }
+
+        const lines = data.split('\n');
+        for (let i = 0; i < lines.length; ++i) {
+          set_variable(`file-read:all`, data, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`file-read:count`, lines.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`file-read:line[${i}]`, lines[i].trim(), VARIABLE_TYPE.NEXT, module_name, next_data);
+        }
+
+        next();
+      });
+    }
+  },
+  'inputs-file-write': (module_name, receive, data, next_data) => {
+    const file = apply_variables(data.file, module_name, next_data),
+      content = (data.separator ? '\n' : '') + apply_variables(data.content, module_name, next_data);
+
+    if (file.trim().length) {
+      fs.writeFile(file, content, {
+        encoding: 'utf8',
+        flag: data.append ? 'a' : 'w'
+      }, error => {
+        if (error) {
+          console.error('file-write error:', error);
+        }
+      });
     }
   },
   'both-http-request': (module_name, receive, data, next_data, next) => {
@@ -251,10 +439,33 @@ const actions = {
           set_variable('http-request:body', await req.body.text(), VARIABLE_TYPE.NEXT, module_name, next_data);
 
           next();
+        })
+        .catch(error => {
+          console.error('http-request error:', error);
         });
     }
   },
-  'inputs-kill-app': (module_name, receive, data, next_data, next) => {
+  'outputs-keyboard-shortcut': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'manager' && receive.name === 'keyboard') {
+      if (receive.data.down.normal.length && receive.data.event.state.toLowerCase() === data.state) {
+        let shortcuts = {
+          saved: functions.sort_keys(data.keys),
+          normal: functions.sort_keys(receive.data.down.normal),
+          simple: functions.sort_keys(receive.data.down.simple)
+        };
+
+        if (JSON.stringify(shortcuts.saved) === JSON.stringify(shortcuts.normal) || JSON.stringify(shortcuts.saved) === JSON.stringify(shortcuts.simple)) {
+          set_variable('keyboard-shortcut:name', receive.data.event.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('keyboard-shortcut:code', receive.data.event.scanCode, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('keyboard-shortcut:virtual', receive.data.event.vKey, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('keyboard-shortcut:state', data.state, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+          next();
+        }
+      }
+    }
+  },
+  'inputs-kill-app': (module_name, receive, data, next_data) => {
     if (!_cmd) {
       return;
     }
@@ -270,7 +481,16 @@ const actions = {
             };
 
             if (ps.path === data.program) {
-              process.kill(ps.id, 'SIGKILL');
+              console.log('kill-app:', data);
+              if (data.children) {
+                child_process.exec(`taskkill /PID ${ps.id} /T /F`, (error, stdout, stderr) => {
+                  if (error) {
+                    console.error('kill-app error:', data, error);
+                  }
+                });
+              } else {
+                process.kill(ps.id, 'SIGKILL');
+              }
             }
           }
         }
@@ -288,30 +508,28 @@ const actions = {
         next();
       })
       .on('error', error => {
-        console.error('launch-app:', data, error);
+        console.error('launch-app error:', data, error);
       });
   },
-  'inputs-notification': (module_name, receive, data, next_data, next) => {
+  'inputs-notification': (module_name, receive, data, next_data) => {
     const icon = apply_variables(data.icon, module_name, next_data) || get_variable('notification:icon', '', module_name, next_data),
       title = apply_variables(data.title, module_name, next_data),
       message = apply_variables(data.message, module_name, next_data);
 
-    let duration = parseInt(data.duration);
-    if (!isNaN(duration) && duration > 0) {
+    let time = parseInt(data.duration);
+    if (!isNaN(time) && time > 0) {
       if (data.number_unit === 'seconds') {
-        duration *= 1000;
+        time *= 1000;
       } else if (data.number_unit === 'minutes') {
-        duration *= 60000;
+        time *= 60000;
       }
-    } else {
-      duration = 0;
-    }
 
-    if (message.trim().length) {
-      _sender('notifications', 'ShowNotification', [message, title, ((typeof icon === 'string' && icon.trim().length) ? icon : false), duration]);
+      if (message.trim().length) {
+        _sender('notifications', 'ShowNotification', [message, title, ((typeof icon === 'string' && icon.trim().length) ? icon : false), time]);
+      }
     }
   },
-  'inputs-open-url': (module_name, receive, data, next_data, next) => {
+  'inputs-open-url': (module_name, receive, data, next_data) => {
     if (!_cmd) {
       return;
     }
@@ -326,11 +544,8 @@ const actions = {
         cmd: process.env.USERPROFILE,
         detached: true
       })
-        .on('close', () => {
-          next();
-        })
         .on('error', error => {
-          console.error('open-url:', data, error);
+          console.error('open-url error:', data, error);
         });
     }
   },
@@ -340,8 +555,8 @@ const actions = {
     }
   },
   'both-self-timer': (module_name, receive, data, next_data, next) => {
-    if (data.millis > 0) {
-      let time = data.millis;
+    let time = parseInt(data.millis);
+    if (!isNaN(time) && time > 0) {
       if (data.number_unit === 'seconds') {
         time *= 1000;
       } else if (data.number_unit === 'minutes') {
@@ -380,7 +595,7 @@ const actions = {
       }
     }
   },
-  'inputs-toggle-block': (module_name, receive, data, next_data, next) => {
+  'inputs-toggle-block': (module_name, receive, data, next_data) => {
     const node = _config.actions[module_name].data[parseInt(data.id)];
     if (typeof node !== 'undefined') {
       if (data.state === 'toggle') {
@@ -433,9 +648,9 @@ const actions = {
         break;
       case 'number':
         value1 = parseFloat(value1);
-        value2 = parseFloat(data.number);
+        value2 = parseFloat(apply_variables(data.number, module_name, next_data));
 
-        if (isNaN(value1)) {
+        if (isNaN(value1) || isNaN(value2)) {
           return;
         }
 
@@ -463,7 +678,7 @@ const actions = {
         break;
     }
 
-    if (!condition.indexOf('not-') || !condition.indexOf('less-')) {
+    if (!condition.indexOf('not-') || !condition.indexOf('less')) {
       check = !check;
     }
 
@@ -475,6 +690,12 @@ const actions = {
     let value = get_variable(data.variable, undefined, module_name, next_data);
     if (typeof value === 'undefined') {
       value = 0;
+    }
+    if (typeof value === 'string') {
+      const tmp = parseFloat(value);
+      if (!isNaN(tmp)) {
+        value = tmp;
+      }
     }
     if (typeof value === 'number') {
       value += parseInt(data.number);
@@ -531,16 +752,11 @@ const actions = {
       _data = apply_variables(data.data, module_name, next_data);
 
     if (url.trim().length && _data.trim().length) {
-      let tdata = _data;
-      try {
-        tdata = JSON.parse(tdata);
-      } catch (e) {}
-
       const client = new ws(url);
       client.on('error', error => console.error('websocket-request error:', error));
 
       client.onopen = () => {
-        client.send(tdata, () => {
+        client.send(_data, () => {
           client.close();
 
           next();
@@ -548,8 +764,9 @@ const actions = {
       };
     }
   },
-  'inputs-discord-webhook-embed': async (module_name, receive, data, next_data) => {
-    const big_image = apply_variables(data['big-image'], module_name, next_data) || get_variable('discord:big-image', '', module_name, next_data),
+  'both-discord-webhook-embed': async (module_name, receive, data, next_data, next) => {
+    const id = get_variable('discord:webhook:id', '', module_name, next_data),
+      big_image = apply_variables(data['big-image'], module_name, next_data) || get_variable('discord:big-image', '', module_name, next_data),
       thumbnail = apply_variables(data.thumbnail, module_name, next_data) || get_variable('discord:thumbnail', '', module_name, next_data);
 
     let texts = {};
@@ -581,19 +798,23 @@ const actions = {
       }
 
       const webhook = new WebhookClient({ url: data.webhook }),
-        embed = new MessageEmbed()
+        embed = new EmbedBuilder()
           .setColor('#c0392b')
           .setTitle(texts.title);
 
       let images = [];
       if (big_image_path) {
-        images.push(new MessageAttachment(big_image_path));
+        images.push(new AttachmentBuilder(big_image_path));
       }
       if (thumbnail_path) {
-        images.push(new MessageAttachment(thumbnail_path));
+        images.push(new AttachmentBuilder(thumbnail_path));
       }
 
       if (texts.url) {
+        if (texts.url.indexOf('://') < 0) {
+          texts.url = 'https://' + texts.url;
+        }
+
         embed.setURL(texts.url);
       }
       if (big_image_path) {
@@ -602,11 +823,12 @@ const actions = {
       if (thumbnail_path) {
         embed.setThumbnail('attachment://' + path.basename(thumbnail_path));
       }
+
       if (texts['inline-1-title'].trim().length && texts['inline-1-content'].trim().length) {
-        embed.addField(texts['inline-1-title'], texts['inline-1-content'], true);
+        embed.addFields([{ name: texts['inline-1-title'], value: texts['inline-1-content'], inline: true }]);
       }
       if (texts['inline-2-title'].trim().length && texts['inline-2-content'].trim().length) {
-        embed.addField(texts['inline-2-title'], texts['inline-2-content'], true);
+        embed.addFields([{ name: texts['inline-2-title'], value: texts['inline-2-content'], inline: true }]);
       }
 
       let parse = [];
@@ -614,11 +836,33 @@ const actions = {
         parse.push('everyone');
       }
 
-      webhook.send({ content: (texts.message || ''), embeds: [embed], files: images, allowed_mentions: { parse: ['everyone'] } });
+      const options = {
+        content: texts.message || '',
+        embeds: [embed],
+        files: images,
+        allowed_mentions: { parse: ['everyone'] }
+      };
+
+      if (id) {
+        webhook
+          .editMessage(id, options)
+          .then(message => functions.discord_next(message, module_name, next_data, next))
+          .catch(() => {
+            webhook
+              .send(options)
+              .then(message => functions.discord_next(message, module_name, next_data, next));
+          });
+      } else {
+        webhook
+          .send(options)
+          .then(message => functions.discord_next(message, module_name, next_data, next));
+      }
     }
   },
-  'inputs-discord-webhook-message': async (module_name, receive, data, next_data) => {
-    const message = apply_variables(data.message, module_name, next_data);
+  'both-discord-webhook-message': async (module_name, receive, data, next_data, next) => {
+    const id = get_variable('discord:webhook:id', '', module_name, next_data),
+      message = apply_variables(data.message, module_name, next_data);
+
     if (data.webhook && message.trim().length) {
       const webhook = new WebhookClient({ url: data.webhook });
 
@@ -627,7 +871,27 @@ const actions = {
         parse.push('everyone');
       }
 
-      webhook.send({ content: message, embeds: [], files: [], allowed_mentions: { parse: ['everyone'] } });
+      const options = {
+        content: message,
+        embeds: [],
+        files: [],
+        allowed_mentions: { parse: ['everyone'] }
+      };
+
+      if (id) {
+        webhook
+          .editMessage(id, options)
+          .then(message => functions.discord_next(message, module_name, next_data, next))
+          .catch(() => {
+            webhook
+              .send(options)
+              .then(message => functions.discord_next(message, module_name, next_data, next));
+          });
+      } else {
+        webhook
+          .send(options)
+          .then(message => functions.discord_next(message, module_name, next_data, next));
+      }
     }
   },
   'outputs-obs-studio-authentification': (module_name, receive, data, next_data, next) => {
@@ -690,6 +954,21 @@ const actions = {
   },
   'inputs-obs-studio-save-replay': (module_name, receive, data, next_data) => {
     _sender('obs-studio', 'SaveReplayBuffer');
+  },
+  'inputs-obs-studio-set-browser': (module_name, receive, data, next_data) => {
+    if (data.source) {
+      _sender('obs-studio', 'SetSourceSettings', [data.source, { url: apply_variables(data.url, module_name, next_data) }, false]);
+    }
+  },
+  'inputs-obs-studio-set-image': (module_name, receive, data, next_data) => {
+    if (data.source) {
+      _sender('obs-studio', 'SetSourceSettings', [data.source, { file: apply_variables(data.file, module_name, next_data) }, false]);
+    }
+  },
+  'inputs-obs-studio-set-media': (module_name, receive, data, next_data) => {
+    if (data.source) {
+      _sender('obs-studio', 'SetSourceSettings', [data.source, { local_file: apply_variables(data.file, module_name, next_data) }, false]);
+    }
   },
   'inputs-obs-studio-set-text': (module_name, receive, data, next_data) => {
     if (data.source) {
@@ -861,65 +1140,29 @@ const actions = {
     const state = functions.get_state(data.state, 'StartVirtualCam', 'ToggleVirtualCam', 'StopVirtualCam');
     _sender('obs-studio', state);
   },
-  'both-spotify-search': (module_name, receive, data, next_data, next) => {
-    const track = apply_variables(data.track, module_name, next_data);
-    if (track.trim().length) {
-      _sender('spotify', 'Search', [track])
-        .then(tracks => {
-          set_variable('spotify:search:total', tracks.length, VARIABLE_TYPE.NEXT, module_name, next_data);
-
-          if (tracks.length) {
-            for (let i = 0; i < tracks.length; ++i) {
-              const track = tracks[i];
-
-              set_variable(`spotify:search[${i}]:name`, track.name, VARIABLE_TYPE.NEXT, module_name, next_data);
-              set_variable(`spotify:search[${i}]:type`, track.type, VARIABLE_TYPE.NEXT, module_name, next_data);
-              set_variable(`spotify:search[${i}]:uri`, track.uri, VARIABLE_TYPE.NEXT, module_name, next_data);
-              set_variable(`spotify:search[${i}]:link`, track.external_urls.spotify, VARIABLE_TYPE.NEXT, module_name, next_data);
-              set_variable(`spotify:search[${i}]:image`, track.preview_url, VARIABLE_TYPE.NEXT, module_name, next_data);
-              set_variable(`spotify:search[${i}]:duration`, track.duration_ms, VARIABLE_TYPE.NEXT, module_name, next_data);
-
-              let artists = [];
-              for (let j = 0; j < track.artists.length; ++j) {
-                artists.push(track.artists[j].name);
-                set_variable(`spotify:search[${i}]:artist[${j}]:name`, track.artists[j].name, VARIABLE_TYPE.NEXT, module_name, next_data);
-                set_variable(`spotify:search[${i}]:artist[${j}]:uri`, track.artists[j].uri, VARIABLE_TYPE.NEXT, module_name, next_data);
-                set_variable(`spotify:search[${i}]:artist[${j}]:link`, track.artists[j].external_urls.spotify, VARIABLE_TYPE.NEXT, module_name, next_data);
-              }
-              set_variable(`spotify:search[${i}]:artists:name`, artists.join(', '), VARIABLE_TYPE.NEXT, module_name, next_data);
-              set_variable(`spotify:search[${i}]:artists:total`, artists.length, VARIABLE_TYPE.NEXT, module_name, next_data);
-            }
-          } else {
-            set_variable('spotify:search[0]:name', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:type', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:uri', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:link', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:image', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:duration', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:artist[0]:name', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:artist[0]:uri', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:artist[0]:link', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:artists:name', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-            set_variable('spotify:search[0]:artists:total', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
-          }
-
-          next();
-        });
-    }
-  },
-  'inputs-spotify-add-to-queue': (module_name, receive, data, next_data, next) => {
+  'inputs-spotify-add-to-queue': (module_name, receive, data, next_data) => {
     const track = apply_variables(data.track, module_name, next_data) || get_variable('spotify:search[0]:uri', '', module_name, next_data);
     if (typeof track === 'string' && track.trim().length) {
-      _sender('spotify', 'AddToQueue', [track]);
+      _sender('spotify', 'addToQueue', [track]);
     }
   },
-  'inputs-spotify-play-pause': (module_name, receive, data, next_data, next) => {
+  'both-spotify-current-queue': (module_name, receive, data, next_data, next) => {
+    _sender('spotify', 'getQueue').then(data => {
+      functions.spotify_next('spotify:current', ((data.body && data.body.queue) ? [data.body.queue] : []), module_name, next_data, next);
+    });
+  },
+  'both-spotify-currently-playing': (module_name, receive, data, next_data, next) => {
+    _sender('spotify', 'getCurrentTrack').then(track => {
+      functions.spotify_next('spotify:current', (track ? [track] : []), module_name, next_data, next);
+    });
+  },
+  'inputs-spotify-play-pause': (module_name, receive, data, next_data) => {
     const track = apply_variables(data.track, module_name, next_data) || get_variable('spotify:search[0]:uri', '', module_name, next_data),
       play_pause = play => {
         if (play) {
-          _sender('spotify', 'PlayNow', [(typeof track === 'string' && track.trim().length) ? track : false]);
+          _sender('spotify', 'playNow', [(typeof track === 'string' && track.trim().length) ? track : false]);
         } else {
-          _sender('spotify', 'PauseNow');
+          _sender('spotify', 'pauseNow');
         }
       };
 
@@ -931,14 +1174,23 @@ const actions = {
       play_pause(data.state === 'on');
     }
   },
-  'inputs-spotify-prev-next': (module_name, receive, data, next_data, next) => {
+  'inputs-spotify-prev-next': (module_name, receive, data, next_data) => {
     _sender('spotify', (data.state ? 'skipToPrevious' : 'skipToNext'));
   },
-  'inputs-spotify-repeat': (module_name, receive, data, next_data, next) => {
+  'inputs-spotify-repeat': (module_name, receive, data, next_data) => {
     const state = functions.get_state(data.state, 'off', 'track', 'context');
     _sender('spotify', 'setRepeat', [state]);
   },
-  'inputs-spotify-shuffle': (module_name, receive, data, next_data, next) => {
+  'both-spotify-search': (module_name, receive, data, next_data, next) => {
+    const track = apply_variables(data.track, module_name, next_data);
+    if (track.trim().length) {
+      _sender('spotify', 'search', [track])
+        .then(tracks => {
+          functions.spotify_next('spotify:search', tracks, module_name, next_data, next);
+        });
+    }
+  },
+  'inputs-spotify-shuffle': (module_name, receive, data, next_data) => {
     if (['on', 'off'].indexOf(data.state) < 0) {
       _sender('spotify', 'isShuffle').then(is_shuffle => {
         _sender('spotify', 'setShuffle', [!is_shuffle]);
@@ -947,21 +1199,25 @@ const actions = {
       _sender('spotify', 'setShuffle', [data.state === 'on']);
     }
   },
-  'inputs-spotify-volume': (module_name, receive, data, next_data, next) => {
+  'inputs-spotify-volume': (module_name, receive, data, next_data) => {
     _sender('spotify', 'setVolume', [data.volume]);
   },
   'outputs-twitch-action': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Action', 'message', false),
   'inputs-twitch-action': (module_name, receive, data, next_data) => {
-    const message = apply_variables(data.message, module_name, next_data);
+    const message = apply_variables(data.message, module_name, next_data),
+      type = (data.account && data.account.toLowerCase() === 'bot') ? 'BotChat' : 'Chat';
+
     if (message.trim().length) {
-      _sender('twitch', 'Action', { type: 'Chat', args: [message] });
+      _sender('twitch', 'Action', { type, args: [message] });
     }
   },
   'outputs-twitch-announcement': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Announcement', 'message', false),
   'inputs-twitch-announce': (module_name, receive, data, next_data) => {
-    const message = apply_variables(data.message, module_name, next_data);
+    const message = apply_variables(data.message, module_name, next_data),
+      type = (data.account && data.account.toLowerCase() === 'bot') ? 'BotChat' : 'Chat';
+
     if (message.trim().length) {
-      _sender('twitch', 'Announce', { type: 'Methods', args: [false, message] });
+      _sender('twitch', 'announce', { type: 'Methods', args: [false, message, (data.color ? data.color.toLowerCase() : false), (type === 'BotChat')] });
     }
   },
   'outputs-twitch-ban': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
@@ -1045,12 +1301,15 @@ const actions = {
   },
   'outputs-twitch-first-message': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'obs-studio' && receive.name === 'StreamStateChanged' && receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') {
-      return set_variable('twitch:users', [], VARIABLE_TYPE.GLOBALS);
+      const variable_name = `twitch:users[${get_variable('block:id', -1, module_name, next_data)}]`;
+      return set_variable(variable_name, [], VARIABLE_TYPE.GLOBALS);
     }
 
     const type = (typeof data.type === 'undefined' || data.type) ? 'Command' : 'Message';
     functions.twitch_compare(module_name, receive, data, next_data, () => {
-      let users = get_variable('twitch:users', []);
+      const variable_name = `twitch:users[${get_variable('block:id', -1, module_name, next_data)}]`;
+
+      let users = get_variable(variable_name, []);
       if (typeof users !== 'object' && !Array.isArray(users)) {
         users = [];
       }
@@ -1062,7 +1321,7 @@ const actions = {
 
       if (!exists) {
         users.push(user);
-        set_variable('twitch:users', users, VARIABLE_TYPE.GLOBALS);
+        set_variable(variable_name, users, VARIABLE_TYPE.GLOBALS);
       }
 
       if ((all && !exists) || (!all && !tmp.length)) {
@@ -1071,9 +1330,9 @@ const actions = {
     }, type, type.toLowerCase(), (type === 'command'));
   },
   'outputs-twitch-follow': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
-    set_variable(['twitch:all:user:id', 'twitch:follow:user:id'], receive.data.data.userId, VARIABLE_TYPE.NEXT, module_name, next_data);
-    set_variable(['twitch:all:user:name', 'twitch:follow:user:name'], receive.data.data.displayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
-    set_variable(['twitch:all:user:display', 'twitch:follow:user:display'], receive.data.data.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable(['twitch:all:user:id', 'twitch:follow:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable(['twitch:all:user:name', 'twitch:follow:user:name'], receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+    set_variable(['twitch:all:user:display', 'twitch:follow:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
     functions.date_to_vars(receive.data.data.followDate, 'twitch:follow', VARIABLE_TYPE.NEXT, module_name, next_data);
 
     next();
@@ -1113,26 +1372,6 @@ const actions = {
       set_variable('twitch:gift-paid-upgrade:original:display', receive.data.upgrade.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
 
       next();
-    }
-  },
-  'outputs-twitch-host': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
-    set_variable('twitch:host:channel', receive.data.host.channel, VARIABLE_TYPE.GLOBALS);
-    set_variable('twitch:host:count', receive.data.host.viewers.length, VARIABLE_TYPE.GLOBALS);
-
-    if (typeof next !== 'undefined') {
-      next();
-    }
-  }, 'Host', 'channel', true, () => receive.data.host.channel),
-  'outputs-twitch-hosted': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
-    set_variable('twitch:hosted:channel', receive.data.host.channel, VARIABLE_TYPE.NEXT, module_name, next_data);
-    set_variable('twitch:hosted:count', receive.data.host.viewers.length, VARIABLE_TYPE.NEXT, module_name, next_data);
-
-    next();
-  }, 'Hosted', 'channel', true, () => receive.data.host.channel),
-  'inputs-twitch-host': (module_name, receive, data, next_data) => {
-    const channel = apply_variables(data.channel, module_name, next_data);
-    if (channel.trim().length) {
-      _sender('twitch', 'Host', { type: 'Chat', args: [channel] });
     }
   },
   'outputs-twitch-info': (module_name, receive, data, next_data, next) => {
@@ -1216,9 +1455,11 @@ const actions = {
   },
   'outputs-twitch-message': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
   'inputs-twitch-message': (module_name, receive, data, next_data) => {
-    const message = apply_variables(data.message, module_name, next_data);
+    const message = apply_variables(data.message, module_name, next_data),
+      type = (data.account && data.account.toLowerCase() === 'bot') ? 'BotChat' : 'Chat';
+
     if (message.trim().length) {
-      _sender('twitch', 'Say', { type: 'Chat', args: [message] });
+      _sender('twitch', 'Say', { type, args: [message] });
     }
   },
   'inputs-twitch-message-delay': (module_name, receive, data, next_data) => {
@@ -1273,7 +1514,7 @@ const actions = {
       set_variable(['twitch:all:user:id', 'twitch:subscribe:user:id'], receive.data.subscribe.info.userId, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable(['twitch:all:user:name', 'twitch:subscribe:user:name'], receive.data.subscribe.info.displayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable(['twitch:all:user:display', 'twitch:subscribe:user:display'], receive.data.subscribe.info.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:subscribe:message', receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:message', 'twitch:subscribe:message'], receive.data.message || receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:months', receive.data.subscribe.info.months, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:plan:name', receive.data.subscribe.info.planName, VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1324,6 +1565,12 @@ const actions = {
 
     next();
   }, 'Ritual', 'user', true, () => receive.data.ritual.user),
+  'inputs-twitch-shoutout': (module_name, receive, data, next_data) => {
+    const user = apply_variables(data.user, module_name, next_data);
+    if (user.trim().length) {
+      _sender('twitch', 'shoutout', { type: 'Methods', args: [user] });
+    }
+  },
   'outputs-twitch-slow': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'twitch' && receive.name === 'Slow') {
       set_variable('twitch:slow:enabled', receive.data.slow.enabled, VARIABLE_TYPE.GLOBALS);
@@ -1350,11 +1597,11 @@ const actions = {
     }
   },
   'outputs-twitch-sub': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'Subscription') {
+    if (receive.id === 'twitch' && receive.name === 'Sub') {
       set_variable(['twitch:all:user:id', 'twitch:subscribe:user:id'], receive.data.subscribe.info.userId, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable(['twitch:all:user:name', 'twitch:subscribe:user:name'], receive.data.subscribe.info.displayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable(['twitch:all:user:display', 'twitch:subscribe:user:display'], receive.data.subscribe.info.displayName, VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:subscribe:message', receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:message', 'twitch:subscribe:message'], receive.data.message || receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:months', receive.data.subscribe.info.months, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:plan:name', receive.data.subscribe.info.planName, VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1384,7 +1631,7 @@ const actions = {
       set_variable('twitch:subscribe:gifter:id', receive.data.subscribe.info.gifterUserId, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:gifter:name', receive.data.subscribe.info.gifterDisplayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:gifter:display', receive.data.subscribe.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:subscribe:message', receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
+      set_variable(['twitch:message', 'twitch:subscribe:message'], receive.data.message || receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:duration', receive.data.subscribe.info.giftDuration, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:count', receive.data.subscribe.info.gifterGiftCount, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1426,17 +1673,6 @@ const actions = {
       _sender('twitch', 'Timeout', { type: 'Chat', args: [user, data.duration, reason] });
     }
   },
-  'outputs-twitch-unhost': (module_name, receive, data, next_data, next) => {
-    if (receive.id === 'twitch' && receive.name === 'Unhost') {
-      set_variable('twitch:host:channel', '', VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:host:count', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
-
-      next();
-    }
-  },
-  'inputs-twitch-unhost': (module_name, receive, data, next_data) => {
-    _sender('twitch', 'UnhostOutside', { type: 'Chat', args: [] });
-  },
   'outputs-twitch-unique-message': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'twitch' && (receive.name === 'R9k' || receive.name === 'UniqueChat')) {
       set_variable('twitch:unique-message:enabled', receive.data.r9k.enabled, VARIABLE_TYPE.GLOBALS);
@@ -1461,6 +1697,14 @@ const actions = {
     }
   },
 };
+
+function update_interface() {
+  _sender('message', 'config', _config);
+}
+
+function save_config() {
+  _sender('manager', 'config', _config);
+}
 
 function scope(data) {
   let variable_type = VARIABLE_TYPE.GLOBALS;
@@ -1529,7 +1773,7 @@ function apply_variables(text, module_name, next_data) {
   return text.replace(/\$\{[^}]*}/g, '');
 }
 
-function variables_block(node, module_name, next_data, first) {
+function variables_block(prefix, node, module_name, next_data, first) {
   let connections = { inputs: 0, outputs: 0 };
   for (const input_index in node.inputs) {
     connections.inputs += node.inputs[input_index].connections.length;
@@ -1538,14 +1782,14 @@ function variables_block(node, module_name, next_data, first) {
     connections.outputs += node.outputs[output_index].connections.length;
   }
 
-  set_variable('block:previous:id', (first ? -1 : node.id), VARIABLE_TYPE.NEXT, module_name, next_data);
-  set_variable('block:previous:type', (first ? '' : node.type), VARIABLE_TYPE.NEXT, module_name, next_data);
-  set_variable('block:previous:name', (first ? '' : node.html), VARIABLE_TYPE.NEXT, module_name, next_data);
-  set_variable('block:previous:title', (first ? '' : node.title), VARIABLE_TYPE.NEXT, module_name, next_data);
-  set_variable('block:previous:input:exists', (typeof node.inputs.input_1 !== 'undefined'), VARIABLE_TYPE.NEXT, module_name, next_data);
-  set_variable('block:previous:output:exists', (typeof node.outputs.output_1 !== 'undefined'), VARIABLE_TYPE.NEXT, module_name, next_data);
-  set_variable('block:previous:input:connections', connections.inputs, VARIABLE_TYPE.NEXT, module_name, next_data);
-  set_variable('block:previous:output:connections', connections.outputs, VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable(`${prefix}:id`, (first ? -1 : node.id), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable(`${prefix}:type`, (first ? '' : node.type), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable(`${prefix}:name`, (first ? '' : node.html), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable(`${prefix}:title`, (first ? '' : node.title), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable(`${prefix}:input:exists`, (typeof node.inputs.input_1 !== 'undefined'), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable(`${prefix}:output:exists`, (typeof node.outputs.output_1 !== 'undefined'), VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable(`${prefix}:input:connections`, connections.inputs, VARIABLE_TYPE.NEXT, module_name, next_data);
+  set_variable(`${prefix}:output:connections`, connections.outputs, VARIABLE_TYPE.NEXT, module_name, next_data);
 }
 
 function process_modules(id, name, data) {
@@ -1573,7 +1817,7 @@ function process_modules(id, name, data) {
   }
 }
 
-function process_block(module_name, node, next_data, receive, force) {
+function process_block(module_name, node, next_data, receive, force, direct_next) {
   receive = receive || {};
   next_data = next_data || {};
 
@@ -1581,26 +1825,52 @@ function process_block(module_name, node, next_data, receive, force) {
     return;
   }
 
-  if ((force || !Object.keys(node.inputs).length) && typeof actions[node.data.type] !== 'undefined') {
+  if ((force || !Object.keys(node.inputs).length) && (direct_next || typeof actions[node.data.type] !== 'undefined')) {
     const next = node => {
-      variables_block(node, module_name, next_data);
+      variables_block('block:previous', node, module_name, next_data);
 
       for (const output_index in node.outputs) {
         const output = node.outputs[output_index].connections;
         for (const connection of node.outputs[output_index].connections) {
           const node = _config.actions[module_name].data[connection.node];
           if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled)) {
+            variables_block('block', node, module_name, next_data);
+
             actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
           }
         }
       }
     };
 
-    if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled || force)) {
-      variables_block(node, module_name, next_data, true);
+    if (direct_next) {
+      next(node);
+    } else if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled || force)) {
+      variables_block('block', node, module_name, next_data);
 
       actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
     }
+  }
+}
+
+function get_module_block_id(id) {
+  for (const module_name in _config.actions) {
+    const action = _config.actions[module_name],
+      node = action.data[id];
+
+    if (typeof node !== 'undefined') {
+      return {
+        module_name,
+        action,
+        node
+      };
+    }
+  }
+}
+
+function process_block_id(id, receive, next_data, force, direct_next) {
+  const data = get_module_block_id(id);
+  if (data.module_name && data.node) {
+    process_block(data.module_name, data.node, (next_data || {}), (receive || {}), force, direct_next);
   }
 }
 
@@ -1633,6 +1903,8 @@ function node_converter(node) {
     split[0] = 'inputs';
   } else if (split.join('-') === 'inputs-discord-webhook') {
     split.push('embed');
+  } else if (['inputs-discord-webhook-embed', 'inputs-discord-webhook-message'].indexOf(node.html) >= 0) {
+    split[0] = 'both';
   } else {
     check = false;
   }
@@ -1692,6 +1964,27 @@ setInterval(() => {
     });
 }, 5000);
 
+(new keyevents()).addListener((event, down) => {
+  let normal = [];
+  let simple = [];
+  for (const key in down) {
+    if (down[key]) {
+      normal.push(key);
+      simple.push(key.replace('LEFT ', '').replace('RIGHT ', ''));
+    }
+  }
+
+  normal = functions.sort_keys(normal);
+  simple = functions.sort_keys(simple);
+
+  if (JSON.stringify(_keys) !== JSON.stringify(normal)) {
+    _keys = normal;
+
+    process_modules('manager', 'keyboard', { event, down: { keys: down, normal, simple } });
+    _sender('message', 'keyboard', { event, down: { keys: down, normal, simple } });
+  }
+});
+
 
 module.exports = {
   init: (origin, config, sender) => {
@@ -1728,7 +2021,7 @@ module.exports = {
   receiver: (id, name, data) => {
     if (id === 'manager') {
       if (name === 'show') {
-        _sender('message', 'config', _config);
+        update_interface();
       } else if (name === 'enabled') {
         _config.default.enabled = data;
       }
@@ -1748,10 +2041,10 @@ module.exports = {
           }
         } else if (data.module) {
           _config.settings.module = data.module;
-          _sender('manager', 'config', _config);
+          save_config();
         } else if (data.disabled) {
           _config.settings.disabled = data.disabled;
-          _sender('manager', 'config', _config);
+          save_config();
         } else if (data.request) {
           if (data.request[1] === 'multi-actions') {
             return module.exports.receiver(...data.request.slice(1));
@@ -1791,6 +2084,30 @@ module.exports = {
         }
 
         _sender('message', 'receive', { source: false, id: 'manager', name: data.name, data: data.data });
+      } else if (name === 'websocket') {
+        if (typeof data === 'object' && data.target === 'multi-actions') {
+          if (data.name === 'block' && typeof data.data === 'number') {
+            const block = get_module_block_id(data.data);
+            if (block && block.module_name) {
+              let next_data = {};
+              while (_variables.temp.length) {
+                const variable = _variables.temp.shift();
+                set_variable(variable.name, variable.value, ((variable.scope === 'Local') ? VARIABLE_TYPE.LOCALS : VARIABLE_TYPE.NEXT), block.module_name, next_data);
+              }
+
+              process_block_id(data.data, data, next_data, false, true);
+            }
+          } else if (data.name === 'variable' && typeof data.data === 'object') {
+            if (typeof data.data.name === 'string' && data.data.name.trim().length && typeof data.data.value !== 'undefined' && typeof data.data.scope === 'string') {
+              data.data.name = data.data.name.trim();
+              if (['Local', 'Next'].indexOf(data.data.scope) >= 0) {
+                _variables.temp.push(data.data);
+              } else if (data.data.scope === 'Global') {
+                set_variable(data.data.name, data.data.value, VARIABLE_TYPE.GLOBALS);
+              }
+            }
+          }
+        }
       }
 
       return;

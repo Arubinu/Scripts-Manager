@@ -220,7 +220,7 @@
           widget.classList.remove('is-selected');
         });
 
-        const elem = ((event instanceof HTMLElement) ? event : event.target);
+        const elem = ((event instanceof HTMLElement) ? event : event.target.closest('[value]'));
         const id = elem.getAttribute('value');
         elem.classList.add('is-selected');
 

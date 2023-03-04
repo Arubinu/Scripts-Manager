@@ -130,6 +130,7 @@
       }
       .drawflow-node.block-note [contenteditable] {
         font-size: 1.3rem;
+        white-space: nowrap;
         outline: none !important;
         cursor: text;
       }
@@ -273,7 +274,8 @@
       }
 
       .is-browse,
-      .is-command {
+      .is-command,
+      .is-right-button {
         position: relative;
       }
 
@@ -292,10 +294,12 @@
         background-color: rgba(255, 255, 255, .06);
       }
 
-      .is-browse input {
+      .is-browse input,
+      .is-right-button input {
         padding-right: calc(6px + 24px) !important;
       }
-      .is-browse button {
+      .is-browse button,
+      .is-right-button button {
         position: absolute;
         top: 1px;
         right: -20px;
@@ -310,7 +314,8 @@
         border: none;
         cursor: pointer;
       }
-      .is-browse button .fa-xmark {
+      .is-browse button .fa-xmark,
+      .is-right-button button .fa-xmark {
         vertical-align: 4px;
       }
 
@@ -476,7 +481,7 @@
           <div class="content">
             <h4><span class="value-name"></span> :</h4>
           </div>
-          <input type="text" class="input has-text-centered" />
+          <textarea class="input" style="height: 120px;"></textarea>
         </section>
         <footer class="modal-card-foot is-justify-content-right">
           <button class="button is-success">Confirm</button>
@@ -490,6 +495,7 @@
         <div class="hero-body">
           <div class="subtitle is-size-6 has-text-white-ter">
             Program all kinds of actions related to addons.
+            <i class="fas fa-lock is-pulled-right ml-2 lock-view" title="Lock/Unlock view"></i>
             <i class="fas fa-gear is-pulled-right ml-2 edit-module" title="Edit"></i>
             <i class="fas fa-upload is-pulled-right ml-2 export-blocks" browse-file=".container .hero-body input.export" browse-file-name="module" browse-file-ext="smma" title="Export"></i>
             <i class="fas fa-download is-pulled-right ml-2 import-blocks" browse-file=".container .hero-body input.import" browse-file-ext="smma" title="Import"></i>
@@ -544,6 +550,15 @@
         </div>
         <div class="content mb-4">
           <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+            Stream Deck / Touch Portal
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
+            <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-outputs-color" section-filter="outputs" title="Blocks receiving an event"></div>
+          </h5>
+          <div class="mx-5" blocks-type="streamdeck"></div>
+        </div>
+        <div class="content mb-4">
+          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
             Twitch
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
@@ -563,6 +578,7 @@
         editor = new Drawflow(drawflow);
 
       let _config = false;
+      let view_locked = true;
       let edit_target = false;
       window.editor = editor;
       editor.draggable_inputs = false;
@@ -609,6 +625,15 @@
           document.querySelector('div.edit-module .module-enabled').classList.toggle('is-hidden', disabled);
           document.querySelector('div.edit-module .module-disabled').classList.toggle('is-hidden', !disabled);
         }
+      }
+
+      function cloneMouseEvent(event) {
+        const copy = document.createEvent('MouseEvents');
+        copy.initMouseEvent(event.type, event.bubbles, event.cancelable, event.view, event.detail,
+          event.pageX || event.layerX, event.pageY || event.layerY, event.clientX, event.clientY, event.ctrlKey, event.altKey,
+          event.shiftKey, event.metaKey, event.button, event.relatedTarget);
+
+        return copy;
       }
 
       // Events!
@@ -697,6 +722,14 @@
         window.drawflow_select();
       });
 
+      document.querySelector('i.lock-view').addEventListener('click', event => {
+        const elem = event.target;
+
+        view_locked = !view_locked;
+        elem.classList.toggle('fa-lock', view_locked);
+        elem.classList.toggle('fa-lock-open', !view_locked);
+      });
+
       document.querySelector('i.edit-module').addEventListener('click', event => {
         const elem = document.querySelector('div.edit-module'),
           input = elem.querySelector('input');
@@ -749,18 +782,22 @@
       });
 
       document.addEventListener('dblclick', () => {
-        const node = get_node(event.target);
-        if (node && event.target.nodeName.toLowerCase() === 'input' && event.target.getAttribute('type') === 'text') {
+        const node = get_node(event.target),
+          is_input = event.target.nodeName.toLowerCase() === 'input',
+          is_textarea = event.target.nodeName.toLowerCase() === 'textarea';
+
+        if (node && ((is_input && event.target.getAttribute('type') === 'text') || is_textarea)) {
           const elem = document.querySelector('div.edit-value'),
-            input = elem.querySelector('input'),
+            textarea = elem.querySelector('textarea'),
             title = elem.querySelector('.modal-card-title'),
             name = elem.querySelector('.value-name');
 
           elem.classList.add('is-active');
           title.innerText = window.get_block(node.html).title;
           name.innerText = get_name(event.target);
-          input.value = event.target.value;
-          input.focus();
+          textarea.classList.toggle('has-text-centered', !is_textarea);
+          textarea.value = event.target.value;
+          textarea.focus();
 
           edit_target = event.target;
         }
@@ -769,11 +806,11 @@
       document.querySelector('div.edit-value .is-success').addEventListener('click', event => {
         const node = get_node(event.target),
           elem = document.querySelector('div.edit-value'),
-          input = elem.querySelector('input'),
-          modal = event.target.closest('.modal');
+          modal = event.target.closest('.modal'),
+          textarea = elem.querySelector('textarea');
 
         modal.classList.remove('is-active');
-        edit_target.value = input.value;
+        edit_target.value = (edit_target.nodeName.toLowerCase() === 'input') ? textarea.value.replaceAll('\n', ' ') : textarea.value;
         edit_target.dispatchEvent(new Event('change', { bubbles: true }));
         edit_target = false;
       });
@@ -784,6 +821,24 @@
       for (const filter of document.querySelectorAll('[section-filter]')) {
         filter.addEventListener('click', section_filter);
       }
+
+      document.addEventListener('mousedown', event => {
+        if (!view_locked && event.target === editor.container) {
+          editor.precanvas.dispatchEvent(cloneMouseEvent(event));
+        } else if (view_locked && event.target === editor.precanvas) {
+          event.stopPropagation();
+        }
+      }, true);
+      document.addEventListener('mousemove', event => {
+        if (!view_locked && event.target === editor.container) {
+          editor.precanvas.dispatchEvent(cloneMouseEvent(event));
+        }
+      }, false);
+      document.addEventListener('mouseup', event => {
+        if (!view_locked && event.target === editor.container) {
+          editor.precanvas.dispatchEvent(cloneMouseEvent(event));
+        }
+      }, false);
 
       window.addEventListener('message', event => {
         if (event.origin !== 'null') {
@@ -828,6 +883,8 @@
             if (node) {
               node.elem.classList.toggle('disabled', !event.data.data.enabled);
             }
+          } else if (event.data.name === 'keyboard') {
+            window.drawflow_receiver(false, 'manager', 'keyboard', event.data.data);
           }
         }
       }, false);

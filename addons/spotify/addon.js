@@ -7,11 +7,13 @@ const path = require('node:path'),
 const {
   client_id: CLIENT_ID,
   client_secret: CLIENT_SECRET,
+  scopes: SCOPES,
 } = require('./auth.json');
 
 let _vars = {},
   _config = {},
   _sender = null,
+  _refresh = false,
   instance = new spotify();
 
 instance.getQueue = function(callback) {
@@ -22,17 +24,10 @@ instance.getQueue = function(callback) {
 };
 
 function update_interface() {
-  const scopes = [
-    'user-read-playback-state',
-    'user-modify-playback-state',
-    'playlist-read-private',
-    'playlist-modify-public',
-    'playlist-modify-private',
-  ];
-
   _sender('message', 'config', Object.assign({
-    authorize: instance.createAuthorizeURL(scopes, ''),
-    redirect_url: `${_vars.http}/spotify/authorize`
+    authorize: instance.createAuthorizeURL(SCOPES, ''),
+    redirect_url: `${_vars.http}/spotify/authorize`,
+    refresh: _refresh
   }, _config));
 }
 
@@ -52,7 +47,7 @@ async function refresh_token(error) {
 }
 
 const functions = {
-  Search: async function(track) {
+  search: async function(track) {
     try {
       const data = await instance.searchTracks(track);
       if (typeof data.body === 'object' && typeof data.body.tracks === 'object' && Array.isArray(data.body.tracks.items) && data.body.tracks.items.length) {
@@ -60,20 +55,20 @@ const functions = {
       }
     } catch (e) {
       if (await refresh_token(e)) {
-        return functions.Search(...arguments);
+        return functions.search(...arguments);
       }
 
       throw e;
     }
   },
-  AddToQueue: async function(track, device) {
+  addToQueue: async function(track, device) {
     try {
       if (!device) {
-        device = await functions.GetActiveDevice();
+        device = await functions.getActiveDevice();
       }
 
       if (track.indexOf('spotify:')) {
-        const tracks = await functions.Search(track);
+        const tracks = await functions.search(track);
         if (tracks.length) {
           return await instance.addToQueue(tracks[0].uri, { device_id: device && device.id });
         }
@@ -84,20 +79,20 @@ const functions = {
       return false;
     } catch (e) {
       if (await refresh_token(e)) {
-        return functions.AddToQueue(...arguments);
+        return functions.addToQueue(...arguments);
       }
 
       throw e;
     }
   },
-  PlayNow: async function(track, device) {
+  playNow: async function(track, device) {
     try {
       if (!device) {
-        device = await functions.GetActiveDevice();
+        device = await functions.getActiveDevice();
       }
       if (track) {
         if (track.indexOf('spotify:')) {
-          const tracks = await functions.Search(track);
+          const tracks = await functions.search(track);
           if (tracks.length) {
             return await instance.play({
               device_id: device && device.id,
@@ -117,43 +112,43 @@ const functions = {
       return false;
     } catch (e) {
       if (await refresh_token(e)) {
-        return functions.PlayNow(...arguments);
+        return functions.playNow(...arguments);
       }
 
       throw e;
     }
   },
-  PauseNow: async function(device) {
+  pauseNow: async function(device) {
     try {
       if (!device) {
-        device = await functions.GetActiveDevice();
+        device = await functions.getActiveDevice();
       }
 
       return await instance.pause({ device_id: device && device.id });
     } catch (e) {
       if (await refresh_token(e)) {
-        return functions.PauseNow(...arguments);
+        return functions.pauseNow(...arguments);
       }
 
       throw e;
     }
   },
-  GetDevices: async function() {
+  getDevices: async function() {
     try {
       const data = await instance.getMyDevices();
 
       return data.body.devices;
     } catch (e) {
       if (await refresh_token(e)) {
-        return functions.GetDevices(...arguments);
+        return functions.getDevices(...arguments);
       }
 
       throw e;
     }
   },
-  GetActiveDevice: async function() {
+  getActiveDevice: async function() {
     try {
-      const devices = await functions.GetDevices();
+      const devices = await functions.getDevices();
 
       if (devices.length >= 0) {
         for (const device of devices) {
@@ -166,7 +161,19 @@ const functions = {
       }
     } catch (e) {
       if (await refresh_token(e)) {
-        return functions.GetActiveDevice(...arguments);
+        return functions.getActiveDevice(...arguments);
+      }
+
+      throw e;
+    }
+  },
+  getCurrentTrack: async function() {
+    try {
+      const data = await instance.getMyCurrentPlaybackState();
+      return data.body && data.body.item;
+    } catch (e) {
+      if (await refresh_token(e)) {
+        return functions.getCurrentTrack(...arguments);
       }
 
       throw e;
@@ -178,7 +185,7 @@ const functions = {
       return data.body && data.body.is_playing;
     } catch (e) {
       if (await refresh_token(e)) {
-        return functions.GetActiveDevice(...arguments);
+        return functions.isPlaying(...arguments);
       }
 
       throw e;
@@ -191,7 +198,7 @@ const functions = {
       return data.body && data.body.shuffle_state;
     } catch (e) {
       if (await refresh_token(e)) {
-        return functions.GetActiveDevice(...arguments);
+        return functions.isShuffle(...arguments);
       }
 
       throw e;
@@ -213,6 +220,20 @@ module.exports = {
     instance.setClientSecret(_config.connection.client_secret || CLIENT_SECRET);
     if (_config.connection.access_token) {
       instance.setAccessToken(_config.connection.access_token);
+
+      let scopes = {
+        saved: _config.connection.scopes,
+        current: SCOPES
+      };
+      scopes.current.sort();
+      if (Array.isArray(scopes.saved)) {
+        scopes.saved.sort();
+      }
+
+      if (JSON.stringify(scopes.saved) !== JSON.stringify(scopes.current)) {
+        _refresh = true;
+        _sender('manager', 'state', 'warning');
+      }
     }
     if (_config.connection.refresh_token) {
       instance.setRefreshToken(_config.connection.refresh_token);
@@ -258,10 +279,13 @@ module.exports = {
           instance.authorizationCodeGrant(search.code).then(data => {
             _config.connection.access_token = data.body.access_token;
             _config.connection.refresh_token = data.body.refresh_token;
+            _config.connection.scopes = SCOPES;
 
             instance.setAccessToken(_config.connection.access_token);
             instance.setRefreshToken(_config.connection.refresh_token);
 
+            _refresh = false;
+            _sender('manager', 'state');
             _sender('manager', 'config', _config);
 
             update_interface();

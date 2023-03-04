@@ -1,8 +1,8 @@
 const fs = require('node:fs'),
   path = require('node:path'),
   https = require('node:https'),
+  StreamTransform = require('node:stream').Transform,
   temp = require('temp'),
-  StreamTransform = require('stream').Transform,
   notifications = require('electron-custom-notifications');
 
 const PATH_ICON = path.join(__dirname, '..', '..', 'public', 'images', 'logo.png'),
@@ -229,6 +229,36 @@ module.exports = {
           _timeout = setTimeout(() => {
             functions.ShowNotification(`${name[0].toUpperCase() + name.substring(1)}: ${Array.isArray(data[name]) ? data[name].join(' ') : data[name]}`, 'Notification settings');
           }, 2000 );
+        }
+      }
+
+      return;
+    } else if (id === 'methods') {
+      if (name === 'websocket') {
+        if (typeof data === 'object' && data.target === 'notifications') {
+          if (data.name === 'corner') {
+            const anchors = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
+
+            let anchor = '';
+            if (data.data && anchors.indexOf(data.data) >= 0) {
+              anchor = data.data;
+              _config.settings.anchor = data.data.split('-');
+            } else {
+              if (Array.isArray(_config.settings.anchor)) {
+                anchor = _config.settings.anchor.join('-');
+              }
+
+              const pos = anchors.indexOf(anchor) + 1;
+              _config.settings.anchor = anchors[pos % anchors.length].split('-');
+            }
+
+            update_interface();
+            save_config();
+          } else if (data.name === 'next-screen') {
+            next_screen();
+            update_interface();
+            save_config();
+          }
         }
       }
 

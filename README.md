@@ -1,7 +1,7 @@
 # Scripts Manager
 
 Program grouping together a multitude of scripts to avoid redeveloping everything each time.
-<br />To know everything about how this software works, documentation is available in the `Wiki` tab at the top of the page.
+<br />To know everything about how this software works, documentation is available here: https://arubinu.github.io/Scripts-Manager
 
 ![](screenshot.png)
 

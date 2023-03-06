@@ -1,0 +1,207 @@
+<h2>
+  <a id="description" class="anchor" href="#description"><span class="octicon octicon-link"></span></a>
+  Description
+</h2>
+
+<p>
+  <span class="text-orange">Scripts Manager</span> est un outil pour les streameurs, les développeurs, mais aussi tous ceux qui souhaitent automatiser des actions sur leur ordinateur.
+  <br />Vous pouvez tout de même l'utiliser comme une boite à outil pour ne pas redévelopper un logiciel de A à Z si vous êtes un développeur <code>Java Scripts</code>/<code>NodeJS</code>.
+  <br /><br />N'hésitez-pas à participer en m'envoyant vos suggestions via le serveur <span class="text-orange">Discord</span> de ma chaîne <span class="text-orange">Twitch</span>: <a href="https://discord.gg/BNarUut7Kx" target="_blank">https://discord.gg/BNarUut7Kx</a>.
+  <br />Dans le cas où vous développez des <span class="text-orange">Addons</span> ou des <span class="text-orange">Scripts</span>, proposez-les au téléchargement depuis votre compte <span class="text-orange">GitHub</span> (je l'ajouterai peut-être dans cette documentation).
+</p>
+
+<h2>
+  <a id="download" class="anchor" href="#download"><span class="octicon octicon-link"></span></a>
+  Téléchargement
+</h2>
+
+<p>
+  La version est celle présenté dans cette documentation: <a href="https://github.com/Arubinu/Scripts-Manager/releases/tag/v2.0.5" target="_blank">https://github.com/Arubinu/Scripts-Manager/releases/tag/v2.0.5</a>.
+  <br />Mais vous pouvez consulter toutes les versions ici: <a href="https://github.com/Arubinu/Scripts-Manager/releases" target="_blank">https://github.com/Arubinu/Scripts-Manager/releases</a>.
+  <br /><br />Vous trouverez le logiciel à télécharger dans la partie <code>Assets</code> (ceci n'est pas un installeur mais le logiciel complet).
+  <br />Mettez le logiciel à l'endroit où vous voulez le laisser avant de le lancer, évitez les dossiers où il y a une demande d'accès administrateur (ce logiciel ne vous demandera jamais ce genre de droits).
+  <br /><br />Il est possible que Windows reconnaisse le logiciel comme malveillant, puisque je n'ai pas les moyens de prendre un certificat (bien trop cher).
+</p>
+
+<ul>
+  <li>Si Windows bloque le téléchargement, il vous faudra désactiver temporairement votre antivirus.</li>
+  <li>Si Windows supprime le fichier une fois téléchargé, vous pouvez vous rendre dans la partie quarantaine pour autoriser le logiciel (il sera immédiatement remis à sa place).</li>
+  <li>Au lancement du logiciel, Windows vous avertira du potentiel danger, vous pouvez cliquer sur <code>Informations complémentaires</code> puis <code>Exécuter quand même</code></li>
+</ul>
+
+<h2>
+  <a id="addons" class="anchor" href="#addons"><span class="octicon octicon-link"></span></a>
+  Addons
+</h2>
+
+<p>
+  Il existe actuellement plusieurs <span class="text-orange">Addons</span> intégrés au logiciel qui donnent accès notamment à <span class="text-orange">OBS Studio</span>, <span class="text-orange">Spotify</span>, et <span class="text-orange">Twitch</span>.
+  <br />Ceux-ci peuvent être utilisés via des <span class="text-orange">Scripts</span> de votre conception ou <span class="text-orange">Multi Actions</span>.
+</p>
+
+<h3>
+  <a id="notifications" class="anchor" href="#notifications"><span class="octicon octicon-link"></span></a>
+  Notifications
+</h3>
+
+<p>
+  Rend l'affichage des notifications disponible par les différents <span class="text-orange">Scripts</span> existants.
+  <br />Il est possible de les utiliser depuis le bloc <span class="text-orange">Notification</span> du script <span class="text-orange">Multi Actions</span>.
+</p>
+
+<img src="./images/screenshots/v2.0/notifications.png" alt="" />
+
+<p>
+  Il est possible de régler l'opacité, la taille, l'arrondi des coins, ainsi que la position des notifications.
+</p>
+
+<h3>
+  <a id="obs-studio" class="anchor" href="#obs-studio"><span class="octicon octicon-link"></span></a>
+  OBS Studio
+</h3>
+
+<img src="./images/screenshots/v2.0/obs-studio.png" alt="" />
+
+<p>
+  L'adresse est toujours la même, sauf si vous avez une configuration à deux ordinateurs.
+  <br /><u>Le mot de passe est à récupérer dans <span class="text-orange">OBS Studio</span>, suivez ces quelques étapes:</u>
+</p>
+
+<ul>
+  <li>Cliquez sur <code>Outils</code> situé dans la barre d'outils d'<span class="text-orange">OBS Studio</span> (barre en haut de l'application),</li>
+  <li>Cliquez sur <code>Paramètre du websocket obs</code>, pour ouvrir les paramètres,</li>
+  <li>Cochez <code>Activer le serveur WebSocket</code> si ce n'est déjà fait, sans oublier de cliquer sur <code>Appliquer</code>,</li>
+  <li>Cliquez sur <code>Afficher les informations de connexion</code> puis sur <code>Copier</code>, au niveau du mot de passe,</li>
+  <li>Entrez le mot de passe dans le champ prévu à cet effet sur <span class="text-orange">Scripts Manager</span>.</li>
+</ul>
+
+<h3>
+  <a id="spotify" class="anchor" href="#spotify"><span class="octicon octicon-link"></span></a>
+  Spotify
+</h3>
+
+<p>
+  Contrôlez <span class="text-orange">Spotify</span> depuis le script <span class="text-orange">Multi Actions</span> via une commande <span class="text-orange">Twitch</span> ou autre.
+</p>
+
+<img src="./images/screenshots/v2.0/spotify.png" alt="" />
+
+<h4>
+  <a id="limited-connection" class="anchor" href="#limited-connection"><span class="octicon octicon-link"></span></a>
+  Connexion limité
+</h4>
+
+<p>
+  Il vous suffit de cliquer sur <code>Generate</code> pour donner accès à votre compte et générer les tokens.
+  <br />Cette méthode est très limitée, sauf si vous m'envoyez votre adresse e-mail, afin que je puisse l'ajouter à l'application développeur <span class="text-orange">Spotify</span>.
+</p>
+
+<h4>
+  <a id="extended-connection" class="anchor" href="#extended-connection"><span class="octicon octicon-link"></span></a>
+  Connexion étendue
+</h4>
+
+<p>
+  Vous devez créer vous-même une application développeur <span class="text-orange">Spotify</span>, sans oublier de saisir votre propre adresse e-mail pour enlever les limitations.
+  <br />Cette application vous donne le <code>Client ID</code> ainsi que le <code>Client Secret</code> pour pouvoir générer les tokens associés.
+</p>
+
+<h3>
+  <a id="twitch" class="anchor" href="#twitch"><span class="octicon octicon-link"></span></a>
+  Twitch
+</h3>
+
+<p>
+  Débloque toutes les fonctionnalités du script <span class="text-orange">Multi Actions</span> ainsi que du script <span class="text-orange">Stream Flash</span>.
+</p>
+
+<img src="./images/screenshots/v2.0/twitch.png" alt="" />
+
+<p>
+  Cliquez simplement sur <code>Generate</code> pour donner accès à votre compte.
+  <br />L'envoi de messages, d'annonces et autres sera en votre nom.
+</p>
+
+<h2>
+  <a id="scripts" class="anchor" href="#scripts"><span class="octicon octicon-link"></span></a>
+  Scripts
+</h2>
+
+<h3>
+  <a id="multi-actions" class="anchor" href="#multi-actions"><span class="octicon octicon-link"></span></a>
+  Multi Actions
+</h3>
+
+<p>
+  Ce script contient un grand nombre de possibilités d'automatisation séparées en modules comme bon vous semble.
+</p>
+
+<img src="./images/screenshots/v2.0/multi-actions.png" alt="" />
+
+<p>
+  En cliquant sur <code>Toggle Blocks</code> vous aurez accès à tous les blocs de script que vous pourrez utiliser en les faisant glisser dans le module.
+  <br />Le script étant très complexe, une page lui est dédiée en cliquant ici: <a href="?multi-actions">Multi Actions</a>.
+</p>
+
+<h3>
+  <a id="stream-flash" class="anchor" href="#stream-flash"><span class="octicon octicon-link"></span></a>
+  Stream Flash
+</h3>
+
+<p>
+  Faites clignoter votre écran lorsqu'un message est envoyé dans le tchat <span class="text-orange">Twitch</span>.
+</p>
+
+<img src="./images/screenshots/v2.0/stream-flash.png" alt="" />
+
+<p>
+  La première ligne informe du nombre de flashs survenus pour les différents types d'utilisateurs.
+</p>
+
+<p>
+  <code>Screen to flash</code> laisse le choix de l'écran sur lequel afficher le flash (souvent celui où <span class="text-orange">OBS Studio</span> est affiché).
+  <br />Le bouton <code>Reset statistics</code> remet à zéro les compteurs de la première ligne.
+</p>
+
+<p>
+  <u>Quelques paramètres:</u>
+</p>
+
+<ul>
+  <li><u>Opacity:</u> permet de ne pas trop masquer les informations affichées à l'écran.</li>
+  <li><u>Duration:</u> est le temps que met le flash pour apparaître et disparaître.</li>
+  <li><u>Delay:</u> ignore les messages pendant ce temps après qu'un flash s'est produit.</li>
+  <li><u>Pause:</u> met en pause le système <span class="text-orange">Stream Flash</span> pendant la durée choisie (accessible depuis l'icône <span class="text-orange">Scripts Manager</span> dans la barre d'état système).</li>
+</ul>
+
+<p>
+  <code>Respond to join</code> active le flash lorsqu'un utilisateur arrive sur le stream (même sans parler).
+  <br /><code>Respond to command</code> active le flash lorsqu'une commande est envoyée dans le tchat <span class="text-orange">Twitch</span>.
+</p>
+
+<h3>
+  <a id="stream-widgets" class="anchor" href="#stream-widgets"><span class="octicon octicon-link"></span></a>
+  Stream Widgets
+</h3>
+
+<p>
+  Affiche des pages Web sur l'un de vos écrans.
+  <br />Peut être utilisé pour afficher ses alertes, son chat <span class="text-orange">Twitch</span>, ou autre sur un jeu (ne fonctionne pas sur les écrans où un jeu est réglé en plein écran exclusif).
+</p>
+
+<img src="./images/screenshots/v2.0/stream-widgets.png" alt="" />
+
+<p>
+  <code>Screen for widgets</code> laisse le choix de l'écran sur lequel afficher les pages web (souvent l'écran principal).
+</p>
+
+<p>
+  <code>Anchor</code> permet de choisir l'ancrage de base de la page pour les valeurs suivantes.
+  <br /><code>X</code>, <code>Y</code>, <code>Width</code>, <code>Height</code> peut être fait directement depuis l'icône <span class="text-orange">Scripts Manager</span> dans la barre d'état système (avec l'option <code>Edit Mode</code>).
+  <br />Pour quitter le mode d'édition, appuyez simplement sur le bouton <code>Échap</code> du clavier.
+</p>
+
+<p>
+  Indiquez un nom dans le champ <code>Name</code> puis l'adresse de la page à afficher dans le champ <code>URL</code> puis cliquez sur <code>Create</code>.
+  Une fois affiché, le déplacement et le redimensionnement se font à partir de l'option <code>Edit Mode</code> mentionnée précédemment.
+</p>

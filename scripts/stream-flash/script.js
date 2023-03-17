@@ -3,6 +3,7 @@ const path = require('node:path'),
 
 let win = null,
   _last = 0,
+  _menu = [],
   _pause = 0,
   _screen = 0,
   _config = {},
@@ -20,6 +21,7 @@ let win = null,
     statistics: {
       flash: 0,
       viewer: 0,
+      follower: 0,
       subscriber: 0,
       moderator: 0
     }
@@ -63,10 +65,35 @@ function create_window() {
   });
   setInterval(() => {
     if (_config.default.enabled) {
-      win.setAlwaysOnTop(true, 'screen-saver');
-      win.setVisibleOnAllWorkspaces(true);
+      try {
+        win.setAlwaysOnTop(true, 'screen-saver');
+        win.setVisibleOnAllWorkspaces(true);
+      } catch (e) {}
     }
   }, 100);
+}
+
+function update_menu() {
+  _sender('manager', 'menu', [
+    { label: 'Pause', type: 'checkbox', click : item => {
+      clearTimeout(_pause);
+      _pause = 0;
+
+      if (item.checked) {
+        _pause = setTimeout(() => {
+          _pause = 0;
+          item.checked = false;
+        }, (_config.settings.pause * 1000 * 60));
+      }
+    }, checked: !!_pause },
+    { label: 'Next Screen', click : () => {
+      next_screen();
+      update_interface();
+      save_config();
+
+      flash_screen(false, true);
+    } }
+  ]).then();
 }
 
 function update_interface() {
@@ -147,27 +174,7 @@ module.exports = {
     _config.settings.duration = Math.max(100, _config.settings.duration);
   },
   initialized: () => {
-    _sender('manager', 'menu', [
-      { label: 'Pause', type: 'checkbox', click : item => {
-        clearTimeout(_pause);
-        _pause = 0;
-
-        if (item.checked) {
-          _pause = setTimeout(() => {
-            _pause = 0;
-            item.checked = false;
-          }, (_config.settings.pause * 1000 * 60));
-        }
-      } },
-      { label: 'Next Screen', click : () => {
-        next_screen();
-        update_interface();
-        save_config();
-
-        flash_screen(false, true);
-      } }
-    ]);
-
+    update_menu();
     create_window();
   },
   receiver: (id, name, data) => {
@@ -177,9 +184,7 @@ module.exports = {
       } else if (name === 'enabled') {
         _config.default.enabled = data;
       }
-    }
-
-    if (id === 'message') {
+    } else if (id === 'message') {
       if (typeof data === 'object') {
         const name = Object.keys(data)[0];
         if (typeof data[name] === typeof _config.settings[name]) {
@@ -198,18 +203,47 @@ module.exports = {
       } else if (data === 'reset') {
         _config.statistics.flash = 0;
         _config.statistics.viewer = 0;
-        _config.statistics.moderator = 0;
+        _config.statistics.follower = 0;
         _config.statistics.subscriber = 0;
+        _config.statistics.moderator = 0;
 
         update_interface();
         save_config();
       }
+    } else if (id === 'methods') {
+      if (name === 'websocket') {
+        if (typeof data === 'object' && data.target === 'stream-flash') {
+          if (data.name === 'pause') {
+            const state = (typeof data.data === 'object' && typeof data.data.state === 'boolean') ? data.data.state : !_pause,
+              delay = (typeof data.data === 'object' && typeof data.data.delay === 'number' && data.data.delay > 0) ? data.data.delay : _config.settings.pause;
+
+            clearTimeout(_pause);
+            _pause = 0;
+
+            if (state) {
+              _pause = setTimeout(() => {
+                _pause = 0;
+              }, (delay * 1000 * 60));
+            }
+
+            update_menu();
+          } else if (data.name === 'next-screen') {
+            next_screen();
+            update_interface();
+            save_config();
+
+            flash_screen(false, true);
+          }
+        }
+      }
+
+      return;
     }
 
     if (_config.default.enabled) {
-      if (id === 'twitch' && name === 'Register') {
+      if (id === 'twitch' && name === 'AuthenticationSuccess') {
         flash_screen('connected', true);
-      } else if (id === 'twitch' && (name === 'Error' || name === 'Disconnected')) {
+      } else if (id === 'twitch' && (name === 'AuthenticationFailure' || name === 'Disconnected')) {
         flash_screen('disconnected', true);
       }
 
@@ -227,6 +261,9 @@ module.exports = {
           }
           if (data.flags.subscriber && !(viewer = false)) {
             ++_config.statistics.subscriber;
+          }
+          if (data.flags.follower && !(viewer = false)) {
+            ++_config.statistics.follower;
           }
 
           if (viewer) {

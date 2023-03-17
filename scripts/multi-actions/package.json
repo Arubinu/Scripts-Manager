@@ -1,0 +1,22 @@
+{
+  "name": "multi-actions",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Arubinu",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^19.0.6"
+  },
+  "dependencies": {
+    "dgram": "^1.0.1",
+    "discord.js": "^14.8.0",
+    "node-global-key-listener": "^0.1.1",
+    "temp": "^0.9.4",
+    "undici": "^5.5.1",
+    "ws": "^8.13.0"
+  }
+}

@@ -1,6 +1,8 @@
 const fs = require('node:fs'),
+  net = require('node:net'),
   http = require('node:http'),
   path = require('node:path'),
+  tp = require('touchportal-api'),
   ws = require('ws'),
   { usb, WebUSB } = require('usb'),
   elog = require('electron-log'),
@@ -16,14 +18,29 @@ const APP_PORT = 5042,
   store = new estore();
 
 let win,
+  tpc,
   wss,
   tray,
   menus = {},
   addons = {},
+  exited = false,
   manager = {},
   scripts = {},
+  tpc_state = false,
+  store_clear = false,
   usb_infos = {},
   bluetooth_callback = null;
+
+function relaunch_app() {
+  if (process.env.PORTABLE_EXECUTABLE_FILE) {
+    app.relaunch({ execPath: process.env.PORTABLE_EXECUTABLE_FILE });
+  } else {
+    app.relaunch();
+  }
+
+  console.log('Closing Scripts Manager');
+  app.exit();
+}
 
 function create_server() {
   const server = http.createServer({}, async (req, res) => {
@@ -34,36 +51,203 @@ function create_server() {
     res.writeHead(200);
     res.end('success');
   });
-  server.on('error', err => {
-    if (err.message.indexOf('EADDRINUSE') < 0) {
-      console.error(err);
-    }
-  });
+  server.on('error', exit_on_error);
   server.listen(APP_PORT, () => {
-    console.log('Http running on port', APP_PORT);
+    console.log('HTTP running on port', APP_PORT);
   });
 
   wss = new ws.Server({server});
   wss.on('connection', client => {
     client.on('message', async data => {
       if (typeof data === 'object') {
-        data = String.fromCharCode.apply(null, new Uint16Array(data));
+        data = Buffer.from(data).toString();
       }
 
       try {
         data = JSON.parse(data);
       } catch (e) {}
 
-      if (await all_methods('websocket', data)) {
+      if (typeof data === 'object' && data.target === 'manager') {
+        if (data.name === 'enabled' && typeof data.data === 'object') {
+          win.webContents.send('manager', { name: data.name, data: data.data });
+        } else if (data.name === 'addons') {
+          let data = {};
+          for (const id in addons) {
+            data[id] = addons[id].config.default;
+          }
+
+          client.send(JSON.stringify({ from: 'manager', name: 'addons', data }));
+        } else if (data.name === 'scripts') {
+          let data = {};
+          for (const id in scripts) {
+            data[id] = scripts[id].config.default;
+          }
+
+          client.send(JSON.stringify({ from: 'manager', name: 'scripts', data }));
+        }
+      } else if (await all_methods('websocket', data)) {
         return;
       }
     });
   });
+
+  const tcp_connect = () => {
+    tpc = new tp.Client();
+
+    tpc.on('connected', () => {
+      if (!tpc_state) {
+        tpc_state = true;
+        console.log('TouchPortal Connected');
+      }
+
+      let data = [];
+      for (const id in scripts) {
+        data.push(scripts[id].config.default.name);
+      }
+      tpc.choiceUpdate('script', data);
+    });
+
+    tpc.on('Action', async _data => {
+      const get_state = state => {
+          if (state === 'Enable') {
+            return true;
+          } else if (state === 'Disable') {
+            return false;
+          }
+
+          return undefined;
+        },
+        get_script = name => {
+          for (const id in scripts) {
+            if (scripts[id].config.default.name === name) {
+              return id;
+            }
+          }
+
+          return undefined;
+        },
+        get_evidence = evidence => {
+          const evidences = {
+            'EMF Level 5': 'emf-5',
+            'Fingerprints': 'fingerprints',
+            'Ghost Writing': 'ghost-writing',
+            'Freezing Temperatures': 'freezing-temperatures',
+            'D.O.T.S Projector': 'dots-projector',
+            'Ghost Orb': 'ghost-orb',
+            'Spirit Box': 'spirit-box'
+          };
+
+          return evidences[evidence];
+        },
+        get_mode = mode => {
+          if (mode === 'Found') {
+            return 'on';
+          } else if (mode === 'Impossible') {
+            return 'off';
+          }
+
+          return 'toggle';
+        };
+
+      let data = {};
+      for (const item of _data.data) {
+        data[item.id] = item.value;
+      }
+
+      switch (_data.actionId) {
+        case 'fr.arubinu42.action.scripts-manager.custom-request':
+          try {
+            await all_methods('websocket', (data.isJson ? JSON.parse(data.message) : data.message));
+          } catch (e) {}
+
+          break;
+
+        case 'fr.arubinu42.action.scripts-manager.toggle-script':
+          win.webContents.send('manager', { name: get_script(data.script), data: get_state(data.state) });
+          break;
+
+        case 'fr.arubinu42.action.multi-actions.button':
+          await all_methods('websocket', { target: 'multi-actions', name: 'block', data: parseInt(data.id) });
+          break;
+
+        case 'fr.arubinu42.action.multi-actions.variable-setter.string':
+        case 'fr.arubinu42.action.multi-actions.variable-setter.number':
+        case 'fr.arubinu42.action.multi-actions.variable-setter.boolean':
+          await all_methods('websocket', { target: 'multi-actions', name: 'variable', data });
+          break;
+
+        case 'fr.arubinu42.action.notifications.corner':
+          await all_methods('websocket', { target: 'notifications', name: 'corner', data: data.toLowerCase() });
+          break;
+
+        case 'fr.arubinu42.action.notifications.next-screen':
+          await all_methods('websocket', { target: 'notifications', name: 'next-screen' });
+          break;
+
+        case 'fr.arubinu42.action.stream-flash.next-screen':
+          await all_methods('websocket', { target: 'stream-flash', name: 'next-screen' });
+          break;
+
+        case 'fr.arubinu42.action.stream-flash.pause':
+          await all_methods('websocket', { target: 'stream-flash', name: 'pause', data: { state: get_state(data.state) } });
+          break;
+
+        case 'fr.arubinu42.action.stream-widgets.next-screen':
+          await all_methods('websocket', { target: 'stream-widgets', name: 'next-screen' });
+          break;
+
+        case 'fr.arubinu42.action.stream-widgets.replace-url':
+          await all_methods('websocket', { target: 'stream-widgets', name: 'replace-url', data: { name: data.widget, url: data.url } });
+          break;
+
+        case 'fr.arubinu42.action.stream-widgets.toggle-widget':
+          await all_methods('websocket', { target: 'stream-widgets', name: 'toggle-widget', data: { name: data.widget, state: get_state(data.state) } });
+          break;
+
+        case 'fr.arubinu42.action.phasmophobia.evidence':
+          await all_methods('websocket', {
+            origin: 'arubinu42',
+            data: {
+              target: 'phasmophobia',
+              name: `${get_mode(data.mode)}-evidence`,
+              data: get_evidence(data.evidence)
+            }
+          });
+          break;
+
+        case 'fr.arubinu42.action.phasmophobia.reset':
+          await all_methods('websocket', {
+            origin: 'arubinu42',
+            data: {
+              target: 'phasmophobia',
+              name: 'reset-evidence',
+              data: undefined
+            }
+          });
+          break;
+      }
+    });
+
+    tpc.on('disconnected', () => {
+      if (tpc_state) {
+        tpc_state = false;
+        console.log('TouchPortal Disconnected');
+      }
+
+      setTimeout(() => {
+        tcp_connect();
+      }, 5000);
+    });
+
+    tpc.connect({ pluginId: 'fr.arubinu42', disableLogs: true, exitOnClose: false });
+  };
+
+  tcp_connect();
 }
 
 function create_window() {
   win = new BrowserWindow({
-    show: false,
+    show: !manager.default || !manager.default.systray,
     icon: APP_ICON,
     width: 1140,
     height: 630,
@@ -79,7 +263,15 @@ function create_window() {
 
   win.setMenu(null);
   win.setTitle('Scripts Manager');
-  win.loadFile(path.join(__dirname, 'public', 'index.html')).then(() => {
+  win.loadFile(path.join(__dirname, 'public', 'index.html'), {
+    extraHeaders: 'Content-Security-Policy: ' + [
+      `default-src 'self'`,
+      `connect-src 'self' https://api.github.com/repos/Arubinu/Scripts-Manager/releases/latest`,
+      `script-src 'self'`,
+      `style-src 'self'`,
+      `frame-src 'self'`
+    ].join('; ')
+  }).then(() => {
     ipcMain.handleOnce('init', (event, data) => {
       ipcMain.handle('manager', (event, data) => {
         let id = 'manager';
@@ -114,7 +306,7 @@ function create_window() {
         } else if (data.name === 'browse:file' || data.name === 'browse:files') {
           dialog[data.data.name ? 'showSaveDialog' : 'showOpenDialog']({
             properties: [(data.name === 'browse:files') ? 'openFiles' : 'openFile'],
-            defaultPath: data.data.name ? `${data.data.name}.${data.data.ext}` : undefined,
+            defaultPath: data.data.name ? `${data.data.name}${data.data.ext ? `.${data.data.ext}` : ''}` : undefined,
             filters: [{ name: 'all', extensions: (data.data.ext ? data.data.ext.split(',') : ['*']) }],
           }).then(result => {
             if (!result.canceled) {
@@ -142,6 +334,36 @@ function create_window() {
           } else if (data.name === 'load') {
             data.data = JSON.parse(JSON.stringify(manager));
             win.webContents.send('manager', data);
+          } else if (data.name === 'import') {
+            const saved = JSON.stringify(store.store);
+            try {
+              store_clear = true;
+              store.set(JSON.parse(fs.readFileSync(data.data, 'utf-8')));
+
+              if (process.env.PORTABLE_EXECUTABLE_DIR) {
+                app.setLoginItemSettings({
+                  name: 'Scripts Manager',
+                  path: process.env.PORTABLE_EXECUTABLE_FILE,
+                  openAtLogin: manager.default.startup
+                });
+              }
+
+              relaunch_app();
+            } catch (e) {
+              store.set(JSON.parse(saved));
+            }
+
+            store_clear = false;
+          } else if (data.name === 'export') {
+            try {
+              fs.writeFileSync(data.data, JSON.stringify(store.store, null, '  '));
+            } catch (e) {}
+          } else if (data.name === 'reset' || data.name === 'restart') {
+            if (data.name === 'reset') {
+              store.clear();
+            }
+
+            relaunch_app();
           }
         } else if (obj && typeof obj.include.receiver === 'function') {
           obj.include.receiver(id, data.name, data.data);
@@ -253,7 +475,19 @@ function load_manager_config() {
 }
 
 function save_manager_config() {
+  if (store_clear) {
+    return;
+  }
+
   store.set('manager', manager);
+
+  if (process.env.PORTABLE_EXECUTABLE_DIR) {
+    app.setLoginItemSettings({
+      name: 'Scripts Manager',
+      path: process.env.PORTABLE_EXECUTABLE_FILE,
+      openAtLogin: manager.default.startup
+    });
+  }
 }
 
 async function save_config(type, id, data, override) {
@@ -297,11 +531,35 @@ async function save_config(type, id, data, override) {
   }
 
   if (is_global) {
+    if (store_clear) {
+      return false;
+    }
+
     store.set(`${type}-${id}`, obj);
     return true;
   }
 
   return await inifile.write(path.join(config_path, 'config.ini'), obj);
+}
+
+async function check_port(port) {
+  return new Promise((resolve, reject) => {
+    const s = net.createServer();
+    s.once('error', (err) => {
+      s.close();
+      if (err.code === "EADDRINUSE") {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+    s.once('listening', () => {
+      console.log('listening');
+        resolve();
+        s.close();
+    });
+    s.listen(port);
+  });
 }
 
 function load_addons(dir, is_global) {
@@ -439,6 +697,12 @@ function load_scripts(dir, is_global) {
 }
 
 async function all_methods(type, data) {
+  if (typeof data === 'object' && typeof data.origin === 'string') {
+    for (const client of wss.clients) {
+      client.send(JSON.stringify(data));
+    }
+  }
+
   for (const id in addons) {
     if (typeof addons[id].config.default.methods === 'string' && addons[id].config.default.methods.split(',').indexOf(type) >= 0) {
       if (await (addons[id].include.receiver('methods', type, data))) {
@@ -460,8 +724,11 @@ async function all_methods(type, data) {
 
 async function all_sender(type, id, target, name, data) {
   if (target === 'manager') {
-    const names = name.split(':');
+    if (name === 'state') {
+      win.webContents.send('manager', { type, id, name, data });
+    }
 
+    const names = name.split(':');
     if (names[0] === 'websocket') {
       data = JSON.stringify(data);
       for (const client of wss.clients) {
@@ -521,7 +788,9 @@ async function all_sender(type, id, target, name, data) {
       const split = name.split(':');
       if (name === 'menu') {
         scripts[id].menu = data;
-        generate_menu();
+
+        const menu = generate_menu().getMenuItemById(id);
+        return menu ? menu.submenu : null;
       } else if (split[0] === 'config') {
         save_config(type, id, data, (split.length === 2 && split[1] === 'override'));
       } else {
@@ -552,11 +821,11 @@ async function all_sender(type, id, target, name, data) {
 
 function generate_menu() {
   let scripts_menu = [];
-  for (let name in scripts) {
+  for (let id in scripts) {
     try {
-      const menu = scripts[name].menu;
+      const menu = scripts[id].menu;
       if (menu.length) {
-        let tmp = { label: scripts[name].config.default.name };
+        let tmp = { id, label: scripts[id].config.default.name };
         tmp.submenu = menu;
 
         Menu.buildFromTemplate([tmp]);
@@ -565,15 +834,23 @@ function generate_menu() {
     } catch (e) {}
   }
 
-  tray.setContextMenu(Menu.buildFromTemplate(scripts_menu.concat([
+  const menu = Menu.buildFromTemplate(scripts_menu.concat([
     { type: 'separator' },
     { label: 'Settings', click : async () => {
       win.show();
     } },
+    { type: 'separator' },
+    { label: 'Restart', click : async () => {
+      relaunch_app();
+    } },
     { label: 'Quit', click : async () => {
+      console.log('Closing Scripts Manager');
       app.exit();
     } }
-  ])));
+  ]));
+
+  tray.setContextMenu(menu);
+  return menu;
 }
 
 function usb_sender(type, device) {
@@ -622,8 +899,13 @@ function usb_detection() {
   });
 }
 
-process.on('uncaughtException', err => {
+function exit_on_error(err) {
+  if (exited) {
+    return;
+  }
+
   if (err.message.indexOf('EADDRINUSE') >= 0 || err.message.indexOf('ERR_FAILED (-2)') >= 0) {
+    exited = true;
     if (Notification.isSupported()) {
       (new Notification({
         title: 'Scripts Manager',
@@ -634,12 +916,23 @@ process.on('uncaughtException', err => {
     }
 
     process.exit(1);
+  } else {
+    console.error(err);
   }
-});    
+}
 
-const logpath = (process.env.PORTABLE_EXECUTABLE_DIR ? process.env.PORTABLE_EXECUTABLE_DIR : __dirname);
+
+process.on('uncaughtException', exit_on_error);
+
+let logpath = (process.env.PORTABLE_EXECUTABLE_DIR ? process.env.PORTABLE_EXECUTABLE_DIR : __dirname);
+if (logpath.endsWith('app.asar')) {
+  logpath = path.dirname(path.dirname(logpath));
+}
+
 elog.transports.file.resolvePath = () => path.join(logpath, 'ScriptsManager.log');
 Object.assign(console, elog.functions);
+
+console.log('Starting Scripts Manager');
 
 const env_file = path.join(__dirname, 'env.json');
 if (fs.existsSync(env_file)) {
@@ -647,64 +940,73 @@ if (fs.existsSync(env_file)) {
 }
 
 app.whenReady().then(() => {
-  // init tray
-  tray = new Tray(APP_ICON);
-  tray.setToolTip('Scripts Manager');
+  app.setAppUserModelId('fr.arubinu42.scripts-manager');
 
-  tray.on('double-click', () => {
-    if (win) {
-      win.show();
-    }
-  });
+  check_port(APP_PORT)
+    .then(() => {
+      // init tray
+      tray = new Tray(APP_ICON);
+      tray.setToolTip('Scripts Manager');
 
-  // built-in scripts
-  const next = () => {
-    // user addons
-    const next = () => {
-      // user scripts
+      tray.on('double-click', event => {
+        if (win) {
+          win.show();
+        }
+      });
+
+      // built-in scripts
       const next = () => {
-        // init app
+        // user addons
         const next = () => {
-          generate_menu();
-          create_server();
-          usb_detection();
-          create_window();
-
-          app.on('activate', () => {
-            if (!win) {
+          // user scripts
+          const next = () => {
+            // init app
+            const next = () => {
+              generate_menu();
+              create_server();
+              usb_detection();
               create_window();
-            } else if (!win.isVisible()) {
-              win.show();
+
+              app.on('activate', () => {
+                if (!win) {
+                  create_window();
+                } else if (!win.isVisible()) {
+                  win.show();
+                }
+              });
+            };
+
+            if (typeof manager.default === 'object' && typeof manager.default.all === 'string') {
+              const scripts_path = path.join(manager.default.all, 'scripts');
+              if (fs.existsSync(scripts_path)) {
+                load_scripts(scripts_path).then(next).catch(next);
+                return;
+              }
             }
-          });
+
+            next();
+          };
+
+          load_manager_config();
+          if (typeof manager.default === 'object' && typeof manager.default.all === 'string') {
+            const addons_path = path.join(manager.default.all, 'addons');
+            if (fs.existsSync(addons_path)) {
+              load_addons(addons_path).then(next).catch(next);
+              return;
+            }
+          }
+
+          next();
         };
 
-        if (typeof manager.default === 'object' && typeof manager.default.all === 'string') {
-          const scripts_path = path.join(manager.default.all, 'scripts');
-          if (fs.existsSync(scripts_path)) {
-            load_scripts(scripts_path).then(next).catch(next);
-            return;
-          }
-        }
-
-        next();
+        load_scripts(path.join(__dirname, 'scripts'), true).then(next).catch(next);
       };
 
-      load_manager_config();
-      if (typeof manager.default === 'object' && typeof manager.default.all === 'string') {
-        const addons_path = path.join(manager.default.all, 'addons');
-        if (fs.existsSync(addons_path)) {
-          load_addons(addons_path).then(next).catch(next);
-          return;
-        }
-      }
-
-      next();
-    };
-
-    load_scripts(path.join(__dirname, 'scripts'), true).then(next).catch(next);
-  };
-
-  // built-in addons
-  load_addons(path.join(__dirname, 'addons'), true).then(next).catch(next);
+      // built-in addons
+      load_addons(path.join(__dirname, 'addons'), true).then(next).catch(next);
+    })
+    .catch(err => {
+      console.log('Scripts Manager already launched');
+      exit_on_error({ message: 'ERR_FAILED (-2)' });
+    });
 });

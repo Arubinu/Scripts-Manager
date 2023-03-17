@@ -18,6 +18,11 @@
       .has-addons .button {
         border-color: #444;
       }
+
+      .is-warning {
+        background-color: rgba(200, 191, 15, 0.2);
+      }
+
       .table {
         background-color: transparent;
       }
@@ -35,17 +40,47 @@
       .table > thead > tr > th:nth-child(5),
       .table > thead > tr > th:nth-child(6),
       .table > thead > tr > th:nth-child(7),
+      .table > thead > tr > th:nth-child(8),
       .table > tbody > tr > td:nth-child(4),
       .table > tbody > tr > td:nth-child(5),
       .table > tbody > tr > td:nth-child(6),
-      .table > tbody > tr > td:nth-child(7) {
-        width: 50px;
+      .table > tbody > tr > td:nth-child(7),
+      .table > tbody > tr > td:nth-child(8) {
+        width: 35px;
+        text-align: center;
+      }
+
+      .account {
+        position: absolute;
+        top: -24px;
+        width: 100%;
+        font-style: italic;
         text-align: center;
       }
     </style>
   </head>
 
   <body>
+    <div class="modal bot-generate">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Bot Access</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="has-text-centered">
+            Click to automatically copy the link below
+            <br />Then enter it in the browser where you are connected with your Bot
+          </div>
+          <br /><input type="text" class="input has-text-centered" title="click to copy" readonly />
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button" aria-label="close">Close</button>
+        </footer>
+      </div>
+    </div>
+
     <div class="container">
       <section class="hero is-small has-background-grey-dark">
         <div class="hero-body">
@@ -54,13 +89,14 @@
       </section>
 
       <div class="m-5">
-        <div class="field is-horizontal is-narrow mt-2 mb-5 p-2">
+        <div class="field is-horizontal mt-2 mb-5 p-2">
           <div class="field-label is-normal">
             <label class="label">Token:</label>
           </div>
           <div class="field-body">
             <div class="field has-addons token">
               <div class="control ml-6 pl-6 has-icons-right is-expanded">
+                <div class="account account_broadcaster"></div>
                 <input class="input has-text-centered is-two-thirds" type="password" />
                 <span class="icon is-small is-right">
                   <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
@@ -76,16 +112,45 @@
         </div>
       </div>
 
-      <table class="table is-fullwidth is-narrow is-striped mb-5">
+      <div class="has-text-centered is-italic">
+        <div>The Bot is only to be used if you have another Twitch account that will send messages for you.</div>
+      </div>
+
+      <div class="m-5">
+        <div class="field is-horizontal mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Bot Token:</label>
+          </div>
+          <div class="field-body">
+            <div class="field has-addons bot_token">
+              <div class="control ml-6 pl-6 has-icons-right is-expanded">
+                <div class="account account_bot"></div>
+                <input class="input has-text-centered is-two-thirds" type="password" />
+                <span class="icon is-small is-right">
+                  <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                </span>
+              </div>
+              <div class="control">
+                <a class="button is-dark">
+                  Generate
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <table class="table is-fullwidth is-striped mb-5">
         <thead>
           <tr>
             <th>Date</th>
             <th>Type</th>
             <th>From</th>
-            <th title="Subscriber"><i class="fas fa-solid fa-coins"></i></th>
-            <th title="VIP"><i class="fas fa-solid fa-star"></i></th>
-            <th title="Moderator"><i class="fas fa-solid fa-shield-halved"></i></th>
-            <th title="Broadcaster"><i class="fas fa-solid fa-award"></i></th>
+            <th title="Follower"><i class="fas fa-link"></i></th>
+            <th title="Subscriber"><i class="fas fa-coins"></i></th>
+            <th title="VIP"><i class="fas fa-star"></i></th>
+            <th title="Moderator"><i class="fas fa-shield-halved"></i></th>
+            <th title="Broadcaster"><i class="fas fa-award"></i></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -93,9 +158,10 @@
     </div>
 
     <script type="text/javascript">
-      let timeout = 0;
+      let config = false,
+        timeout = 0;
 
-      for (const name of ['token']) {
+      for (const name of ['token', 'bot_token']) {
         const elem = document.querySelector(`.${name} input`);
         const callback = event => {
           let data = {};
@@ -108,7 +174,7 @@
         elem.addEventListener('input', event => {
           clearTimeout(timeout);
           timeout = setTimeout(() => {
-            window.parent.postMessage({refresh: true}, '*');
+            window.parent.postMessage({ refresh: true }, '*');
           }, 5000);
         });
       }
@@ -124,14 +190,54 @@
         });
       }
 
+      document.querySelectorAll('[aria-label="close"]').forEach(elem => {
+        elem.addEventListener('click', () => {
+          const modal = elem.closest('.modal');
+          if (modal) {
+            modal.classList.remove('is-active');
+          }
+
+          window.parent.postMessage({ bot: false }, '*');
+        }, false);
+      });
+
+      document.querySelector('.bot_token .button').addEventListener('click', () => {
+        const elem = document.querySelector('div.bot-generate'),
+          input = elem.querySelector('input');
+
+        window.parent.postMessage({ bot: true }, '*');
+
+        elem.classList.add('is-active');
+        input.value = _config.authorize;
+        input.focus();
+        input.select();
+      });
+
+      document.querySelector('div.bot-generate input').addEventListener('click', function() {
+        this.select();
+        document.execCommand('copy');
+      });
+
       window.addEventListener('message', event => {
         if (event.origin !== 'null') {
           if (event.data.name == 'config') {
-            const _config = event.data.data;
+            _config = event.data.data;
 
-            for (const name of ['token']) {
+            if (_config.wait && _config.connection.bot_token) {
+              document.querySelector('.bot-generate').classList.remove('is-active');
+              window.parent.postMessage({ bot: false }, '*');
+            }
+
+            for (const name of ['token', 'bot_token']) {
               document.querySelector(`.${name} input`).value = _config.connection[name];
             }
+
+            for (const name of ['account_broadcaster', 'account_bot']) {
+              document.querySelector(`.${name}`).innerText = _config[name];
+            }
+
+            document.querySelector('.token input').classList.toggle('is-warning', (_config.refresh === 1 || _config.refresh === 3));
+            document.querySelector('.bot_token input').classList.toggle('is-warning', (_config.refresh === 2 || _config.refresh === 3));
 
             document.querySelector('.token .button').setAttribute('external-link', _config.authorize);
           } else if (event.data.name == 'logs') {
@@ -152,6 +258,7 @@
                 const date = document.createElement('td');
                 const type = document.createElement('td');
                 const from = document.createElement('td');
+                const fol = document.createElement('td');
                 const sub = document.createElement('td');
                 const vip = document.createElement('td');
                 const mod = document.createElement('td');
@@ -160,8 +267,8 @@
                 const cross = document.createElement('i');
                 cross.classList.add('fas', 'fa-xmark');
 
-                const columns = [date, type, from, sub, vip, mod, brd];
-                if (row.type == 'Register') {
+                const columns = [date, type, from, fol, sub, vip, mod, brd];
+                if (row.type == 'AuthenticationSuccess') {
                   columns.forEach(column => column.classList.add('is-info'));
                 } else if (row.type == 'Reconnect') {
                   columns.forEach(column => column.classList.add('is-warning'));
@@ -174,6 +281,9 @@
                 from.innerText = (row.user ? (row.user.name || '') : '');
 
                 if (row.flags) {
+                  if (row.flags.follower) {
+                    fol.appendChild(cross.cloneNode());
+                  }
                   if (row.flags.subscriber) {
                     sub.appendChild(cross.cloneNode());
                   }
@@ -191,6 +301,7 @@
                 tr.appendChild(date);
                 tr.appendChild(type);
                 tr.appendChild(from);
+                tr.appendChild(fol);
                 tr.appendChild(sub);
                 tr.appendChild(vip);
                 tr.appendChild(mod);

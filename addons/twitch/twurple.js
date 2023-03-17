@@ -1,114 +1,21 @@
 const { ApiClient } = require('@twurple/api'),
   { ChatClient } = require('@twurple/chat'),
   { PubSubClient } = require('@twurple/pubsub'),
-  { StaticAuthProvider } = require('@twurple/auth'),
+  { StaticAuthProvider, getTokenInfo } = require('@twurple/auth'),
   { EventSubWsListener } = require('@twurple/eventsub-ws');
 
 let channel = { id: '', name: '', display: '', creation: '', description: '', joined: [] },
+  bot_channel = { id: '', name: '', display: '', creation: '', description: '' },
   channel_ids = {},
   api_client = null,
   chat_client = null,
-  chat_listeners = {
-    Action: null,
-    Announcement: null,
-    AnyMessage: null,
-    AuthenticationFailure: null,
-    Ban: null,
-    BitsBadgeUpgrade: null,
-    ChatClear: null,
-    CommunityPayForward: null,
-    CommunitySub: null,
-    Connect: null,
-    Ctcp: null,
-    CtcpReply: null,
-    Disconnect: null,
-    EmoteOnly: null,
-    FollowersOnly: null,
-    GiftPaidUpgrade: null,
-    Host: null,
-    Hosted: null,
-    HostsRemaining: null,
-    Join: null,
-    JoinFailure: null,
-    Message: null,
-    MessageFailed: null,
-    MessageRatelimit: null,
-    MessageRemove: null,
-    NickChange: null,
-    NoPermission: null,
-    Notice: null,
-    Part: null,
-    PasswordError: null,
-    PrimeCommunityGift: null,
-    PrimePaidUpgrade: null,
-    R9k: null,
-    Raid: null,
-    RaidCancel: null,
-    Register: null,
-    Resub: null,
-    RewardGift: null,
-    ritual: null,
-    Slow: null,
-    StandardPayForward: null,
-    Sub: null,
-    SubExtend: null,
-    SubGift: null,
-    Timeout: null,
-    SubsOnly: null,
-    Unhost: null,
-    Whisper: null,
-  },
+  chat_listeners = {},
+  bot_api_client = null,
+  bot_chat_client = null,
   ws_listener = null,
-  ws_listeners = {
-    StreamOnline: null,
-    StreamOffline: null,
-    ChannelUpdate: null,
-    ChannelFollow: null,
-    ChannelSubscription: null,
-    ChannelSubscriptionGift: null,
-    ChannelSubscriptionMessage: null,
-    ChannelSubscriptionEnd: null,
-    ChannelCheer: null,
-    ChannelCharityCampaignStart: null,
-    ChannelCharityCampaignStop: null,
-    ChannelCharityDonation: null,
-    ChannelCharityCampaignProgress: null,
-    ChannelBan: null,
-    ChannelUnban: null,
-    ChannelShieldModeBegin: null,
-    ChannelShieldModeEnd: null,
-    ChannelModeratorAdd: null,
-    ChannelModeratorRemove: null,
-    ChannelRaidFrom: null,
-    ChannelRaidTo: null,
-    ChannelRewardAdd: null,
-    ChannelRewardUpdate: null,
-    ChannelRewardRemove: null,
-    ChannelRedemptionAdd: null,
-    ChannelRedemptionUpdate: null,
-    ChannelPollBegin: null,
-    ChannelPollProgress: null,
-    ChannelPollEnd: null,
-    ChannelPredictionBegin: null,
-    ChannelPredictionProgress: null,
-    ChannelPredictionLock: null,
-    ChannelPredictionEnd: null,
-    ChannelGoalBegin: null,
-    ChannelGoalProgress: null,
-    ChannelGoalEnd: null,
-    ChannelHypeTrainBegin: null,
-    ChannelHypeTrainProgress: null,
-    ChannelHypeTrainEnd: null,
-    ExtensionBitsTransactionCreate: null,
-    UserAuthorizationGrant: null,
-    UserAuthorizationRevoke: null,
-    UserUpdate: null,
-  },
+  ws_listeners = {},
   pubsub_client = null,
-  pubsub_listeners = {
-    Subscription: null,
-    Redemption: null,
-  };
+  pubsub_listeners = {};
 
 const methods = {
   isStreamLive: async userName => {
@@ -126,6 +33,9 @@ const methods = {
     }
 
     return await api_client.users.getFollowFromUserToBroadcaster(userIdCheck, user.id);
+  },
+  getAccounts: async () => {
+    return { broadcaster: channel, bot: bot_channel };
   },
   getChatUsers: async () => {
     return channel.joined;
@@ -160,7 +70,7 @@ const methods = {
       return false;
     }
 
-    return api_client.channelPoints.getCustomRewards(user.id, onlyManageable);
+    return await api_client.channelPoints.getCustomRewards(user.id, onlyManageable);
   },
   getGame: async gameName => {
     return await api_client.games.getGameByName(gameName);
@@ -215,7 +125,7 @@ const methods = {
       data.isEnabled = isEnabled;
     }
 
-    return api_client.channelPoints.updateCustomReward(user.id, rewardId, data);
+    return await api_client.channelPoints.updateCustomReward(user.id, rewardId, data);
   },
   updateSettings: async (userName, settings) => {
     const user = await getChannelUser(userName || channel.name);
@@ -231,18 +141,28 @@ const methods = {
       return false;
     }
 
-    api_client.moderation.deleteChatMessages(user.id, user.id, messageId);
+    return await api_client.moderation.deleteChatMessages(user.id, user.id, messageId);
   },
-  announce: async (userName, message, color) => {
+  announce: async (userName, message, color, bot) => {
     const user = await getChannelUser(userName || channel.name);
     if (!user) {
       return false;
     }
 
-    api_client.chat.sendAnnouncement(user.id, user.id, {
-      //color: '', // blue | green | orange | purple | primary
+    return await ((bot_api_client && bot) ? bot_api_client : api_client).chat.sendAnnouncement(user.id, ((bot_api_client && bot) ? bot_channel.id : user.id), {
+      color: color || 'primary',
       message
     });
+  },
+  shoutout: async userName => {
+    const user = await getChannelUser(channel.name),
+      to = await getChannelUser(userName);
+
+    if (!userName || !user || !to) {
+      return false;
+    }
+
+    return await api_client.chat.shoutoutUser(user.id, to.id, user.id);
   }
 };
 
@@ -283,7 +203,6 @@ function convert(obj) {
   return items;
 }
 
-
 async function getChannelUser(userName) {
   if (!api_client) {
     return false;
@@ -299,7 +218,7 @@ async function getChannelUser(userName) {
   return user;
 }
 
-async function connect(clientId, accessToken, callback) {
+async function connect(clientId, accessToken, botAccessToken, callback) {
   channel.id = '';
   channel.name = '';
   channel.display = '';
@@ -307,24 +226,40 @@ async function connect(clientId, accessToken, callback) {
   channel.description = '';
   channel.joined = [];
 
-  const auth_provider = new StaticAuthProvider(clientId, accessToken);
+  bot_channel.id = '';
+  bot_channel.name = '';
+  bot_channel.display = '';
+  bot_channel.creation = '';
+  bot_channel.description = '';
+
+  const auth_provider = new StaticAuthProvider(clientId, accessToken),
+    bot_auth_provider = botAccessToken ? new StaticAuthProvider(clientId, botAccessToken) : null;
 
   api_client = new ApiClient({ authProvider: auth_provider });
+  bot_api_client = botAccessToken ? new ApiClient({ authProvider: bot_auth_provider }) : null;
 
   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  const me = await api_client.users.getMe(false);
+  const me = await api_client.users.getAuthenticatedUser((await getTokenInfo(accessToken)).userId);
   channel.id = me.id;
   channel.name = me.name;
   channel.display = me.displayName;
   channel.creation = me.creationDate;
   channel.description = me.description;
 
-  chat_client = new ChatClient({ authProvider: auth_provider, channels: [channel.name], requestMembershipEvents: true });
-  ws_listener = new EventSubWsListener({ apiClient: api_client });
-  pubsub_client = new PubSubClient();
+  if (botAccessToken) {
+    const bot = await bot_api_client.users.getAuthenticatedUser((await getTokenInfo(botAccessToken)).userId);
+    bot_channel.id = bot.id;
+    bot_channel.name = bot.name;
+    bot_channel.display = bot.displayName;
+    bot_channel.creation = bot.creationDate;
+    bot_channel.description = bot.description;
+  }
 
-  const pubsub_userid = await pubsub_client.registerUserListener(auth_provider);
+  chat_client = new ChatClient({ authProvider: auth_provider, channels: [channel.name], requestMembershipEvents: true });
+  bot_chat_client = botAccessToken ? new ChatClient({ authProvider: bot_auth_provider, channels: [channel.name], requestMembershipEvents: true }) : null;
+  ws_listener = new EventSubWsListener({ apiClient: api_client });
+  pubsub_client = new PubSubClient({ authProvider: auth_provider });
 
   // Fires when a user sends an action (/me) to a channel.
   chat_listeners.Action = chat_client.onAction(async (_channel, user, message, msg) => {
@@ -339,6 +274,11 @@ async function connect(clientId, accessToken, callback) {
   // Fires when authentication fails.
   chat_listeners.AuthenticationFailure = chat_client.onAuthenticationFailure(async (message, retryCount) => {
     callback(await get('AuthenticationFailure', null, message, null, { retry: retryCount }));
+  });
+
+  // Fires when authentication succeeds.
+  chat_listeners.AuthenticationSuccess = chat_client.onAuthenticationSuccess(async () => {
+    callback(await get('AuthenticationSuccess', null, null, null));
   });
 
   // Fires when a user upgrades their bits badge in a channel.
@@ -361,24 +301,6 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('CommunitySub', msg, null, user, { subscribe: { user, info: subInfo } }));
   });
 
-  chat_listeners.Connect = chat_client.onConnect(async () => {
-    callback(await get('Connect', null, null, null));
-  });
-
-  chat_listeners.Ctcp = chat_client.onCtcp(async (target, user, command, params, msg) => {
-    callback(await get('Ctcp', msg, command, user, { ctcp: { target, params } }));
-  });
-
-  chat_listeners.CtcpReply = chat_client.onCtcpReply(async (target, user, command, params, msg) => {
-    callback(await get('CtcpReply', msg, command, user, { ctcp: { target, params } }));
-  });
-
-  chat_listeners.Disconnect = chat_client.onDisconnect(async (manually, reason) => {
-    callback(await get('Disconnect', null, null, null, { reason, manually }));
-
-    channel.joined = [];
-  });
-
   // Fires when emote-only mode is toggled in a channel.
   chat_listeners.EmoteOnly = chat_client.onEmoteOnly(async (_channel, enabled) => {
     callback(await get('EmoteOnly', null, null, null, { emote_only: { enabled } }));
@@ -392,21 +314,6 @@ async function connect(clientId, accessToken, callback) {
   // Fires when a user upgrades their gift subscription to a paid subscription in a channel.
   chat_listeners.GiftPaidUpgrade = chat_client.onGiftPaidUpgrade(async (_channel, user, subInfo, msg) => {
     callback(await get('GiftPaidUpgrade', msg, null, user, { upgrade: { user, info: subInfo } }));
-  });
-
-  // Fires when a channel hosts another channel.
-  chat_listeners.Host = chat_client.onHost(async (_channel, target, viewers) => {
-    callback(await get('Host', null, null, null, { host: { channel: target, viewers } }));
-  });
-
-  // Fires when a channel you're logged in as its owner is being hosted by another channel.
-  chat_listeners.Hosted = chat_client.onHosted(async (_channel, byChannel, auto, viewers) => {
-    callback(await get('Hosted', null, null, byChannel, { host: { channel: byChannel, viewers, auto } }));
-  });
-
-  // Fires when Twitch tells you the number of hosts you have remaining in the next half hour for the channel for which you're logged in as owner after hosting a channel.
-  chat_listeners.HostsRemaining = chat_client.onHostsRemaining(async (_channel, numberOfHosts) => {
-    callback(await get('HostsRemaining', null, null, null, { host: { remaining: numberOfHosts } }));
   });
 
   // Fires when a user joins a channel.
@@ -440,19 +347,9 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('MessageRemove', msg, null, null));
   });
 
-  chat_listeners.NickChange = chat_client.onNickChange(async (oldNick, newNick, msg) => {
-    callback(await get('NickChange', msg, null, newNick, { user: { old: oldNick } }));
-  });
-
   // Fires when you tried to execute a command you don't have sufficient permission for.
   chat_listeners.NoPermission = chat_client.onNoPermission(async (_channel, message) => {
     callback(await get('NoPermission', null, message, null));
-  });
-
-  // Sent to indicate the outcome of an action like banning a user (eg. /emoteonly, /subscribers, /ban or /host).
-  // peut-être au raid aussi ou au fin de live
-  chat_listeners.Notice = chat_client.onNotice(async (target, user, message, msg) => {
-    callback(await get('Notice', msg, message, user, { notice: { user, target } }));
   });
 
   // Fires when a user leaves ("parts") a channel.
@@ -465,13 +362,9 @@ async function connect(clientId, accessToken, callback) {
     }
   });
 
-  chat_listeners.PasswordError = chat_client.onPasswordError(async error => {
-    callback(await get('PasswordError', null, null, null, { error }));
-  });
-
   // Fires when a user gifts a Twitch Prime benefit to the channel.
   chat_listeners.PrimeCommunityGift = chat_client.onPrimeCommunityGift(async (_channel, user, subInfo, msg) => {
-    callback(await get('PrimeCommunityGift', msg, null, user));
+    callback(await get('PrimeCommunityGift', msg, null, user, { subscribe: { user, info: subInfo } }));
   });
 
   // Fires when a user upgrades their Prime subscription to a paid subscription in a channel.
@@ -494,13 +387,9 @@ async function connect(clientId, accessToken, callback) {
     callback(await get('RaidCancel', msg, null, null));
   });
 
-  chat_listeners.Register = chat_client.onRegister(async () => {
-    callback(await get('Register', null, null, null));
-  });
-
   // Fires when a user resubscribes to a channel.
-  chat_listeners.Resub = chat_client.onResub(async (_channel, user, subInfo) => {
-    callback(await get('Resub', null, null, user, { subscribe: { user, info: subInfo } }));
+  chat_listeners.Resub = chat_client.onResub(async (_channel, user, subInfo, msg) => {
+    callback(await get('Resub', msg, subInfo.message, user, { subscribe: { user, info: subInfo } }));
   });
 
   // Fires when a user gifts rewards during a special event.
@@ -519,13 +408,13 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Fires when a user pays forward a subscription that was gifted to them to a specific user.
-  chat_listeners.StandardPayForward = chat_client.onStandardPayForward(async (_channel, user, subInfo, msg) => {
-    callback(await get('StandardPayForward', msg, null, user, { subscribe: { user, info: subInfo } }));
+  chat_listeners.StandardPayForward = chat_client.onStandardPayForward(async (_channel, user, forwardInfo, msg) => {
+    callback(await get('StandardPayForward', msg, null, user, { subscribe: { user, info: forwardInfo } }));
   });
 
   // Fires when a user subscribes to a channel.
-  chat_listeners.Sub = chat_client.onSub(async (_channel, user) => {
-    callback(await get('Sub', null, null, user, { subscribe: { user, info: null } }));
+  chat_listeners.Sub = chat_client.onSub(async (_channel, user, subInfo, msg) => {
+    callback(await get('Sub', msg, subInfo.message, user, { subscribe: { user, info: subInfo } }));
   });
 
   // Fires when a user extends their subscription using a Sub Token.
@@ -534,18 +423,13 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Fires when a user gifts a subscription to a channel to another user.
-  chat_listeners.SubGift = chat_client.onSubGift(async (_channel, user, subInfo) => {
-    callback(await get('SubGift', null, null, user, { subscribe: { user, info: subInfo } }));
+  chat_listeners.SubGift = chat_client.onSubGift(async (_channel, user, subInfo, msg) => {
+    callback(await get('SubGift', msg, subInfo.message, user, { subscribe: { user, info: subInfo } }));
   });
 
   // Fires when sub only mode is toggled in a channel.
   chat_listeners.SubsOnly = chat_client.onSubsOnly(async (_channel, enabled) => {
     callback(await get('SubsOnly', null, null, null, { subscribe_only: { enabled } }));
-  });
-
-  // Fires when host mode is disabled in a channel.
-  chat_listeners.Unhost = chat_client.onUnhost(async _channel => {
-    callback(await get('Unhost', null, null, null));
   });
 
   // Fires when receiving a whisper from another user.
@@ -554,7 +438,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events representing a stream going live.
-  ws_listeners.StreamOnline = await ws_listener.subscribeToStreamOnlineEvents(channel.id, async e => {
+  ws_listeners.StreamOnline = await ws_listener.onStreamOnline(channel.id, async e => {
     callback(await get('StreamOnline', null, null, null, {
       data: {
         id: e.id,
@@ -565,12 +449,12 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events representing a stream going offline.
-  ws_listeners.StreamOffline = await ws_listener.subscribeToStreamOfflineEvents(channel.id, async e => {
+  ws_listeners.StreamOffline = await ws_listener.onStreamOffline(channel.id, async e => {
     callback(await get('StreamOffline', null, null, null));
   });
 
   // Subscribes to events representing a change in channel metadata, e.g. stream title or category.
-  ws_listeners.ChannelUpdate = await ws_listener.subscribeToChannelUpdateEvents(channel.id, async e => {
+  ws_listeners.ChannelUpdate = await ws_listener.onChannelUpdate(channel.id, async e => {
     callback(await get('Update', null, null, null, {
       data: {
         streamTitle: e.streamTitle,
@@ -583,7 +467,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user following a channel.
-  ws_listeners.ChannelFollow = await ws_listener.subscribeToChannelFollowEvents(channel.id, async e => {
+  ws_listeners.ChannelFollow = await ws_listener.onChannelFollow(channel.id, async e => {
     callback(await get('Follow', null, null, null, {
       user: {
         id: e.userId,
@@ -598,7 +482,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user gifting a subscription to a channel to someone else.
-  ws_listeners.ChannelSubscriptionGift = await ws_listener.subscribeToChannelSubscriptionGiftEvents(channel.id, async e => {
+  ws_listeners.ChannelSubscriptionGift = await ws_listener.onChannelSubscriptionGift(channel.id, async e => {
     callback(await get('SubscriptionGift', null, null, null, {
       user: {
         id: e.gifterId,
@@ -616,7 +500,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user's subscription to a channel being announced.
-  ws_listeners.ChannelSubscriptionMessage = await ws_listener.subscribeToChannelSubscriptionMessageEvents(channel.id, async e => {
+  ws_listeners.ChannelSubscriptionMessage = await ws_listener.onChannelSubscriptionMessage(channel.id, async e => {
     callback(await get('SubscriptionMessage', null, null, null, {
       user: {
         id: e.userId,
@@ -635,7 +519,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user's subscription to a channel ending.
-  ws_listeners.ChannelSubscriptionEnd = await ws_listener.subscribeToChannelSubscriptionEndEvents(channel.id, async e => {
+  ws_listeners.ChannelSubscriptionEnd = await ws_listener.onChannelSubscriptionEnd(channel.id, async e => {
     callback(await get('SubscriptionEnd', null, null, null, {
       user: {
         id: e.userId,
@@ -651,7 +535,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user cheering some bits.
-  ws_listeners.ChannelCheer = await ws_listener.subscribeToChannelCheerEvents(channel.id, async e => {
+  ws_listeners.ChannelCheer = await ws_listener.onChannelCheer(channel.id, async e => {
     callback(await get('Cheer', null, null, null, {
       user: {
         id: e.userId,
@@ -671,7 +555,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a charity campaign starting in a channel.
-  ws_listeners.ChannelCharityCampaignStart = await ws_listener.subscribeToChannelCharityCampaignStartEvents(channel.id, async e => {
+  ws_listeners.ChannelCharityCampaignStart = await ws_listener.onChannelCharityCampaignStart(channel.id, async e => {
     callback(await get('CharityCampaignStart', null, null, null, {
       data: {
         id: e.id,
@@ -687,7 +571,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a charity campaign ending in a channel.
-  ws_listeners.ChannelCharityCampaignStop = await ws_listener.subscribeToChannelCharityCampaignStopEvents(channel.id, async e => {
+  ws_listeners.ChannelCharityCampaignStop = await ws_listener.onChannelCharityCampaignStop(channel.id, async e => {
     callback(await get('CharityCampaignStop', null, null, null, {
       data: {
         id: e.id,
@@ -703,7 +587,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a donation to a charity campaign in a channel.
-  ws_listeners.ChannelCharityDonation = await ws_listener.subscribeToChannelCharityDonationEvents(channel.id, async e => {
+  ws_listeners.ChannelCharityDonation = await ws_listener.onChannelCharityDonation(channel.id, async e => {
     callback(await get('CharityDonation', null, null, null, {
       user: {
         id: e.donorId,
@@ -723,7 +607,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent progress in a charity campaign in a channel.
-  ws_listeners.ChannelCharityCampaignProgress = await ws_listener.subscribeToChannelCharityCampaignProgressEvents(channel.id, async e => {
+  ws_listeners.ChannelCharityCampaignProgress = await ws_listener.onChannelCharityCampaignProgress(channel.id, async e => {
     callback(await get('CharityCampaignProgress', null, null, null, {
       data: {
         id: e.id,
@@ -738,7 +622,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user getting banned from a channel.
-  ws_listeners.ChannelBan = await ws_listener.subscribeToChannelBanEvents(channel.id, async e => {
+  ws_listeners.ChannelBan = await ws_listener.onChannelBan(channel.id, async e => {
     let obj = {
       user: {
         id: e.userId,
@@ -768,7 +652,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user getting unbanned from a channel.
-  ws_listeners.ChannelUnban = await ws_listener.subscribeToChannelUnbanEvents(channel.id, async e => {
+  ws_listeners.ChannelUnban = await ws_listener.onChannelUnban(channel.id, async e => {
     callback(await get('Unban', null, null, null, {
       user: {
         id: e.userId,
@@ -792,7 +676,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user getting moderator permissions in a channel.
-  ws_listeners.ChannelModeratorAdd = await ws_listener.subscribeToChannelModeratorAddEvents(channel.id, async e => {
+  ws_listeners.ChannelModeratorAdd = await ws_listener.onChannelModeratorAdd(channel.id, async e => {
     callback(await get('ModeratorAdd', null, null, null, {
       user: {
         id: e.userId,
@@ -804,7 +688,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user losing moderator permissions in a channel.
-  ws_listeners.ChannelModeratorRemove = await ws_listener.subscribeToChannelModeratorRemoveEvents(channel.id, async e => {
+  ws_listeners.ChannelModeratorRemove = await ws_listener.onChannelModeratorRemove(channel.id, async e => {
     callback(await get('ModeratorRemove', null, null, null, {
       user: {
         id: e.userId,
@@ -816,7 +700,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a broadcaster raiding another broadcaster.
-  ws_listeners.ChannelRaidFrom = await ws_listener.subscribeToChannelRaidEventsFrom(channel.id, async e => {
+  ws_listeners.ChannelRaidFrom = await ws_listener.onChannelRaidFrom(channel.id, async e => {
     callback(await get('RaidFrom', null, null, null, {
       user: {
         id: e.raidingBroadcasterId,
@@ -831,7 +715,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a broadcaster being raided by another broadcaster.
-  ws_listeners.ChannelRaidTo = await ws_listener.subscribeToChannelRaidEventsTo(channel.id, async e => {
+  ws_listeners.ChannelRaidTo = await ws_listener.onChannelRaidTo(channel.id, async e => {
     callback(await get('RaidTo', null, null, null, {
       user: {
         id: e.raidedBroadcasterId,
@@ -846,7 +730,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a Channel Points reward being added to a channel.
-  ws_listeners.ChannelRewardAdd = await ws_listener.subscribeToChannelRewardAddEvents(channel.id, async e => {
+  ws_listeners.ChannelRewardAdd = await ws_listener.onChannelRewardAdd(channel.id, async e => {
     callback(await get('RewardAdd', null, null, null, {
       data: {
         id: e.id,
@@ -869,7 +753,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a Channel Points reward being updated.
-  ws_listeners.ChannelRewardUpdate = await ws_listener.subscribeToChannelRewardUpdateEvents(channel.id, async e => {
+  ws_listeners.ChannelRewardUpdate = await ws_listener.onChannelRewardUpdate(channel.id, async e => {
     callback(await get('RewardUpdate', null, null, null, {
       data: {
         id: e.id,
@@ -892,7 +776,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a Channel Points reward being removed.
-  ws_listeners.ChannelRewardRemove = await ws_listener.subscribeToChannelRewardRemoveEvents(channel.id, async e => {
+  ws_listeners.ChannelRewardRemove = await ws_listener.onChannelRewardRemove(channel.id, async e => {
     callback(await get('RewardRemove', null, null, null, {
       data: {
         id: e.id,
@@ -915,7 +799,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represents a Channel Points reward being redeemed.
-  ws_listeners.ChannelRedemptionAdd = await ws_listener.subscribeToChannelRedemptionAddEvents(channel.id, async e => {
+  ws_listeners.ChannelRedemptionAdd = await ws_listener.onChannelRedemptionAdd(channel.id, async e => {
     callback(await get('RedemptionAdd', null, null, null, {
       user: {
         id: e.raidedBroadcasterId,
@@ -936,7 +820,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a Channel Points reward being updated by a broadcaster.
-  ws_listeners.ChannelRedemptionUpdate = await ws_listener.subscribeToChannelRedemptionUpdateEvents(channel.id, async e => {
+  ws_listeners.ChannelRedemptionUpdate = await ws_listener.onChannelRedemptionUpdate(channel.id, async e => {
     callback(await get('RedemptionUpdate', null, null, null, {
       user: {
         id: e.raidedBroadcasterId,
@@ -957,7 +841,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a poll starting in a channel.
-  ws_listeners.ChannelPollBegin = await ws_listener.subscribeToChannelPollBeginEvents(channel.id, async e => {
+  ws_listeners.ChannelPollBegin = await ws_listener.onChannelPollBegin(channel.id, async e => {
     callback(await get('PollBegin', null, null, null, {
       data: {
         id: e.id,
@@ -974,7 +858,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a poll being voted on in a channel.
-  ws_listeners.ChannelPollProgress = await ws_listener.subscribeToChannelPollProgressEvents(channel.id, async e => {
+  ws_listeners.ChannelPollProgress = await ws_listener.onChannelPollProgress(channel.id, async e => {
     callback(await get('PollProgress', null, null, null, {
       data: {
         id: e.id,
@@ -991,7 +875,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a poll ending in a channel.
-  ws_listeners.ChannelPollEnd = await ws_listener.subscribeToChannelPollEndEvents(channel.id, async e => {
+  ws_listeners.ChannelPollEnd = await ws_listener.onChannelPollEnd(channel.id, async e => {
     callback(await get('PollEnd', null, null, null, {
       data: {
         id: e.id,
@@ -1009,7 +893,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a prediction starting in a channel.
-  ws_listeners.ChannelPredictionBegin = await ws_listener.subscribeToChannelPredictionBeginEvents(channel.id, async e => {
+  ws_listeners.ChannelPredictionBegin = await ws_listener.onChannelPredictionBegin(channel.id, async e => {
     callback(await get('PredictionBegin', null, null, null, {
       data: {
         id: e.id,
@@ -1022,7 +906,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a prediction being voted on in a channel.
-  ws_listeners.ChannelPredictionProgress = await ws_listener.subscribeToChannelPredictionProgressEvents(channel.id, async e => {
+  ws_listeners.ChannelPredictionProgress = await ws_listener.onChannelPredictionProgress(channel.id, async e => {
     callback(await get('PredictionProgress', null, null, null, {
       data: {
         id: e.id,
@@ -1035,7 +919,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a prediction being locked in a channel.
-  ws_listeners.ChannelPredictionLock = await ws_listener.subscribeToChannelPredictionLockEvents(channel.id, async e => {
+  ws_listeners.ChannelPredictionLock = await ws_listener.onChannelPredictionLock(channel.id, async e => {
     callback(await get('PredictionLock', null, null, null, {
       data: {
         id: e.id,
@@ -1048,7 +932,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a prediction ending in a channel.
-  ws_listeners.ChannelPredictionEnd = await ws_listener.subscribeToChannelPredictionEndEvents(channel.id, async e => {
+  ws_listeners.ChannelPredictionEnd = await ws_listener.onChannelPredictionEnd(channel.id, async e => {
     callback(await get('PredictionEnd', null, null, null, {
       data: {
         id: e.id,
@@ -1064,7 +948,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a Goal beginning.
-  ws_listeners.ChannelGoalBegin = await ws_listener.subscribeToChannelGoalBeginEvents(channel.id, async e => {
+  ws_listeners.ChannelGoalBegin = await ws_listener.onChannelGoalBegin(channel.id, async e => {
     callback(await get('GoalBegin', null, null, null, {
       data: {
         id: e.id,
@@ -1078,7 +962,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent progress in a Goal in a channel.
-  ws_listeners.ChannelGoalProgress = await ws_listener.subscribeToChannelGoalProgressEvents(channel.id, async e => {
+  ws_listeners.ChannelGoalProgress = await ws_listener.onChannelGoalProgress(channel.id, async e => {
     callback(await get('GoalProgress', null, null, null, {
       data: {
         id: e.id,
@@ -1092,7 +976,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent the end of a Goal in a channel.
-  ws_listeners.ChannelGoalEnd = await ws_listener.subscribeToChannelGoalEndEvents(channel.id, async e => {
+  ws_listeners.ChannelGoalEnd = await ws_listener.onChannelGoalEnd(channel.id, async e => {
     callback(await get('GoalEnd', null, null, null, {
       data: {
         id: e.id,
@@ -1108,7 +992,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a Hype Train beginning.
-  ws_listeners.ChannelHypeTrainBegin = await ws_listener.subscribeToChannelHypeTrainBeginEvents(channel.id, async e => {
+  ws_listeners.ChannelHypeTrainBegin = await ws_listener.onChannelHypeTrainBegin(channel.id, async e => {
     callback(await get('HypeTrainBegin', null, null, null, {
       data: {
         id: e.id,
@@ -1125,7 +1009,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent progress in a Hype Train in a channel.
-  ws_listeners.ChannelHypeTrainProgress = await ws_listener.subscribeToChannelHypeTrainProgressEvents(channel.id, async e => {
+  ws_listeners.ChannelHypeTrainProgress = await ws_listener.onChannelHypeTrainProgress(channel.id, async e => {
     callback(await get('HypeTrainProgress', null, null, null, {
       data: {
         id: e.id,
@@ -1142,7 +1026,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent the end of a Hype Train in a channel.
-  ws_listeners.ChannelHypeTrainEnd = await ws_listener.subscribeToChannelHypeTrainEndEvents(channel.id, async e => {
+  ws_listeners.ChannelHypeTrainEnd = await ws_listener.onChannelHypeTrainEnd(channel.id, async e => {
     callback(await get('HypeTrainEnd', null, null, null, {
       data: {
         id: e.id,
@@ -1157,7 +1041,7 @@ async function connect(clientId, accessToken, callback) {
   });
 
   // Subscribes to events that represent a user updating their account details.
-  ws_listeners.UserUpdate = await ws_listener.subscribeToUserUpdateEvents(channel.id, async e => {
+  ws_listeners.UserUpdate = await ws_listener.onUserUpdate(channel.id, async e => {
     callback(await get('UserUpdate', null, null, null, {
       user: {
         id: e.raidedBroadcasterId,
@@ -1171,45 +1055,55 @@ async function connect(clientId, accessToken, callback) {
     }));
   });
 
-  pubsub_listeners.Subscription = await pubsub_client.onSubscription(pubsub_userid, async message => {
-    callback(await get('Subscription', null, message, null));
-  });
-
-  pubsub_listeners.Redemption = await pubsub_client.onRedemption(pubsub_userid, async msg => {
+  pubsub_listeners.Redemption = await pubsub_client.onRedemption(channel.id, async msg => {
     callback(await get('Redemption', msg, msg.message, null));
   });
 
   await chat_client.connect();
+  if (botAccessToken) {
+    await bot_chat_client.connect();
+  }
   await ws_listener.start();
+
+  return await methods.getAccounts();
 }
 
 async function disconnect() {
   for (const name in chat_listeners) {
     const listener = chat_listeners[name];
     if (listener) {
-      chat_client.removeListener(listener);
+      try {
+        chat_client.removeListener(listener);
+      } catch (e) {}
     }
   }
 
   for (const name in ws_listeners) {
     const listener = ws_listeners[name];
     if (listener) {
-      listener.stop();
+      try {
+        listener.stop();
+      } catch (e) {}
     }
   }
 
-  for (const name in pubsub_listeners) {
-    const listener = pubsub_listeners[name];
-    if (listener) {
-      listener.remove();
-    }
-  }
-
-  await ws_listener.stop();
-  await chat_client.quit();
+  try {
+    pubsub_client.removeAllHandlers();
+  } catch (e) {}
+  try {
+    await ws_listener.stop();
+  } catch (e) {}
+  try {
+    await bot_chat_client.quit();
+  } catch (e) {}
+  try {
+    await chat_client.quit();
+  } catch (e) {}
 
   pubsub_client = null;
   ws_listener = null;
+  bot_chat_client = null;
+  bot_api_client = null;
   chat_client = null;
   api_client = null;
 }
@@ -1221,8 +1115,13 @@ async function exec(type, name, args) {
   try {
     if (type === 'API') {
       c = api_client;
-    } else if (type === 'Chat') {
-      c = chat_client;
+    } else if (['Chat', 'BotChat', 'AutoChat'].indexOf(type) >= 0) {
+      c = (bot_chat_client && type === 'BotChat') ? bot_chat_client : chat_client;
+      if (type === 'AutoChat') {
+        if (bot_chat_client && args.shift().toLowerCase() === bot_channel.name) {
+          c = bot_chat_client;
+        }
+      }
 
       const prefix_channel = [
         'action',
@@ -1234,7 +1133,6 @@ async function exec(type, name, args) {
         'getVips',
         'host',
         'mod',
-        'purge',
         'raid',
         'removeVip',
         'runCommercial',
@@ -1243,6 +1141,18 @@ async function exec(type, name, args) {
         'unhostOutside',
         'unmod',
         'unraid',
+        'say'
+      ];
+
+      if (prefix_channel.indexOf(name) >= 0) {
+        args.unshift(channel.name);
+      }
+    } else if (bot_chat_client && type === 'BotChat') {
+      c = bot_chat_client;
+
+      const prefix_channel = [
+        'action',
+        'sendAnnouncement',
         'say'
       ];
 

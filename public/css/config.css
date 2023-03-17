@@ -24,6 +24,18 @@ textarea:focus {
   box-shadow: none !important;
 }
 
+.is-selected {
+  background-color: rgba(0, 0, 0, .5);
+}
+.is-narrow,
+.is-narrow-top {
+  border-top: 1px solid #555;
+}
+.is-narrow,
+.is-narrow-bottom {
+  border-bottom: 1px solid #555;
+}
+
 select option {
   background-color: #333;
 }

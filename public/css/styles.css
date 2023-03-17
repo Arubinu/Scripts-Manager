@@ -50,7 +50,7 @@ body[mode="development"] .lateral-menu > section {
 .lateral-menu > section > .hero-body {
   flex-direction: column;
   align-items: inherit !important;
-  padding: 2rem 2em 1.5em;
+  padding: 1.5em;
   color: #eee;
 }
 .lateral-menu a:hover {
@@ -70,9 +70,12 @@ body[mode="development"] .lateral-menu > section {
   position: relative;
   margin-left: 300px;
   padding: 0px;
-  width: calc(100% - 300px);
+  width: calc(100% - 300px + 8px);
   color: #eee;
   background-color: #363636;
+}
+.content.is-scrollbar {
+  width: calc(100% - 300px);
 }
 
 .content > iframe {
@@ -83,4 +86,25 @@ body[mode="development"] .lateral-menu > section {
   left: 0px;
   width: 100%;
   min-height: 100%;
+}
+
+[state]::before {
+  content: ' ';
+  position: absolute;
+  left: -1.6rem;
+  margin-right: .5rem;
+  width: 18px;
+  height: 18px;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, .4);
+  border-radius: 3px;
+}
+[state="connected"]::before {
+  background-color: #3bcb42;
+}
+[state="warning"]::before {
+  background-color: #cbc93b;
+}
+[state="disconnected"]::before {
+  background-color: #b72b2b;
 }

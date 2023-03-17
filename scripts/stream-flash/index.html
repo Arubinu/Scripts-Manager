@@ -47,6 +47,12 @@
             </div>
           </div>
           <div class="level-item has-text-centered">
+            <div class="info-follower">
+              <p class="heading">Followers</p>
+              <p class="title"></p>
+            </div>
+          </div>
+          <div class="level-item has-text-centered">
             <div class="info-subscriber">
               <p class="heading">Subscribers</p>
               <p class="title"></p>
@@ -195,7 +201,7 @@
             _config = event.data.data;
             update_buttons();
 
-            for (const name of ['flash', 'viewer', 'subscriber', 'moderator']) {
+            for (const name of ['flash', 'viewer', 'follower', 'subscriber', 'moderator']) {
               document.querySelector(`.info-${name} .title`).innerText = _config.statistics[name];
             }
 

@@ -73,8 +73,10 @@ function create_window() {
   });
   setInterval(() => {
     if (_config.default.enabled) {
-      win.setAlwaysOnTop(true, 'screen-saver');
-      win.setVisibleOnAllWorkspaces(true);
+      try {
+        win.setAlwaysOnTop(true, 'screen-saver');
+        win.setVisibleOnAllWorkspaces(true);
+      } catch (e) {}
     }
   }, 100);
 }
@@ -105,6 +107,23 @@ function next_screen(index) {
   win.setSize(bounds.width, bounds.height);
 
   win.webContents.send('flash');
+}
+
+function edit_widget(name, callback) {
+  for (const id in _config.widgets) {
+    const widget = JSON.parse(_config.widgets[id]);
+    if (widget.name === name) {
+      callback(widget);
+
+      _config.widgets[id] = JSON.stringify(widget);
+      win.webContents.send('add', { id, widget });
+
+      update_interface();
+      save_config();
+
+      break;
+    }
+  }
 }
 
 
@@ -163,6 +182,22 @@ module.exports = {
       } else if (name === 'enabled') {
         _config.default.enabled = data;
         win.webContents.send('enabled', _config.default.enabled);
+      }
+    } else if (name === 'websocket') {
+      if (typeof data === 'object' && data.target === 'stream-widgets') {
+        if (data.name === 'toggle-widget' && typeof data.data === 'object' && typeof data.data.name === 'string') {
+          edit_widget(data.data.name, widget => {
+            widget.hide = (typeof data.data.state === 'boolean') ? !data.data.state : !widget.hide;
+          });
+        } else if (data.name === 'replace-url' && typeof data.data === 'object' && typeof data.data.name === 'string' && typeof data.data.url === 'string') {
+          edit_widget(data.data.name, widget => {
+            widget.url = data.data.url;
+          });
+        } else if (data.name === 'next-screen') {
+          next_screen();
+          update_interface();
+          save_config();
+        }
       }
     }
 

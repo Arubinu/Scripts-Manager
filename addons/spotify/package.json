@@ -9,7 +9,6 @@
   "author": "Arubinu",
   "license": "ISC",
   "dependencies": {
-    "comfy.js": "^1.1.15",
     "spotify-web-api-node": "^5.0.2"
   }
 }

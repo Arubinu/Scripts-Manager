@@ -136,6 +136,8 @@ const functions = {
 
 function connect() {
   global_send('Connection', []);
+
+  _changes = false;
   obs.connect(_config.connection.address, _config.connection.password, {
     eventSubscriptions: EventSubscription.All,
     rpcVersion: 1
@@ -156,7 +158,6 @@ function disconnect(broadcast) {
     global_send('Disconnection', []);
   }
 
-  _changes = false;
   if (_connected) {
     obs.disconnect().catch(() => {});
   }
@@ -175,77 +176,67 @@ module.exports = {
   },
   initialized: () => {
     const methods = [
-        'CurrentSceneCollectionChanged',
-        'CurrentSceneCollectionChanging',
-        'CurrentSceneTransitionChanged',
-        'CurrentPreviewSceneChanged',
-        'CurrentProfileChanged',
-        'CurrentProfileChanging',
-        'CurrentProgramSceneChanged',
-        'CurrentSceneTransitionDurationChanged',
-        'CustomEvent',
-        'ExitStarted',
-        'InputCreated',
-        'InputActiveStateChanged',
-        'InputAudioBalanceChanged',
-        'InputAudioMonitorTypeChanged',
-        'InputAudioSyncOffsetChanged',
-        'InputAudioTracksChanged',
-        'InputMuteStateChanged',
-        'InputNameChanged',
-        'InputRemoved',
-        'InputShowStateChanged',
-        'InputVolumeChanged',
-        'InputVolumeMeters',
-        'MediaInputActionTriggered',
-        'MediaInputPlaybackEnded',
-        'MediaInputPlaybackStarted',
-        'ProfileListChanged',
-        'RecordStateChanged',
-        'ReplayBufferSaved',
-        'ReplayBufferStateChanged',
-        'SceneCreated',
-        'SceneCollectionListChanged',
-        'SceneItemCreated',
-        'SceneItemEnableStateChanged',
-        'SceneItemListReindexed',
-        'SceneItemLockStateChanged',
-        'SceneItemRemoved',
-        'SceneItemSelected',
-        'SceneItemTransformChanged',
-        'SceneListChanged',
-        'SceneNameChanged',
-        'SceneRemoved',
-        'SceneTransitionEnded',
-        'SceneTransitionStarted',
-        'SceneTransitionVideoEnded',
-        'ScreenshotSaved',
-        'SourceFilterCreated',
-        'SourceFilterEnableStateChanged',
-        'SourceFilterListReindexed',
-        'SourceFilterNameChanged',
-        'SourceFilterRemoved',
-        'StreamStateChanged',
-        'StudioModeStateChanged',
-        'VendorEvent',
-        'VirtualcamStateChanged',
+      'CurrentSceneCollectionChanged',
+      'CurrentSceneCollectionChanging',
+      'CurrentSceneTransitionChanged',
+      'CurrentPreviewSceneChanged',
+      'CurrentProfileChanged',
+      'CurrentProfileChanging',
+      'CurrentProgramSceneChanged',
+      'CurrentSceneTransitionDurationChanged',
+      'CustomEvent',
+      'ExitStarted',
+      'InputCreated',
+      'InputActiveStateChanged',
+      'InputAudioBalanceChanged',
+      'InputAudioMonitorTypeChanged',
+      'InputAudioSyncOffsetChanged',
+      'InputAudioTracksChanged',
+      'InputMuteStateChanged',
+      'InputNameChanged',
+      'InputRemoved',
+      'InputShowStateChanged',
+      'InputVolumeChanged',
+      'InputVolumeMeters',
+      'MediaInputActionTriggered',
+      'MediaInputPlaybackEnded',
+      'MediaInputPlaybackStarted',
+      'ProfileListChanged',
+      'RecordStateChanged',
+      'ReplayBufferSaved',
+      'ReplayBufferStateChanged',
+      'SceneCreated',
+      'SceneCollectionListChanged',
+      'SceneItemCreated',
+      'SceneItemEnableStateChanged',
+      'SceneItemListReindexed',
+      'SceneItemLockStateChanged',
+      'SceneItemRemoved',
+      'SceneItemSelected',
+      'SceneItemTransformChanged',
+      'SceneListChanged',
+      'SceneNameChanged',
+      'SceneRemoved',
+      'SceneTransitionEnded',
+      'SceneTransitionStarted',
+      'SceneTransitionVideoEnded',
+      'ScreenshotSaved',
+      'SourceFilterCreated',
+      'SourceFilterEnableStateChanged',
+      'SourceFilterListReindexed',
+      'SourceFilterNameChanged',
+      'SourceFilterRemoved',
+      'StreamStateChanged',
+      'StudioModeStateChanged',
+      'VendorEvent',
+      'VirtualcamStateChanged',
 
-        'ConnectionOpened',
-        'ConnectionClosed',
-        'AuthenticationSuccess',
-        'AuthenticationFailure',
-        'error'
-      ],
-      deprecated = {
-        'CurrentPreviewSceneChanged': 'PreviewSceneChanged',
-        'CurrentSceneTransitionChanged': 'SwitchTransition',
-        'InputVolumeChanged': 'SourceVolumeChanged',
-        'MediaInputPlaybackEnded': 'MediaStopped',
-        'MediaInputPlaybackStarted': 'MediaStarted',
-        'SceneTransitionEnded': 'TransitionEnd',
-        'SceneTransitionStarted': 'TransitionBegin',
-        'SourceFilterEnableStateChanged': 'SourceFilterVisibilityChanged',
-      };
+      'ConnectionOpened',
+      'ConnectionClosed',
+      'AuthenticationSuccess',
+      'AuthenticationFailure',
+      'error'
+    ];
 
     for (const method of methods) {
       obs.on(method, data => {
@@ -253,8 +244,10 @@ module.exports = {
           return;
         } else if (method === 'ConnectionOpened') {
           _connected = true;
+          _sender('manager', 'state', 'connected');
         } else if (method === 'ConnectionClosed') {
           _connected = false;
+          _sender('manager', 'state', 'disconnected');
         }
 
         const obj = {
@@ -271,21 +264,6 @@ module.exports = {
 
         _sender('message', 'logs', obj);
         global_send(method, data);
-
-        // deprecated
-        if (method === 'CurrentProgramSceneChanged') {
-          global_send('SwitchScenes', data);
-          global_send('ScenesChanged', data);
-        } else if (method === 'ReplayBufferStateChanged') {
-          global_send(((data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? 'ReplayStarting' : 'ReplayStopping'), data);
-          global_send(((data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? 'ReplayStarted' : 'ReplayStopped'), data);
-        } else if (method === 'RecordStateChanged') {
-          global_send(((data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? 'RecordingStarted' : 'RecordingStopped'), data);
-        } else if (method === 'StreamStateChanged') {
-          global_send(((data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED') ? 'StreamStarted' : 'StreamStopped'), data);
-        } else if (typeof deprecated[method] !== 'undefined') {
-          global_send(deprecated[method], data);
-        }
       });
     }
 
@@ -322,7 +300,7 @@ module.exports = {
       if (typeof data === 'object') {
         const name = Object.keys(data)[0];
         if (name === 'refresh') {
-          if (_config.default.enabled) {
+          if (_config.default.enabled && _changes) {
             reconnect();
           }
 

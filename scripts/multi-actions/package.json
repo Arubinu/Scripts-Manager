@@ -12,6 +12,7 @@
     "electron": "^19.0.6"
   },
   "dependencies": {
+    "active-win": "^8.1.0",
     "dgram": "^1.0.1",
     "discord.js": "^14.8.0",
     "node-global-key-listener": "^0.1.1",

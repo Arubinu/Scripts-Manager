@@ -4,11 +4,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'" />
 
     <title>Settings</title>
 
-    <link rel="stylesheet" href="./css/config.css" />
+    <link rel="stylesheet" href="./css/shared.css" />
   </head>
 
   <body>
@@ -24,7 +24,7 @@
           <br />For Addons and Scripts in the folder to be loaded.
         </section>
         <footer class="modal-card-foot is-justify-content-right">
-          <button class="button" aria-label="close">Cancel</button>
+          <button class="button" aria-label="close">Close</button>
         </footer>
       </div>
     </div>
@@ -92,6 +92,20 @@
           </div>
           <div class="column has-text-right">
             <div class="is-inline-block systray">
+              <div class="buttons has-addons">
+                <button class="button" name="on">On</button>
+                <button class="button" name="off">Off</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns is-horizontal">
+          <div class="column is-four-fifths">
+            <label class="label">Access from a browser:</label>
+          </div>
+          <div class="column has-text-right">
+            <div class="is-inline-block local">
               <div class="buttons has-addons">
                 <button class="button" name="on">On</button>
                 <button class="button" name="off">Off</button>

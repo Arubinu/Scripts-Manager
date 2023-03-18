@@ -11,6 +11,33 @@ let _logs = [],
   _connected = false;
 
 const functions = {
+  GetScenesAndGroups: async (withSources, withFilters) => {
+    return {
+      scenes: await functions.GetScenes(withSources, withFilters),
+      groups: await functions.GetGroups(withSources, withFilters)
+    }
+  },
+  GetGroups: async (withSources, withFilters) => {
+    let groups = [];
+    for (const groupName of (await obs.call('GetGroupList')).groups) {
+      if (groupName.length) {
+        groups.push(await functions.GetGroup(groupName, withSources, withFilters));
+      }
+    }
+
+    return groups;
+  },
+  GetGroup: async (groupName, withSources, withFilters) => {
+    let group = await functions.GetSource(groupName);
+    if (group && withSources) {
+      group.sources = (await obs.call('GetGroupSceneItemList', { sceneName: groupName })).sceneItems || [];
+      if (withFilters) {
+        group.filters = await functions.GetFilters(groupName);
+      }
+    }
+
+    return group;
+  },
   GetScenes: async (withSources, withFilters) => {
     let scenes = [];
     for (let scene of (await obs.call('GetSceneList')).scenes) {
@@ -317,22 +344,26 @@ module.exports = {
       return;
     }
 
-    let check = false;
-    if ((name === 'disconnect' || name === 'reconnect') && (check = true)) {
-      return disconnect();
-    }
-    if ((name === 'connect' || name === 'reconnect') && (check = true)) {
-      return connect();
-    }
-
-    if (typeof functions[name] === 'function') {
-      if (Array.isArray(data) && data.length) {
-        return await functions[name](...data);
-      } else {
-        return await functions[name]();
+    if (_config.default.enabled) {
+      let check = false;
+      if ((name === 'disconnect' || name === 'reconnect') && (check = true)) {
+        return disconnect();
       }
-    } else {
-      return await obs.call(name, data);
+      if ((name === 'connect' || name === 'reconnect') && (check = true)) {
+        return connect();
+      }
+
+      if (_connected) {
+        if (typeof functions[name] === 'function') {
+          if (Array.isArray(data) && data.length) {
+            return await functions[name](...data);
+          } else {
+            return await functions[name]();
+          }
+        } else {
+          return await obs.call(name, data);
+        }
+      }
     }
   }
 };

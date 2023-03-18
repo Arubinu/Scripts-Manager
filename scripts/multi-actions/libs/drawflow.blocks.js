@@ -1,7 +1,7 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const editor = window.editor,
-    drawflow = document.querySelector('.box-drawflow'),
+window.drawflow_loader = editor => {
+  const drawflow = document.querySelector('.box-drawflow'),
     show_blocks = document.querySelector('.show-blocks'),
+    export_blocks = document.querySelector('.export-blocks'),
     options = document.querySelector('#template .drawflow-options').cloneNode(true),
     options_test = options.querySelector('.test-action'),
     options_delete = options.querySelector('.delete-action'),
@@ -15,14 +15,35 @@ document.addEventListener('DOMContentLoaded', () => {
     double_click = 0,
     global_datas = {},
     radios_index = {},
+    request_list = {},
     node_selected = -1,
     multi_move = false,
     multi_selection = {},
     mobile_item_selec = '',
     mobile_last_move = null;
 
-  function request(source_id, id, name, data) {
-    window.parent.postMessage({ request: [source_id, id, name, (data || [])] }, '*');
+  function request(source_id, id, name, data, separate) {
+    const list_key = `${id}:${name}`;
+
+    let to_process = false;
+    if (!separate) {
+      if (typeof request_list[list_key] === 'undefined') {
+        to_process = true;
+        request_list[list_key] = [];
+      }
+
+      if (to_process || request_list[list_key].indexOf(source_id) < 0) {
+        if (to_process || !request_list[list_key].length) {
+          to_process = true;
+        }
+
+        request_list[list_key].push(source_id);
+      }
+    }
+
+    if (separate || to_process) {
+      window.parent.postMessage({ request: [source_id, id, name, (data || []), separate] }, '*');
+    }
   }
 
   function drag(event) {
@@ -108,7 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
     node.data.data = _data;
 
     editor.updateNodeDataFromId(node.id, node.data);
-    drawflow_save();
+    if (!window.loading) {
+      drawflow_save();
+    }
 
     const node_elem = drawflow.querySelector(`#node-${id}`);
     for (const data_name of Object.keys(node.data.data)) {
@@ -551,14 +574,57 @@ document.addEventListener('DOMContentLoaded', () => {
         set_value(data_elem, data_elem.value);
       }
     },
+    accounts: (id, elem, data, set_data, receive, receive_data) => {
+      const select = elem.querySelector('select[name="account"]');
+      if (!select.children.length) {
+        if (receive || global_datas.accounts) {
+          if (typeof receive_data === 'object') {
+            global_datas.accounts = receive_data;
+          }
+
+          const selected = select.value || data.account || 'Broadcaster';
+
+          select.innerHTML = '';
+
+          let names = [];
+          for (const type in global_datas.accounts) {
+            const account = type[0].toUpperCase() + type.substring(1).toLowerCase();
+            names.push(account);
+
+            const option = document.createElement('option');
+            option.value = account;
+            option.innerText = account;
+            select.appendChild(option);
+          }
+
+          if (selected && names.indexOf(selected) < 0) {
+            const option = document.createElement('option');
+            option.classList.add('disabled');
+            option.value = selected;
+            option.innerText = 'Not Found';
+
+            select.appendChild(option);
+          }
+
+          select.value = selected;
+        } else if (!receive) {
+          request(id, 'twitch', 'GetAccounts', { type: 'Methods', args: [] });
+        }
+      }
+    },
     scene_source: (id, elem, data, set_data, receive, receive_data) => {
       const selects = elem.querySelectorAll('select');
       if (receive || global_datas.scene_source) {
         if (receive) {
           global_datas.scene_source = receive_data;
 
-          global_datas.scene_source.sort(sort_object('sceneName'));
-          for (const scene of global_datas.scene_source) {
+          global_datas.scene_source.scenes.sort(sort_object('sceneName'));
+          for (const scene of global_datas.scene_source.scenes) {
+            scene.sources.sort(sort_object('sourceName'));
+          }
+
+          global_datas.scene_source.groups.sort(sort_object('sourceName'));
+          for (const scene of global_datas.scene_source.groups) {
             scene.sources.sort(sort_object('sourceName'));
           }
         }
@@ -573,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selects[1].appendChild(document.createElement('option'));
 
             let names = [];
-            for (const scene of global_datas.scene_source) {
+            for (const scene of [...global_datas.scene_source.scenes, ...global_datas.scene_source.groups]) {
               if (scene.sceneName === value) {
                 for (const source of scene.sources) {
                   names.push(source.sourceName);
@@ -613,13 +679,30 @@ document.addEventListener('DOMContentLoaded', () => {
         selects[0].appendChild(document.createElement('option'));
 
         let names = [];
-        for (const scene of global_datas.scene_source) {
+        for (const scene of global_datas.scene_source.scenes) {
           names.push(scene.sceneName);
 
           const option = document.createElement('option');
           option.value = scene.sceneName;
           option.innerText = scene.sceneName;
           selects[0].appendChild(option);
+        }
+
+        if (global_datas.scene_source.groups.length) {
+          const optgroup = document.createElement('option');
+          optgroup.setAttribute('disabled', '');
+          optgroup.classList.add('optgroup');
+          optgroup.innerText = 'Groups';
+          selects[0].appendChild(optgroup);
+
+          for (const group of global_datas.scene_source.groups) {
+            names.push(group.sourceName);
+
+            const option = document.createElement('option');
+            option.value = group.sourceName;
+            option.innerText = group.sourceName;
+            selects[0].appendChild(option);
+          }
         }
 
         if (selected && names.indexOf(selected) < 0) {
@@ -652,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
           selects[1].appendChild(option);
         }
 
-        request(id, 'obs-studio', 'GetScenes', [true]);
+        request(id, 'obs-studio', 'GetScenesAndGroups', [true]);
       }
     },
     source_filter: (id, elem, data, set_data, receive, receive_data, block_name, with_scenes) => {
@@ -799,26 +882,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     },
-    accounts: (id, elem, data, set_data, receive, receive_data) => {
-      const select = elem.querySelector('select[name="account"]');
+    speech_voices: (id, elem, data, set_data, receive, receive_data) => {
+      const select = elem.querySelector('select[name="voice"]');
       if (!select.children.length) {
-        if (receive || global_datas.accounts) {
+        if (receive || global_datas.voices) {
           if (typeof receive_data === 'object') {
-            global_datas.accounts = receive_data;
+            global_datas.voices = receive_data;
+
+            global_datas.voices.sort(sort_object('lang'));
           }
 
-          const selected = select.value || data.account || 'Broadcaster';
+          const selected = select.value || data.voice;
 
           select.innerHTML = '';
+          select.appendChild(document.createElement('option'));
 
           let names = [];
-          for (const type in global_datas.accounts) {
-            const account = type[0].toUpperCase() + type.substring(1).toLowerCase();
-            names.push(account);
+          for (const voice of global_datas.voices) {
+            names.push(voice.name);
 
             const option = document.createElement('option');
-            option.value = account;
-            option.innerText = account;
+            option.value = voice.name;
+            option.innerText = voice.name;
             select.appendChild(option);
           }
 
@@ -833,7 +918,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           select.value = selected;
         } else if (!receive) {
-          request(id, 'twitch', 'GetAccounts', { type: 'Methods', args: [] });
+          request(id, 'manager', 'speech:voices');
         }
       }
     },
@@ -1032,6 +1117,37 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const blocks = {
+    'both-active-window': {
+      title: 'Active Window',
+      help: 'active-window',
+      icon: 'application',
+      inputs: 1,
+      outputs: 2,
+      body: bodys.file('Application', 'program', 'active-window') + bodys.text('Window Title', 'title') + bodys.state('Type', false, 'Application', 'Window Title'),
+      init: (id, elem, data, set_data, first) => {
+        const change_state = state => {
+          state = state ? 'program' : 'title';
+
+          for (const input of elem.querySelectorAll(`input[name="program"], input[name="title"]`)) {
+            const name = input.getAttribute('name'),
+              elem = level_elem(input);
+
+            elem.previousElementSibling.style.display = ((name === state) ? 'block' : 'none');
+            elem.style.display = ((name === state) ? 'block' : 'none');
+          }
+
+          elem.setAttribute('select-type', state);
+        };
+
+        functions.state(id, elem, data, set_data, false, false, 'type', change_state);
+      },
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (!elem.classList.contains('block-init')) {
+          elem.classList.add('block-init');
+          browse_fas(id, 'file', elem.querySelector('.active-window button'), 'program', false, 'exe');
+        }
+      }]
+    },
     'outputs-app-status': {
       title: 'App Status',
       help: 'app-status',
@@ -1124,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'cooldown',
       icon: 'cooldown',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Variable name', 'variable') + bodys.number_unit('Time', 'seconds', 1000, 100, 1, undefined, ['Milliseconds', 'Seconds', 'Minutes']),
       init: (id, elem, data, set_data, first) => {
         if (!data.variable) {
@@ -1143,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'download-file',
       icon: 'download',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('URL') + bodys.text('File name', 'name') + bodys.file('Folder', false, 'download-file'),
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
@@ -1157,7 +1273,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'file-read',
       icon: 'file',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.file('File', false, 'file-read'),
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
@@ -1185,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'http-request',
       icon: 'request',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('URL') + bodys.text('Method'),
       update: functions.trim
     },
@@ -1253,7 +1369,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'launch-app',
       icon: 'launch',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.file('Application', 'program', 'launch-app'),
       update: (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
@@ -1301,6 +1417,40 @@ document.addEventListener('DOMContentLoaded', () => {
       body: bodys.text('Address'),
       update: functions.trim
     },
+    'both-say': {
+      title: 'Say',
+      help: 'say',
+      icon: 'announce',
+      inputs: 1,
+      outputs: 1,
+      body: bodys.text('Message') + bodys.select('Voice', false, false, false, true) + bodys.number('Volume', false, 100, 1, 1, 100, true) + bodys.number('Rate', false, 1, .1, .1, 10, true) + bodys.number('Pitch', false, .8, .1, 0, 2, true) + bodys.state(false, false, 'Start', 'Stop'),
+      register: [['manager', 'speech:voices']],
+      init: (id, elem, data, set_data, first) => {
+        const change_state = state => {
+          const names = ['start', 'stop'];
+          state = names[state ? 0 : 1];
+
+          for (const input of elem.querySelectorAll(`input[name="start"], input[name="stop"]`)) {
+            const name = input.getAttribute('name'),
+              elem = level_elem(input);
+
+            elem.previousElementSibling.style.display = ((name === state) ? 'block' : 'none');
+            elem.style.display = (name === state) ? 'block' : 'none';
+          }
+
+          const is_stop = (state !== 'start');
+          elem.querySelector('[name="voice"]').classList.toggle('is-hidden', is_stop);
+          elem.querySelector('[name="voice"]').previousElementSibling.classList.toggle('is-hidden', is_stop);
+          elem.querySelector('[name="message"]').classList.toggle('is-hidden', is_stop);
+          elem.querySelector('[name="message"]').previousElementSibling.classList.toggle('is-hidden', is_stop);
+        };
+
+        functions.state(id, elem, data, set_data, false, false, false, change_state);
+      },
+      update: [functions.trim, functions.speech_voices, (id, elem, data, set_data, receive, receive_data) => {
+        functions.select(id, elem, data, set_data, receive, receive_data, 'voice');
+      }]
+    },
     'outputs-launch': {
       title: 'Scripts Manager Launch',
       help: 'scripts-manager-launch',
@@ -1331,7 +1481,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'socket-request',
       icon: 'request',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('IPv4', 'host') + bodys.number('Port', false, 3000, 1, 1) + bodys.text('Data'),
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         functions.number(id, elem, data, set_data, receive, receive_data, 'port', 1);
@@ -1380,7 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'variable-condition',
       icon: 'variable-condition',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Value 1') + bodys.select('Condition') + bodys.text('Value 2', 'string') + bodys.text('Value 2', 'number', '0') + bodys.select('Value 2', 'boolean', ['false', 'true']) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number'),
       init: (id, elem, data, set_data, first) => {
         const conditions = {
@@ -1512,7 +1662,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'websocket-request',
       icon: 'request',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('URL') + bodys.text('Data'),
       update: functions.trim
     },
@@ -1524,7 +1674,7 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'webhook',
       width: 500,
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: '<div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL<i class="fas fa-circle-info is-pulled-right"></i></p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div></div><p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea><p>Inline 1<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
@@ -1547,7 +1697,7 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'webhook',
       width: 500,
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: '<p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea>',
       update: functions.trim
     },
@@ -1573,6 +1723,20 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1
     },
+    'both-obs-studio-filters': {
+      type: 'obs-studio',
+      title: 'Filters',
+      help: 'obs-studio---filters',
+      tooltip: 'OBS Studio - Filters',
+      icon: 'toggle',
+      inputs: 1,
+      outputs: 2,
+      body: bodys.select('Source name', 'source'),
+      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      update: (id, elem, data, set_data, receive, receive_data) => {
+        functions.source_filter(id, elem, data, set_data, receive, receive_data, 'both-obs-studio-filters', true);
+      }
+    },
     'outputs-obs-studio-lock-source': {
       type: 'obs-studio',
       title: 'Lock Source',
@@ -1582,7 +1746,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state(false, false, 'On', 'Off'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'GetScenesAndGroups'], ['obs-studio', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1597,7 +1761,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'GetScenesAndGroups'], ['obs-studio', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1672,6 +1836,15 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'replay',
       inputs: 1,
       outputs: 0,
+    },
+    'both-obs-studio-scenes': {
+      type: 'obs-studio',
+      title: 'Scenes',
+      help: 'obs-studio---scenes',
+      tooltip: 'OBS Studio - Scenes',
+      icon: 'studio',
+      inputs: 1,
+      outputs: 2
     },
     'inputs-obs-studio-set-browser': {
       type: 'obs-studio',
@@ -1780,7 +1953,19 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'GetScenesAndGroups'], ['obs-studio', 'SceneListChanged']],
+      update: functions.scene_source
+    },
+    'both-obs-studio-sources': {
+      type: 'obs-studio',
+      title: 'Sources',
+      help: 'obs-studio---sources',
+      tooltip: 'OBS Studio - Sources',
+      icon: 'layers',
+      inputs: 1,
+      outputs: 2,
+      body: bodys.select('Scene name', 'scene'),
+      register: [['obs-studio', 'GetScenesAndGroups'], ['obs-studio', 'SceneListChanged']],
       update: functions.scene_source
     },
     'outputs-obs-studio-streaming': {
@@ -1818,7 +2003,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Scene name', 'scene'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'GetScenesAndGroups'], ['obs-studio', 'SceneListChanged']],
       update: functions.scene_source
     },
     'inputs-obs-studio-switch-scene': {
@@ -1830,7 +2015,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Scene name', 'scene'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'GetScenesAndGroups'], ['obs-studio', 'SceneListChanged']],
       update: functions.scene_source
     },
     'outputs-obs-studio-toggle-filter': {
@@ -1876,7 +2061,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state(false, false, 'Show', 'Hide'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'GetScenesAndGroups'], ['obs-studio', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1891,7 +2076,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'Show', 'Hide'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'GetScenesAndGroups'], ['obs-studio', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1941,7 +2126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Spotify - Current Queue',
       icon: 'playlist',
       inputs: 1,
-      outputs: 1
+      outputs: 2
     },
     'both-spotify-currently-playing': {
       type: 'spotify',
@@ -1950,7 +2135,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Spotify - Currently Playing',
       icon: 'music',
       inputs: 1,
-      outputs: 1
+      outputs: 2
     },
     'inputs-spotify-play-pause': {
       type: 'spotify',
@@ -1999,7 +2184,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Spotify - Search',
       icon: 'search',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Track'),
       update: functions.trim
     },
@@ -2283,7 +2468,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Twitch - Game',
       icon: 'game',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Game'),
       update: functions.trim
     },
@@ -2312,7 +2497,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Twitch - Info',
       icon: 'info',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Channel'),
       update: functions.trim
     },
@@ -2326,6 +2511,15 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 0,
       body: bodys.text('Status') + bodys.text('Game'),
       update: functions.trim
+    },
+    'outputs-twitch-join': {
+      type: 'twitch',
+      title: 'Join',
+      help: 'twitch---join',
+      tooltip: 'Twitch - Join',
+      icon: 'join',
+      inputs: 0,
+      outputs: 1
     },
     'outputs-twitch-message': {
       type: 'twitch',
@@ -2378,6 +2572,15 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 1,
       body: bodys.text('Message') + bodys.match + bodys.viewers(),
       update: functions.trim
+    },
+    'outputs-twitch-part': {
+      type: 'twitch',
+      title: 'Part',
+      help: 'twitch---part',
+      tooltip: 'Twitch - Part',
+      icon: 'part',
+      inputs: 0,
+      outputs: 1
     },
     'outputs-twitch-prime-community-gift': {
       type: 'twitch',
@@ -2514,6 +2717,24 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 0,
       body: bodys.text('User'),
       update: functions.trim
+    },
+    'outputs-twitch-stream-offline': {
+      type: 'twitch',
+      title: 'Stream Offline',
+      help: 'twitch---stream-offline',
+      tooltip: 'Twitch - Stream Offline',
+      icon: 'bye',
+      inputs: 0,
+      outputs: 1
+    },
+    'outputs-twitch-stream-online': {
+      type: 'twitch',
+      title: 'Stream Online',
+      help: 'twitch---stream-online',
+      tooltip: 'Twitch - Stream Online',
+      icon: 'start',
+      inputs: 0,
+      outputs: 1
     },
     'outputs-twitch-slow': {
       type: 'twitch',
@@ -2703,15 +2924,24 @@ document.addEventListener('DOMContentLoaded', () => {
     window.parent.postMessage({ save: editor.export().drawflow }, '*');
   }
 
-  function drawflow_select() {
-    const selector = document.querySelector('.modules');
+  function drawflow_select(sort) {
+    const selector = document.querySelector('[select="module"]');
 
-    selector.innerHTML = '';
+    selector.removeAll();
+    if (Array.isArray(sort)) {
+      for (const name of sort) {
+        if (typeof editor.drawflow.drawflow[name] !== 'undefined') {
+          selector.addItem(name);
+        }
+      }
+    } else {
+      sort = [];
+    }
+
     for (const name in editor.drawflow.drawflow) {
-      const option = document.createElement('option');
-      option.value = name;
-      option.innerText = name;
-      selector.appendChild(option);
+      if (sort.indexOf(name) < 0) {
+        selector.addItem(name);
+      }
     }
 
     const current = editor.module;
@@ -2720,19 +2950,30 @@ document.addEventListener('DOMContentLoaded', () => {
       module_name = Object.keys(editor.drawflow.drawflow)[0];
     }
 
-    selector.value = module_name;
+    selector.setValue(module_name);
     if (module_name !== current) {
       editor.changeModule(module_name);
     }
   }
 
-  function drawflow_receiver(source, id, name, data) {
+  function drawflow_receiver(source, id, name, data, separate) {
+    const list_key = `${id}:${name}`;
+
     try {
       for (const i in editor.drawflow.drawflow[editor.module].data) {
         const node = get_node(i),
           block = blocks[node.data.type];
 
-        if ((source === false || node.id === source) && typeof block !== 'undefined' && Array.isArray(block.register)) {
+        let source_check = source === false || (separate && node.id === source);
+        if (!source_check && !separate && Array.isArray(request_list[list_key])) {
+          const pos = request_list[list_key].indexOf(node.id);
+          if (pos >= 0) {
+            source_check = true;
+            request_list[list_key].splice(pos, 1);
+          }
+        }
+
+        if (source_check && typeof block !== 'undefined' && Array.isArray(block.register)) {
           let check = false;
           for (const item of block.register) {
             check = check || (item[0] === id && item[1] === name);
@@ -2915,16 +3156,48 @@ document.addEventListener('DOMContentLoaded', () => {
     options.style.display = 'none';
   }, false);
   options_export.addEventListener('click', event => {
+    if (document.location.search.substring(1).split('&').indexOf('internal') < 0) {
+      event.stopPropagation();
+
+      const name = `${event.target.getAttribute('browse-file-name')}.${event.target.getAttribute('browse-file-ext')}`;
+      window.text_to_file(name, JSON.stringify(export_nodes(options_target.id), null, '  '), 'application/json');
+    }
+
     options.style.display = 'none';
-  }, false);
+  }, true);
   options_export.querySelector('input').addEventListener('change', event => {
-    window.parent.postMessage({ export: { path: event.target.value, data: JSON.stringify(export_nodes(options_target.id)) } }, '*');
+    window.parent.postMessage({ export: { path: event.target.value, data: JSON.stringify(export_nodes(options_target.id), null, '  ') } }, '*');
   }, false);
+  export_blocks.addEventListener('click', event => {
+    if (document.location.search.substring(1).split('&').indexOf('internal') < 0) {
+      event.stopPropagation();
+
+      const name = `${event.target.getAttribute('browse-file-name')}.${event.target.getAttribute('browse-file-ext')}`;
+      window.text_to_file(name, JSON.stringify(export_module(editor.module), null, '  '), 'application/json');
+    }
+  }, true);
   button_export.addEventListener('change', event => {
-    window.parent.postMessage({ export: { path: event.target.value, data: JSON.stringify(export_module(editor.module)) } }, '*');
+    window.parent.postMessage({ export: { path: event.target.value, data: JSON.stringify(export_module(editor.module), null, '  ') } }, '*');
   }, false);
   button_import.addEventListener('change', event => {
-    window.parent.postMessage({ import: { path: event.target.value } }, '*');
+    if (!event.target.value.indexOf('blob:')) {
+      fetch(event.target.value)
+        .then(res => {
+          URL.revokeObjectURL(event.target.value);
+          return res.text();
+        })
+        .then(data => {
+          window.message_event({
+            origin: 'drawflow',
+            data: {
+              name: 'import',
+              data: JSON.parse(data)
+            }
+          });
+        });
+    } else {
+      window.parent.postMessage({ import: { path: event.target.value } }, '*');
+    }
   }, false);
 
   document.querySelector('div.delete-blocks .is-success').addEventListener('click', event => {
@@ -3152,7 +3425,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reset_selection();
 
     setTimeout(() => {
-      document.querySelector('.export-blocks').setAttribute('browse-file-name', editor.module);
+      export_blocks.setAttribute('browse-file-name', editor.module);
     }, 10);
   });
   editor.on('nodeUnselected', reset_selection);
@@ -3284,4 +3557,4 @@ document.addEventListener('DOMContentLoaded', () => {
   window.drawflow_select = drawflow_select;
   window.drawflow_receiver = drawflow_receiver;
   window.drawflow_initializer = drawflow_initializer;
-});
+};

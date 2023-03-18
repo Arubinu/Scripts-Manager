@@ -5,6 +5,7 @@ const path = require('node:path'),
 
 let win = null,
   _edit = false,
+  _init = false,
   _screen = 0,
   _config = {},
   _sender = null,
@@ -35,7 +36,7 @@ function create_window() {
     transparent: true,
     titleBarStyle: 'hidden',
     webPreferences: {
-      preload: path.join(__dirname, 'widgets', 'preload.js')
+      preload: path.join(__dirname, 'window', 'preload.js')
     }
   });
 
@@ -44,21 +45,24 @@ function create_window() {
 
   win.setMenu(null);
   win.setIgnoreMouseEvents(true);
-  win.loadFile(path.join(__dirname, 'widgets', 'index.html')).then(() => {
-    ipcMain.handle('edit', (event, data) => {
-      if (typeof _config.widgets[data.id] !== 'undefined') {
-        let widget = JSON.parse(_config.widgets[data.id]);
-        for (const attr of ['x', 'y', 'width', 'height']) {
-          if (typeof data[attr]  !== 'undefined') {
-            widget[attr] = data[attr];
+  win.loadFile(path.join(__dirname, 'window', 'index.html')).then(() => {
+    if (!_init) {
+      _init = true;
+      ipcMain.handle('edit', (event, data) => {
+        if (typeof _config.widgets[data.id] !== 'undefined') {
+          let widget = JSON.parse(_config.widgets[data.id]);
+          for (const attr of ['x', 'y', 'width', 'height']) {
+            if (typeof data[attr]  !== 'undefined') {
+              widget[attr] = data[attr];
+            }
           }
-        }
 
-        _config.widgets[data.id] = JSON.stringify(widget);
-        _sender('message', 'add', { id: data.id, widget: _config.widgets[data.id] });
-        save_config();
-      }
-    });
+          _config.widgets[data.id] = JSON.stringify(widget);
+          _sender('message', 'add', { id: data.id, widget: _config.widgets[data.id] });
+          save_config();
+        }
+      });
+    }
 
     for (const widget_index in _config.widgets) {
       const widget = JSON.parse(_config.widgets[widget_index]);
@@ -72,8 +76,9 @@ function create_window() {
     win.show();
   });
   setInterval(() => {
-    if (_config.default.enabled) {
+    if (_config.default.enabled && win) {
       try {
+        win.setSkipTaskbar(true);
         win.setAlwaysOnTop(true, 'screen-saver');
         win.setVisibleOnAllWorkspaces(true);
       } catch (e) {}
@@ -101,12 +106,14 @@ function next_screen(index) {
     _screen = ((index < screens.length) ? index : 0);
   }
 
-  const bounds = screens[_screen].bounds;
-  win.setPosition(bounds.x, bounds.y);
-  win.setMinimumSize(bounds.width, bounds.height); // fix
-  win.setSize(bounds.width, bounds.height);
+  if (win) {
+    const bounds = screens[_screen].bounds;
+    win.setPosition(bounds.x, bounds.y);
+    win.setMinimumSize(bounds.width, bounds.height); // fix
+    win.setSize(bounds.width, bounds.height);
 
-  win.webContents.send('flash');
+    win.webContents.send('flash');
+  }
 }
 
 function edit_widget(name, callback) {
@@ -116,7 +123,9 @@ function edit_widget(name, callback) {
       callback(widget);
 
       _config.widgets[id] = JSON.stringify(widget);
-      win.webContents.send('add', { id, widget });
+      if (win) {
+        win.webContents.send('add', { id, widget });
+      }
 
       update_interface();
       save_config();
@@ -154,7 +163,7 @@ module.exports = {
   },
   initialized: () => {
     _sender('manager', 'menu', [ { label: 'Edit Mode', click : () => {
-      if (_config.default.enabled) {
+      if (_config.default.enabled && win) {
         _edit = true;
         win.setIgnoreMouseEvents(!_edit);
         win.webContents.send('edit', _edit);
@@ -168,12 +177,16 @@ module.exports = {
     (new keyevents()).addListener(event => {
       if (event.name === 'ESCAPE' && event.state === 'DOWN') {
         _edit = false;
-        win.setIgnoreMouseEvents(!_edit);
-        win.webContents.send('edit', _edit);
+        if (win) {
+          win.setIgnoreMouseEvents(!_edit);
+          win.webContents.send('edit', _edit);
+        }
       }
     });
 
-    create_window();
+    if (_config.default.enabled) {
+      create_window();
+    }
   },
   receiver: (id, name, data) => {
     if (id === 'manager') {
@@ -181,7 +194,12 @@ module.exports = {
         update_interface();
       } else if (name === 'enabled') {
         _config.default.enabled = data;
-        win.webContents.send('enabled', _config.default.enabled);
+        if (_config.default.enabled && !win) {
+          create_window();
+        } else if (!_config.default.enabled && win) {
+          win.destroy();
+          win = false;
+        }
       }
     } else if (name === 'websocket') {
       if (typeof data === 'object' && data.target === 'stream-widgets') {
@@ -208,16 +226,27 @@ module.exports = {
         if (name === 'create') {
           const id = uniqid();
           _config.widgets[id] = data[name].widget;
-          win.webContents.send('add', { id, widget: JSON.parse(_config.widgets[id]) });
+          if (win) {
+            win.webContents.send('add', { id, widget: JSON.parse(_config.widgets[id]) });
+          }
           _sender('message', 'add', { id, widget: _config.widgets[id] });
+        } else if (name === 'refresh') {
+          const id = data[name].id;
+          if (win) {
+            win.webContents.send('refresh', { id });
+          }
         } else if (name === 'update') {
           const id = data[name].id;
           _config.widgets[id] = data[name].widget;
-          win.webContents.send('add', { id, widget: JSON.parse(_config.widgets[id]) });
+          if (win) {
+            win.webContents.send('add', { id, widget: JSON.parse(_config.widgets[id]) });
+          }
         } else if (name === 'delete') {
           const id = data[name].id;
           delete _config.widgets[id];
-          win.webContents.send('remove', { id });
+          if (win) {
+            win.webContents.send('remove', { id });
+          }
         } else if (typeof data[name] === typeof _config.settings[name]) {
           _config.settings[name] = data[name];
         }

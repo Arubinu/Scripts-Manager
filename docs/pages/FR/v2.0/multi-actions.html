@@ -352,7 +352,7 @@
   <tr>
     <td width="200"><a href="./images/multi-actions/visuals/v2.0/both-socket-request.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/both-socket-request.webp" alt="" /></a></td>
     <td>Envoi de données à un serveur socket.
-      <br /><br /><u>IPv4 <span class="text-lightblue">*</span>:</u> Adresse IP du serveur recevant la requête.
+      <br /><br /><u>IPv4 <span class="text-lightblue">*</span>:</u> adresse IP du serveur recevant la requête.
       <br /><u>Port:</u> le port est un nombre qui permet aussi de déduire où envoyer la requête (selon le serveur en question).
       <br /><u>Data <span class="text-lightblue">*</span>:</u> les données écrites sont envoyées telles quelles.
     </td>
@@ -1926,7 +1926,28 @@
 <table>
   <tr>
     <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-sub.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-sub.webp" alt="" /></a></td>
-    <td>Se déclenche lorsqu'un utilisateur s'abonne.</td>
+    <td>Se déclenche lorsqu'un utilisateur s'abonne.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> Ce bloc renvoi les variables suivantes:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:subscribe:user:id <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> identifiant unique de l'utilisateur.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> le type d'utilisateur (les valeurs possibles sont undefined, 'mod', 'global_mod', 'admin' et 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:subscribe:user:name <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom d'utilisateur en minuscules.</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:subscribe:user:display <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom d'utilisateur incluant les majuscules choisies par l'utilisateur.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> couleur du nom d'utilisateur affichée dans le chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si le message vient du streamer (celui qui possède la chaîne, donc vous).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> les premiers abonnés de la chaîne une fois l'affiliation activée.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si le message provient d'un modérateur de la chaîne.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si l'utilisateur est actuellement abonné à la chaîne.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si vous avez donné le rôle de VIP à cet utilisateur.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> vous permet de savoir si l'utilisateur suit la chaîne.</li>
+        <li><u class="underline-gray">twitch:subscribe:message <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> message envoyé avec cette notification d'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:months <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> nombre total de mois d'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:id <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> identifiant du plan de l'abonnement ou des abonnements offert(s).</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:name <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom du plan de l'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:streak <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> nombre de mois consécutifs d'abonnements.</li>
+        <li><u class="underline-gray">twitch:subscribe:prime <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si l'abonnement a été "payé" avec Twitch Prime.</li>
+      </ul>
+    </td>
   </tr>
 </table>
 
@@ -1953,7 +1974,7 @@
         <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si vous avez donné le rôle de VIP à cet utilisateur.</li>
         <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> vous permet de savoir si l'utilisateur suit la chaîne.</li>
         <li><u class="underline-gray">twitch:subscribe:message <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> message envoyé avec cette notification d'abonnement.</li>
-        <li><u class="underline-gray">twitch:subscribe:months <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> le nombre total de mois d'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:months <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> nombre total de mois d'abonnement.</li>
         <li><u class="underline-gray">twitch:subscribe:plan:id <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> identifiant du plan de l'abonnement ou des abonnements offert(s).</li>
         <li><u class="underline-gray">twitch:subscribe:plan:name <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom du plan de l'abonnement.</li>
         <li><u class="underline-gray">twitch:subscribe:streak <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> nombre de mois consécutifs d'abonnements.</li>
@@ -1971,7 +1992,26 @@
 <table>
   <tr>
     <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-extend.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-extend.webp" alt="" /></a></td>
-    <td>Se déclenche lorsqu'un utilisateur prolonge son abonnement à l'aide d'un <code>Sub Token</code>.</td>
+    <td>Se déclenche lorsqu'un utilisateur prolonge son abonnement à l'aide d'un <code>Sub Token</code>.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> Ce bloc renvoi les variables suivantes:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:subscribe:user:id <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> identifiant unique de l'utilisateur.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> le type d'utilisateur (les valeurs possibles sont undefined, 'mod', 'global_mod', 'admin' et 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:subscribe:user:name <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom d'utilisateur en minuscules.</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:subscribe:user:display <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom d'utilisateur incluant les majuscules choisies par l'utilisateur.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> couleur du nom d'utilisateur affichée dans le chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si le message vient du streamer (celui qui possède la chaîne, donc vous).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> les premiers abonnés de la chaîne une fois l'affiliation activée.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si le message provient d'un modérateur de la chaîne.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si l'utilisateur est actuellement abonné à la chaîne.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si vous avez donné le rôle de VIP à cet utilisateur.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> vous permet de savoir si l'utilisateur suit la chaîne.</li>
+        <li><u class="underline-gray">twitch:subscribe:message <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> message envoyé avec cette notification d'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:months <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> nombre total de mois d'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:months:end <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> mois de fin de la prolongation de l'abonnement (1 correspond à janvier et 12 à décembre).</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:id <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> identifiant du plan de l'abonnement ou des abonnements offert(s).</li>
+      </ul>
+    </td>
   </tr>
 </table>
 
@@ -1983,7 +2023,33 @@
 <table>
   <tr>
     <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-gift.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-gift.webp" alt="" /></a></td>
-    <td>Se déclenche lorsqu'un utilisateur offre un abonnement à un autre utilisateur.</td>
+    <td>Se déclenche lorsqu'un utilisateur offre un abonnement à un autre utilisateur.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> Ce bloc renvoi les variables suivantes:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:subscribe:user:id <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> identifiant unique de l'utilisateur.</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> le type d'utilisateur (les valeurs possibles sont undefined, 'mod', 'global_mod', 'admin' et 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:subscribe:user:name <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom d'utilisateur en minuscules.</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:subscribe:user:display <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom d'utilisateur incluant les majuscules choisies par l'utilisateur.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> couleur du nom d'utilisateur affichée dans le chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si le message vient du streamer (celui qui possède la chaîne, donc vous).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> les premiers abonnés de la chaîne une fois l'affiliation activée.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si le message provient d'un modérateur de la chaîne.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si l'utilisateur est actuellement abonné à la chaîne.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si vous avez donné le rôle de VIP à cet utilisateur.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> vous permet de savoir si l'utilisateur suit la chaîne.</li>
+        <li><u class="underline-gray">twitch:subscribe:gifter:id <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> identifiant unique de l'utilisateur qui reçoit le cadeau.</li>
+        <li><u class="underline-gray">twitch:subscribe:gifter:name <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom de l'utilisateur qui reçoit le cadeau en minuscules.</li>
+        <li><u class="underline-gray">twitch:subscribe:gifter:display <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom de l'utilisateur qui reçoit le cadeau incluant les majuscules choisies par l'utilisateur.</li>
+        <li><u class="underline-gray">twitch:subscribe:message <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> message envoyé avec cette notification d'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:duration <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> durée de l'abonnement offert, en mois.</li>
+        <li><u class="underline-gray">twitch:subscribe:count <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> nombre d'abonnements que l'utilisateur a déjà offert au total.</li>
+        <li><u class="underline-gray">twitch:subscribe:months <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> nombre total de mois d'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:id <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> identifiant du plan de l'abonnement ou des abonnements offert(s).</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:name <span class="text-lime"><i>(scope: Next, type: Texte)</i></span>:</u> nom du plan de l'abonnement.</li>
+        <li><u class="underline-gray">twitch:subscribe:streak <span class="text-lime"><i>(scope: Next, type: Nombre)</i></span>:</u> nombre de mois consécutifs d'abonnements.</li>
+        <li><u class="underline-gray">twitch:subscribe:prime <span class="text-lime"><i>(scope: Next, type: Booléen)</i></span>:</u> si l'abonnement a été "payé" avec Twitch Prime.</li>
+      </ul>
+    </td>
   </tr>
 </table>
 

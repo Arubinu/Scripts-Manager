@@ -3,28 +3,8 @@ const fs = require('fs'),
   uniqid = require('uniqid'),
   { shell, ipcRenderer } = require('electron');
 
-let _target = '',
-  _manager = {},
-  _audio = {},
+let _audio = {},
   _bluetooth = {};
-
-function get_target(target = _target) {
-  const split = target.split(':');
-  const [type, id, name] = [
-    split[0],
-    split[1],
-    ((split.length > 2) ? split[2] : 'index')
-  ];
-
-  return { type, id, name, target };
-}
-
-function load_manager() {
-  let target = get_target();
-  target.name = 'load';
-
-  ipcRenderer.invoke('manager', target);
-}
 
 class AudioPlayer {
   constructor() {
@@ -410,103 +390,24 @@ class Bluetooth {
 }
 
 ipcRenderer.on('init', (event, data) => {
-  let index = 0;
-  const list = document.querySelector('.menu'),
-    iframe = document.querySelector('.content > iframe');
+  const iframe = document.querySelector('.content > iframe');
 
-  // define iframe height
-  setInterval(() => {
-    if (iframe.contentWindow.document.body) {
-      iframe.style.height = `${iframe.contentWindow.document.body.scrollHeight - 20}px`;
-    }
-  }, 1000);
-
-  // menu generation
-  const add_ul = (type, name, parent) => {
-    const li = document.createElement('li'),
-      ul = document.createElement('ul');
-
-    li.appendChild(ul);
-    parent.appendChild(li);
-
-    return ul;
+  window.file_exists = function() {
+    return fs.existsSync(path.join(...arguments));
+  };
+  window.send_message = (target, data) => {
+    ipcRenderer.invoke(target, data);
+  };
+  window.open_link = url => {
+    shell.openExternal(url);
   };
 
-  const add_li = (type, id, name, parent) => {
-    const a = document.createElement('a'),
-      li = document.createElement('li');
-
-    a.innerText = name;
-    a.setAttribute('data-target', `${type}:${id}`);
-    li.appendChild(a);
-
-    if (id.indexOf(':') < 0) {
-      const label = document.createElement('label');
-      label.setAttribute('for', `checkbox_${index}`);
-      label.classList.add('switch');
-
-      const checkbox = document.createElement('input');
-      checkbox.setAttribute('type', 'checkbox');
-      checkbox.setAttribute('id', `checkbox_${index}`);
-      checkbox.checked = !!data.configs[type][id].default.enabled;
-
-      const slider = document.createElement('div');
-      slider.classList.add('slider', 'round');
-
-      label.appendChild(checkbox);
-      label.appendChild(slider);
-      li.appendChild(label);
-
-      ++index;
-    }
-
-    parent.appendChild(li);
-
-    return li;
-  };
-
-  for (const type in data.configs) {
-    const list = document.querySelector(`.${type}-list`);
-    for (const id in data.configs[type]) {
-      const name = data.configs[type][id].default.name,
-        li = add_li(type, id, name, list);
-
-      if (type === 'scripts') {
-        const menu = data.menus[id];
-        if (menu.length) {
-          const ul = add_ul(name, li, list);
-          for (const submenu of menu) {
-            add_li(type, `${id}:${submenu.id}`, submenu.name, ul);
-          }
-        }
-      }
-    }
-  }
+  window._data = data;
+  window.init();
 
   // from main
   ipcRenderer.on('manager', (event, data) => {
-    if (data.name === 'enabled') {
-      const elem = document.querySelector(`[data-target="scripts:${data.data.name}"]`);
-      if (elem) {
-        const state = elem.parentElement.querySelector('[type="checkbox"]').checked;
-        if (data.data.state !== state) {
-          elem.parentElement.querySelector('.slider').click();
-        }
-      }
-
-      return;
-    } else if (data.name === 'state') {
-      const elem = document.querySelector(`[data-target="${data.type}:${data.id}"]`);
-      if (elem) {
-        if (data.data) {
-          elem.setAttribute('state', data.data);
-        } else {
-          elem.removeAttribute('state');
-        }
-      }
-
-      return;
-    } else if (data.name === 'bluetooth:scan') {
+    if (data.name === 'bluetooth:scan') {
       _bluetooth[data.id] = new Bluetooth(data.id, data.type, data.data);
       return;
     } else if (data.name === 'bluetooth:connect') {
@@ -531,9 +432,7 @@ ipcRenderer.on('init', (event, data) => {
         ipcRenderer.invoke('manager', data);
       }
       return;
-    }
-
-    if (data.name === 'audio:devices') {
+    } else if (data.name === 'audio:devices') {
       const audio = new AudioPlayer();
       audio.get_devices()
         .then(devices => {
@@ -580,357 +479,49 @@ ipcRenderer.on('init', (event, data) => {
         }
       }
       return;
-    }
+    } else if (data.name === 'speech:cancel') {
+      window.speechSynthesis.cancel();
+    } else if (data.name === 'speech:say') {
+      if (typeof data.data.text === 'string' && data.data.text.trim().length)
+      {
+        for (const voice of window.speechSynthesis.getVoices())
+        {
+          if (voice.name === data.data.voice)
+          {
+            const message = new SpeechSynthesisUtterance();
+            message.onend = () => { ipcRenderer.invoke('manager', { name: 'speech:end', data: data.data }); };
 
-    if (data.target === get_target().target) {
-      const iframe_doc = iframe.contentWindow.document;
+            message.voice = voice;
+            message.volume = parseInt(parseFloat(data.data.volume) || 100) / 100;
+            message.rate = parseInt(parseInt(parseFloat(data.data.rate) || 1) * 100) / 100;
+            message.pitch = parseInt(parseInt(parseFloat(data.data.pitch) || .8) * 100) / 100;
+            message.text = data.data.text.trim();
 
-      if (data.name === 'load') {
-        if (['general:about', 'general:settings'].indexOf(data.target) >= 0) {
-          _manager = data.data;
-        }
-
-        if (data.target === 'general:settings') {
-          const check = typeof _manager === 'object' && typeof _manager.default === 'object',
-            browse = iframe_doc.querySelector('.browse input'),
-            button_action = key => {
-              const buttons = iframe_doc.querySelectorAll(`.${key} .button`),
-                state = (check && _manager.default[key] === true) ? 'on' : 'off';
-
-              for (const button of buttons) {
-                const selected = button.getAttribute('name') === state;
-                button.classList.toggle('is-selected', selected);
-                if (selected) {
-                  button.dispatchEvent(new Event('update', { bubbles: true, cancelable: true }));
-                }
-              }
-            };
-
-          if (check) {
-            if (typeof _manager.default.all === 'string') {
-              browse.value = _manager.default.all;
-              browse.dispatchEvent(new Event('update', { bubbles: true, cancelable: true }));
-            }
+            window.speechSynthesis.speak(message);
+            break;
           }
-
-          button_action('startup');
-          button_action('systray');
         }
-      } else if (!data.name.indexOf('browse:')) {
-        const elem = iframe_doc.querySelector(data.data.elem);
-        elem.value = data.result.filePath || data.result.filePaths[0];
-        elem.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
       }
+    } else if (data.name === 'speech:voices') {
+      let voices = [];
+      const keys = ['default', 'lang', 'localService', 'name', 'voiceURI'];
+      for (const voice of window.speechSynthesis.getVoices()) {
+        let obj = {};
+        for (const key of keys) {
+          obj[key] = voice[key];
+        }
+
+        voices.push(obj);
+      }
+      data.data = voices;
+      ipcRenderer.invoke('manager', data);
+      return;
     }
+
+    window.manager_conn(data);
   });
-  ipcRenderer.on('message', (event, data) => {
-    const target = get_target();
-    if (data.type === target.type && data.id === target.id) {
-      // to renderer
-      iframe.contentWindow.postMessage(data, '*');
-    }
-  });
+  ipcRenderer.on('message', (event, data) => window.message_conn(data));
 
-  // from renderer
-  window.addEventListener('message', event => {
-    if (event.origin !== 'null') {
-      let target = get_target();
-      target.data = event.data;
-
-      // to main
-      ipcRenderer.invoke('message', target);
-    }
-  }, false);
-
-  // target changed
-  iframe.addEventListener('load', event => {
-    setTimeout(() => {
-      const iframe_doc = iframe.contentWindow.document;
-
-      const config_stylesheet = iframe_doc.querySelector(`#config_stylesheet`);
-      if (config_stylesheet) {
-        config_stylesheet.setAttribute('href', path.join(__dirname, 'public', 'css', 'config.css'));
-      }
-
-      // get new target
-      let target = get_target();
-      target.name = 'show';
-      target.data = true;
-
-      // pages
-      if (target.target === 'general:settings') {
-        const browse = iframe_doc.querySelector('.browse input'),
-          import_input = iframe_doc.querySelector('.import input'),
-          export_input = iframe_doc.querySelector('.export input'),
-          reset = iframe_doc.querySelector('.reset-app .is-success'),
-          reload_dialog = iframe_doc.querySelector('div.reload-app'),
-          reset_dialog = iframe_doc.querySelector('div.reset-app'),
-          settings = {
-            all: browse.value,
-            startup: false,
-            systray: false
-          },
-          button_action = key => {
-            const buttons = iframe_doc.querySelectorAll(`.${key} .button`),
-              callback = event => {
-                for (const button of buttons) {
-                  button.classList.remove('is-selected');
-                }
-
-                const on = event.target.getAttribute('name') === 'on';
-                event.target.classList.add('is-selected');
-
-                settings[key] = on;
-                if (event.type !== 'update') {
-                  save_settings();
-                }
-              };
-
-            for (const button of buttons) {
-              button.addEventListener('click', callback, false);
-              button.addEventListener('update', callback, false);
-            }
-          },
-          get_save_target = () => {
-            let target = get_target();
-            target.name = 'save';
-            target.data = { default: settings };
-
-            return target;
-          },
-          save_settings = () => {
-            ipcRenderer.invoke('manager', get_save_target());
-          };
-
-        browse.addEventListener('update', () => {
-          settings.all = browse.value;
-        }, false);
-
-        browse.addEventListener('change', () => {
-          if (browse.value === settings.all) {
-            return;
-          }
-
-          const target = get_save_target();
-
-          let dialog = false;
-          if (target.data.default.all.trim().length) {
-            const addons_path = path.join(target.data.default.all, 'addons');
-            if (!fs.existsSync(addons_path)) {
-              fs.mkdir(addons_path, () => {});
-            } else {
-              dialog = true;
-            }
-
-            const scripts_path = path.join(target.data.default.all, 'scripts');
-            if (!fs.existsSync(scripts_path)) {
-              fs.mkdir(scripts_path, () => {});
-            } else {
-              dialog = true;
-            }
-          }
-
-          settings.all = browse.value;
-          save_settings();
-
-          if (dialog) {
-            reload_dialog.classList.add('is-active');
-          }
-        }, false);
-
-        button_action('startup');
-        button_action('systray');
-
-        import_input.addEventListener('change', event => {
-          let target = get_target();
-          target.name = 'import';
-          target.data = import_input.value;
-
-          ipcRenderer.invoke('manager', target);
-        }, false);
-
-        export_input.addEventListener('change', event => {
-          let target = get_target();
-          target.name = 'export';
-          target.data = export_input.value;
-
-          ipcRenderer.invoke('manager', target);
-        }, false);
-
-        reset.addEventListener('click', () => {
-          let target = get_target();
-          target.name = 'reset';
-
-          ipcRenderer.invoke('manager', target);
-        }, false);
-
-        iframe_doc.querySelectorAll('[aria-label="close"]').forEach(elem => {
-          elem.addEventListener('click', () => {
-            const modal = elem.closest('.modal');
-            if (modal) {
-              modal.classList.remove('is-active');
-            }
-          }, false);
-        });
-
-        iframe_doc.querySelector('.reset').addEventListener('click', () => {
-          reset_dialog.classList.add('is-active');
-        }, false);
-
-        load_manager();
-      } else if (target.target === 'general:about') {
-        const this_file = path.join(__dirname, 'package.json');
-        const this_version = iframe_doc.querySelector('.this-version');
-        if (fs.existsSync(this_file)) {
-          const pkg = require(this_file);
-          this_version.innerText = pkg.version + (data.mode === 'development' ? 'a' : '');
-          this_version.parentElement.children[0].innerText = pkg.name;
-
-          fetch('https://api.github.com/repos/Arubinu/Scripts-Manager/releases/latest').then(async res => {
-            const data = await res.json();
-            if (data.tag_name !== `v${pkg.version}`) {
-              const elem = iframe_doc.querySelector('.new-version');
-              elem.classList.remove('is-hidden');
-              elem.querySelector('span').innerText = data.tag_name.substring(1);
-            }
-          });
-        } else {
-          this_version.parentElement.remove();
-        }
-
-        iframe_doc.querySelector('.node-version').innerText = process.versions.node;
-        iframe_doc.querySelector('.chrome-version').innerText = process.versions.chrome;
-        iframe_doc.querySelector('.electron-version').innerText = process.versions.electron;
-
-        load_manager();
-      }
-
-      // open links in default browser and open dialog
-      iframe_doc.addEventListener('click', event => {
-        let elem = event.target.closest('[browse-file], [browse-file], [browse-folder], [external-link]');
-        if (!elem) {
-          elem = event.target;
-        }
-
-        if (elem.matches('[browse-file], [browse-files]')) {
-          const type = (elem.hasAttribute('browse-file') ? 'file' : 'files');
-          let target = get_target();
-          target.name = `browse:${type}`;
-          target.data = {
-            elem: elem.getAttribute(`browse-${type}`),
-            name: elem.getAttribute(`browse-file-name`),
-            ext: elem.getAttribute(`browse-file-ext`)
-          };
-
-          ipcRenderer.invoke('manager', target);
-        } else if (elem.matches('[browse-folder]')) {
-          let target = get_target();
-          target.name = 'browse:folder';
-          target.data = {
-            elem: elem.getAttribute('browse-folder')
-          };
-
-          ipcRenderer.invoke('manager', target);
-        } else if (elem.matches('[external-link]')) {
-          event.preventDefault();
-          shell.openExternal(elem.getAttribute('external-link'));
-        }
-      }, false);
-
-      // removes focus from buttons and links so as not to have the blue outline
-      iframe_doc.addEventListener('mouseup', event => {
-        if (!event.target.matches('input, select, textarea') && !event.target.closest('input, select, textarea')) {
-          iframe.blur();
-        }
-      }, false);
-
-      // to main
-      ipcRenderer.invoke('manager', target);
-    }, 10);
-
-    // force show/hide content right margin
-    setTimeout(() => {
-      window.dispatchEvent(new Event('resize', { bubbles: true }));
-    }, 1000);
-
-    // production/development
-    document.body.setAttribute('mode', data.mode);
-  });
-
-  // click on menu link
-  document.addEventListener('click', event => {
-    if (event.target.matches('.menu a')) {
-      // unselect all
-      list.querySelectorAll('li, li > a').forEach(elem => {
-        elem.classList.remove('is-active');
-      });
-
-      // select with parent
-      event.target.classList.add('is-active');
-      const parent = event.target.parentElement.parentElement.closest('li');
-      if (parent && parent.previousSibling) {
-        parent.previousSibling.classList.add('is-active');
-      }
-
-      // change target
-      let target = event.target.getAttribute('data-target');
-      if (target) {
-        if (_target) {
-          // get old target
-          let target = get_target();
-          target.name = 'show';
-          target.data = false;
-
-          ipcRenderer.invoke('manager', target);
-        }
-
-        // get/set new target
-        _target = target;
-        target = get_target();
-
-        let uri = `../${target.type}/${target.id}/${target.name}.html`;
-        if (target.type === 'general') {
-          uri = `../public/${target.id}.html`;
-        }
-
-        if (!fs.existsSync(path.join(__dirname, 'erase', uri))) {
-          if (typeof _manager === 'object' && typeof _manager.default === 'object') {
-            if (typeof _manager.default.all === 'string') {
-              uri = path.join(_manager.default.all, 'erase', uri);
-            }
-          }
-        }
-
-        iframe.setAttribute('src', uri);
-      }
-    }
-
-    // send a message to the switch
-    if (event.target.matches('.menu .switch .slider')) {
-      setTimeout(() => {
-        let target = get_target(event.target.parentElement.parentElement.querySelector('a').getAttribute('data-target'));
-        target.name = 'enabled';
-        target.data = event.target.parentElement.querySelector('input').checked;
-
-        // to main
-        ipcRenderer.invoke('manager', target);
-      }, 10);
-    }
-  }, false);
-
-  // send init to main
-  ipcRenderer.invoke('init');
-
-  // enable default target
-  setTimeout(() => {
-    const elem = document.querySelector('[data-target].is-active');
-    _target = elem.getAttribute('data-target');
-    elem.click();
-  }, 10);
-
-  // show/hide content right margin
-  window.addEventListener('resize', () => {
-    const elem = document.querySelector('.content');
-    elem.classList.toggle('is-scrollbar', (elem.scrollHeight > elem.clientHeight));
-  });
+  // send init to manager
+  window.send_message('init');
 });

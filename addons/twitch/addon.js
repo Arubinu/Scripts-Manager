@@ -51,9 +51,6 @@ function update_refresh() {
   const bad_scopes = _config.connection.token && JSON.stringify(scopes.saved) !== JSON.stringify(scopes.current),
     bot_bad_scopes = _config.connection.bot_token && JSON.stringify(scopes.bot_saved) !== JSON.stringify(scopes.current);
 
-  if (bad_scopes) console.log('bad_scopes:', JSON.stringify(scopes.saved), JSON.stringify(scopes.current));
-  if (bot_bad_scopes) console.log('bot_bad_scopes:', JSON.stringify(scopes.bot_saved), JSON.stringify(scopes.current));
-
   if (bad_scopes || bot_bad_scopes) {
     _refresh = (bad_scopes && bot_bad_scopes) ? 3 : (bad_scopes ? 1 : 2);
     _sender('manager', 'state', 'warning');
@@ -231,16 +228,18 @@ module.exports = {
       return;
     }
 
-    let check = false;
-    if ((name === 'disconnect' || name === 'reconnect') && (check = true)) {
-      await disconnect();
-    }
-    if ((name === 'connect' || name === 'reconnect') && (check = true)) {
-      await connect();
-    }
+    if (_config.default.enabled) {
+      let check = false;
+      if ((name === 'disconnect' || name === 'reconnect') && (check = true)) {
+        await disconnect();
+      }
+      if ((name === 'connect' || name === 'reconnect') && (check = true)) {
+        await connect();
+      }
 
-    if (!check) {
-      return await twurple.exec(data.type, name, data.args);
+      if (!check && _connected) {
+        return await twurple.exec(data.type, name, data.args);
+      }
     }
   }
 };

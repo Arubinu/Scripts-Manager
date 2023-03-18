@@ -467,7 +467,7 @@ async function connect(clientId, accessToken, botAccessToken, callback) {
   });
 
   // Subscribes to events that represent a user following a channel.
-  ws_listeners.ChannelFollow = await ws_listener.onChannelFollow(channel.id, async e => {
+  ws_listeners.ChannelFollow = await ws_listener.onChannelFollow(channel.id, channel.id, async e => {
     callback(await get('Follow', null, null, null, {
       user: {
         id: e.userId,

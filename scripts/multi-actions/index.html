@@ -4,366 +4,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'" />
 
     <title>Multi Actions</title>
 
     <link id="config_stylesheet" rel="stylesheet" />
-    <style type="text/css">
-      body {
-        overflow: hidden;
-        background-color: #262626;
-      }
-
-      hr {
-        margin: 6px 0px 15px calc(-40px / 2);
-        width: calc(100% + 40px);
-        height: 1px;
-        background-color: #2a2a2a;
-      }
-
-      label.radio,
-      label.checkbox {
-        display: block;
-        position: relative;
-        margin: .6em 1em !important;
-        padding-left: 1em;
-      }
-      label.radio span,
-      label.checkbox span {
-        padding-left: 2em;
-        vertical-align: 1px;
-      }
-      input[type="radio"],
-      input[type="checkbox"] {
-        position: relative;
-        width: 2em !important;
-        height: initial !important;
-        filter: invert(.83);
-      }
-
-      #template {
-        display: none;
-      }
-
-      .hero {
-        z-index: 1 !important;
-      }
-      button.show-blocks,
-      button.import-blocks {
-        margin-top: -5px;
-        margin-bottom: -5px;
-        margin-left: 5px;
-      }
-
-      input[type="checkbox"]:disabled + span {
-        text-decoration: line-through;
-      }
-
-      .drag-drawflow {
-        position: relative;
-        display: inline-block;
-        margin: 0.25rem !important;
-        padding: 10px 10px 10px 12px;
-        width: 8em;
-        height: 8em;
-        font-size: 1rem;
-        color: #dbdbdb;
-        text-align: center;
-        vertical-align: top;
-        line-height: 1.5;
-        white-space: nowrap;
-        background-color: #2a2a2a;
-        border: 1px solid #444;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-      .inputs-filter:not(.outputs-filter):not(.both-filter) .drag-drawflow.is-outputs,
-      .outputs-filter:not(.inputs-filter):not(.both-filter) .drag-drawflow.is-inputs,
-      .inputs-filter.outputs-filter:not(.both-filter) .drag-drawflow.is-inputs.is-outputs,
-      .inputs-filter.both-filter:not(.outputs-filter) .drag-drawflow.is-outputs:not(.is-inputs),
-      .outputs-filter.both-filter:not(.inputs-filter) .drag-drawflow.is-inputs:not(.is-outputs),
-      .both-filter:not(.inputs-filter):not(.outputs-filter) .drag-drawflow.is-inputs:not(.is-outputs),
-      .both-filter:not(.inputs-filter):not(.outputs-filter) .drag-drawflow.is-outputs:not(.is-inputs) {
-        display: none;
-      }
-      [section-filter] {
-        border-radius: 2px;
-      }
-      .both-filter [section-filter="both"],
-      .inputs-filter [section-filter="inputs"],
-      .outputs-filter [section-filter="outputs"] {
-        outline: 2px solid rgb(50, 50, 50);
-      }
-      .drag-drawflow .icon {
-        width: 100%;
-        height: auto;
-        margin-top: 0.6em;
-      }
-      .drag-drawflow .icon img {
-        max-width: 60%;
-        filter: invert(.8) drop-shadow(2px 2px 6px rgba(0, 0, 0, .6));
-      }
-      .drag-drawflow .name {
-        overflow: hidden;
-        position: absolute;
-        bottom: 6px;
-        width: calc(100% - (2 * .5em));
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .drawflow {
-        background-color: #363636;
-        outline: 2px dashed rgba(255, 255, 255, .65);
-      }
-
-      .drawflow-node.block-note {
-        padding: 0 12px !important;
-        width: auto !important;
-        text-align: center;
-        background-color: rgba(255, 255, 255, .15) !important;
-        border: none !important;
-        border-radius: 15px !important;
-        box-shadow: 0 0px 3px 2px rgba(255, 255, 255, .15) !important;
-        z-index: 6 !important;
-      }
-      .drawflow-node.block-note [contenteditable] {
-        font-size: 1.3rem;
-        white-space: nowrap;
-        outline: none !important;
-        cursor: text;
-      }
-
-      .drawflow-node .title-box {
-        position: relative;
-        padding-right: 2rem !important;
-      }
-      .drawflow-node .title-box > .icons {
-        position: absolute;
-        top: 0;
-        right: 0;
-      }
-      .drawflow-node .title-box > .icons .fas {
-        margin-right: .9rem;
-        cursor: pointer;
-      }
-      .drawflow-options {
-        display: none;
-        position: fixed;
-        top: 3rem;
-        left: 3rem;
-        min-width: 8rem;
-        background-color: rgb(34, 34, 34);
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-      }
-      .drawflow-options > li {
-        padding: .2rem 1rem;
-        cursor: pointer;
-      }
-      .drawflow-options > li.top-separator {
-        border-top: 1px solid var(--border-color);
-      }
-      .drawflow-options > li.bottom-separator {
-        border-bottom: 1px solid var(--border-color);
-      }
-      .drawflow-options > li:hover {
-        background-color: rgba(255, 255, 255, .08);
-      }
-      .drawflow-options > li:first-child {
-        padding-top: .5rem;
-      }
-      .drawflow-options > li:last-child {
-        padding-bottom: .5rem;
-      }
-      .drawflow-options > li > .far,
-      .drawflow-options > li > .fas {
-        float: right;
-        line-height: 1.5rem;
-        margin-left: 1rem;
-      }
-
-      .drag-drawflow.is-outputs,
-      .drawflow-node .is-outputs .title-box {
-        position: relative;
-      }
-      .drag-drawflow.is-inputs::before,
-      .drag-drawflow.is-outputs::before,
-      .drawflow-node .is-inputs .title-box::before,
-      .drawflow-node .is-outputs .title-box::before {
-        content: '';
-        position: absolute;
-        top: 0px;
-        left: 0px;
-        width: 10px;
-        height: calc(50px - 1px);
-        border-top-left-radius: 4px;
-      }
-      .drawflow-inputs-color,
-      .drag-drawflow.is-inputs::before,
-      .drawflow-node .is-inputs .title-box::before {
-        background-color: rgba(230, 126, 34, .7);
-      }
-      .drawflow-outputs-color,
-      .drag-drawflow.is-outputs::before,
-      .drawflow-node .is-outputs .title-box::before {
-        background-color: rgba(46, 204, 113, .7);
-      }
-      .drawflow-both-color,
-      .drag-drawflow.is-inputs.is-outputs::before,
-      .drawflow-node .is-inputs.is-outputs .title-box::before {
-        background-color: rgba(155, 89, 182, .7);
-      }
-      .drawflow-node .column:first-child input {
-        margin: 0px -10px 0px -20px;
-        width: calc(100% + (2 * 15px) + 1px);
-      }
-      .drawflow-node .column:not(:first-child) input {
-        margin: 0px -20px 0 -12px;
-        width: calc(100% + (2 * 15px) + 1px);
-      }
-      .drawflow-node .columns {
-        margin-bottom: 0px;
-      }
-      .drawflow-node .columns > .column {
-        padding-bottom: 0px;
-      }
-      .drawflow-node .columns.clear {
-        clear: both;
-      }
-      .drawflow-node .columns.clear > .column {
-        padding-top: .15rem;
-      }
-      .drawflow-node .column:first-child .is-browse button {
-        right: -10px;
-      }
-
-      .blocks-drawflow {
-        overflow-x: hidden;
-        overflow-y: auto;
-        position: fixed;
-        top: -100%;
-        right: 0px;
-        bottom: 100%;
-        left: 0px;
-        width: 100%;
-        min-height: calc(100% - 68px);
-        background-color: #555;
-        transition: all 500ms ease-in-out;
-        z-index: -1 !important;
-        transform: translate3d(0,0,0); /* fix */
-      }
-      .drag-drawflow::before {
-        height: 100% !important;
-        border-bottom-left-radius: 4px;
-      }
-      body.show-blocks .blocks-drawflow {
-        top: 68px;
-        bottom: 0px;
-      }
-
-      .box-drawflow {
-        position: fixed;
-        top: 68px;
-        right: 0px;
-        bottom: 0px;
-        left: 0px;
-        height: calc(100% - (68px - 6px)) !important;
-        z-index: -2 !important;
-      }
-
-      .is-browse,
-      .is-command,
-      .is-right-button {
-        position: relative;
-      }
-
-      .is-command input {
-        padding-left: calc(6px + 24px) !important;
-      }
-      .is-command::before {
-        content: '!';
-        position: absolute;
-        top: 1px;
-        left: -20px;
-        width: 24px;
-        height: 28px;
-        font-size: 1.3em;
-        text-align: center;
-        background-color: rgba(255, 255, 255, .06);
-      }
-
-      .is-browse input,
-      .is-right-button input {
-        padding-right: calc(6px + 24px) !important;
-      }
-      .is-browse button,
-      .is-right-button button {
-        position: absolute;
-        top: 1px;
-        right: -20px;
-        padding-top: 8px;
-        padding-bottom: 0px;
-        width: 24px;
-        height: 28px;
-        color: inherit;
-        font-size: 1em;
-        text-align: center;
-        background-color: rgba(255, 255, 255, .06);
-        border: none;
-        cursor: pointer;
-      }
-      .is-browse button .fa-xmark,
-      .is-right-button button .fa-xmark {
-        vertical-align: 4px;
-      }
-
-      .fa-circle-info {
-        cursor: pointer;
-      }
-
-      .container-frame {
-        position: fixed;
-        top: 0px;
-        right: 0px;
-        bottom: 0px;
-        left: 0px;
-        background-color: rgba(0, 0, 0, .65);
-        z-index: 4;
-      }
-      .container-frame > div {
-        overflow-x: visible;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        max-width: 90%;
-        max-height: 90%;
-        transform: translate(-50%, -50%);
-      }
-      .container-frame > div > div {
-        position: absolute;
-        top: -1.5em;
-        left: 50%;
-        font-size: 1.5em;
-        white-space: nowrap;
-        transform: translateX(-50%);
-      }
-      .container-frame > div > img {
-        max-width: 100%;
-        max-height: 100%;
-      }
-
-      option.disabled,
-      .modules.disabled {
-        background-color: rgb(117, 84, 84) !important;
-      }
-    </style>
-
     <link rel="stylesheet" href="./libs/drawflow.min.css" />
     <link rel="stylesheet" href="./libs/drawflow.style.css" />
-    <script src="./libs/drawflow.min.js"></script>
-    <script src="./libs/drawflow.blocks.js"></script>
+
+    <link rel="stylesheet" href="./css/main.css" />
+    <link rel="stylesheet" href="./css/selectors.css" />
+
+    <script id="config_script" type="text/javascript"></script>
+    <script type="text/javascript" src="./libs/drawflow.min.js"></script>
+    <script type="text/javascript" src="./libs/drawflow.blocks.js"></script>
+
+    <script type="text/javascript" src="./js/main.js"></script>
+    <script type="text/javascript" src="./js/selectors.js"></script>
   </head>
 
   <body>
@@ -443,7 +100,7 @@
           </div>
         </section>
         <footer class="modal-card-foot is-justify-content-space-between">
-          <button class="button is-danger delete-module" style="justify-content: space-between;">Delete</button>
+          <button class="button is-danger delete-module">Delete</button>
           <div>
             <button class="button is-success">Confirm</button>
             <button class="button" aria-label="close">Cancel</button>
@@ -481,7 +138,7 @@
           <div class="content">
             <h4><span class="value-name"></span> :</h4>
           </div>
-          <textarea class="input" style="height: 120px;"></textarea>
+          <textarea class="input"></textarea>
         </section>
         <footer class="modal-card-foot is-justify-content-right">
           <button class="button is-success">Confirm</button>
@@ -500,8 +157,12 @@
             <i class="fas fa-upload is-pulled-right ml-2 export-blocks" browse-file=".container .hero-body input.export" browse-file-name="module" browse-file-ext="smma" title="Export"></i>
             <i class="fas fa-download is-pulled-right ml-2 import-blocks" browse-file=".container .hero-body input.import" browse-file-ext="smma" title="Import"></i>
             <i class="fas fa-plus is-pulled-right ml-2 add-module" title="Add"></i>
-            <div class="select is-small is-pulled-right ml-2">
-              <select class="modules"></select>
+            <div select="module" class="select-top select-right is-pulled-right ml-2">
+              <span></span>
+              <i class="fas fa-caret-down"></i>
+              <ul>
+                <li><span>Default</span> <i class="fas fa-grip-lines"></i></li>
+              </ul>
             </div>
             <button class="button is-small is-pulled-right show-blocks">Toggle Blocks</button>
 
@@ -513,7 +174,7 @@
 
       <div class="blocks-drawflow">
         <div class="content mb-4">
-          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+          <h5 class="py-1 px-5">
             Fonctionnality
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
@@ -522,7 +183,7 @@
           <div class="mx-5" blocks-type=""></div>
         </div>
         <div class="content mb-4">
-          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+          <h5 class="py-1 px-5">
             Discord
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
@@ -531,7 +192,7 @@
           <div class="mx-5" blocks-type="discord"></div>
         </div>
         <div class="content mb-4">
-          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+          <h5 class="py-1 px-5">
             OBS Studio
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
@@ -540,7 +201,7 @@
           <div class="mx-5" blocks-type="obs-studio"></div>
         </div>
         <div class="content mb-4">
-          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+          <h5 class="py-1 px-5">
             Spotify
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
@@ -549,7 +210,7 @@
           <div class="mx-5" blocks-type="spotify"></div>
         </div>
         <div class="content mb-4">
-          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+          <h5 class="py-1 px-5">
             Stream Deck / Touch Portal
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
@@ -558,7 +219,7 @@
           <div class="mx-5" blocks-type="streamdeck"></div>
         </div>
         <div class="content mb-4">
-          <h5 class="py-1 px-5" style="background-color: rgba(0, 0, 0, .2)">
+          <h5 class="py-1 px-5">
             Twitch
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-both-color" section-filter="both" title="Blocks that can send and receive an event"></div>
             <div class="is-pulled-right ml-1 pt-2 pb-3 pl-2 pr-3 is-clickable drawflow-inputs-color" section-filter="inputs" title="Blocks sending an event"></div>
@@ -568,327 +229,8 @@
         </div>
       </div>
 
-      <div class="box-drawflow">
-      </div>
+      <div class="box-drawflow"></div>
     </div>
-
-    <script type="text/javascript">
-      const drawflow = document.querySelector('.box-drawflow'),
-        selector = document.querySelector('.modules'),
-        editor = new Drawflow(drawflow);
-
-      let _config = false;
-      let view_locked = true;
-      let edit_target = false;
-      window.editor = editor;
-      editor.draggable_inputs = false;
-
-      if (typeof editor.toggleModule !== 'function') {
-        editor.toggleModule = name => {
-          const module_name = (typeof name === 'string' && name.length) ? name : editor.module,
-            pos = _config.settings.disabled.indexOf(module_name);
-
-          if (pos >= 0) {
-            _config.settings.disabled.splice(pos, 1);
-          } else {
-            _config.settings.disabled.push(module_name);
-          }
-
-          window.parent.postMessage({ disabled: _config.settings.disabled }, '*');
-
-          updateDisabled();
-        };
-      }
-
-      if (typeof editor.renameModule !== 'function') {
-        editor.renameModule = new_name => {
-          if (typeof editor.drawflow.drawflow[new_name] === 'undefined') {
-            const current = editor.module;
-            editor.drawflow.drawflow[new_name] = editor.drawflow.drawflow[current];
-            delete editor.drawflow.drawflow[current];
-
-            editor.changeModule(new_name);
-            window.drawflow_save();
-            window.drawflow_select();
-          }
-        };
-      }
-
-      function updateDisabled() {
-        if (_config && Array.isArray(_config.settings.disabled)) {
-          for (const option of selector.querySelectorAll(':scope > option')) {
-            option.classList.toggle('disabled', (_config.settings.disabled.indexOf(option.value) >= 0));
-          }
-
-          const disabled = _config.settings.disabled.indexOf(editor.module) >= 0;
-          selector.classList.toggle('disabled', disabled);
-          document.querySelector('div.edit-module .module-enabled').classList.toggle('is-hidden', disabled);
-          document.querySelector('div.edit-module .module-disabled').classList.toggle('is-hidden', !disabled);
-        }
-      }
-
-      function cloneMouseEvent(event) {
-        const copy = document.createEvent('MouseEvents');
-        copy.initMouseEvent(event.type, event.bubbles, event.cancelable, event.view, event.detail,
-          event.pageX || event.layerX, event.pageY || event.layerY, event.clientX, event.clientY, event.ctrlKey, event.altKey,
-          event.shiftKey, event.metaKey, event.button, event.relatedTarget);
-
-        return copy;
-      }
-
-      // Events!
-      editor.on('nodeCreated', id => {
-        window.drawflow_save();
-      });
-
-      editor.on('nodeRemoved', id => {
-        window.drawflow_save();
-      });
-
-      editor.on('moduleCreated', name => {
-        window.drawflow_save();
-        window.drawflow_select();
-      });
-
-      editor.on('moduleChanged', name => {
-        const init = () => {
-          setTimeout(() => {
-            if (!window.drawflow_initializer) {
-              return init();
-            }
-
-            updateDisabled();
-            window.drawflow_initializer(editor.drawflow.drawflow);
-          }, 10);
-        };
-
-        init();
-        if (typeof editor.drawflow.drawflow[name] !== 'undefined' && Object.keys(editor.drawflow.drawflow).length >= 2) {
-          window.parent.postMessage({ module: name }, '*');
-        }
-      });
-
-      editor.on('connectionCreated', connection => {
-        window.drawflow_save();
-      });
-
-      editor.on('connectionRemoved', connection => {
-        window.drawflow_save();
-      });
-      editor.on('nodeMoved', id => {
-        window.drawflow_save();
-      });
-
-      editor.start();
-      editor.removeModule('Home');
-
-      selector.addEventListener('change', event => {
-        editor.changeModule(selector.value);
-      });
-
-      document.querySelectorAll('[aria-label="close"]').forEach(elem => {
-        elem.addEventListener('click', () => {
-          const modal = elem.closest('.modal');
-          if (modal) {
-            modal.classList.remove('is-active');
-          }
-        }, false);
-      });
-
-      document.querySelector('i.add-module').addEventListener('click', event => {
-        const elem = document.querySelector('div.add-module'),
-          input = elem.querySelector('input');
-
-        elem.classList.add('is-active');
-        input.value = '';
-        input.focus();
-      });
-
-      document.querySelector('div.add-module .modal-card-body input[type="text"]').addEventListener('keypress', event => {
-        if (event.code === 'Enter') {
-          document.querySelector('div.add-module .is-success').dispatchEvent(new Event('click', { bubbles: true }));
-        }
-      });
-
-      document.querySelector('div.add-module .is-success').addEventListener('click', event => {
-        const modal = event.target.closest('.modal');
-        modal.classList.remove('is-active');
-
-        const current = modal.querySelector('input').value.trim();
-        editor.addModule(current);
-        editor.changeModule(current);
-
-        window.drawflow_save();
-        window.drawflow_select();
-      });
-
-      document.querySelector('i.lock-view').addEventListener('click', event => {
-        const elem = event.target;
-
-        view_locked = !view_locked;
-        elem.classList.toggle('fa-lock', view_locked);
-        elem.classList.toggle('fa-lock-open', !view_locked);
-      });
-
-      document.querySelector('i.edit-module').addEventListener('click', event => {
-        const elem = document.querySelector('div.edit-module'),
-          input = elem.querySelector('input');
-
-        updateDisabled();
-
-        elem.classList.add('is-active');
-        input.value = editor.module;
-        input.focus();
-        input.select();
-      });
-
-      document.querySelector('div.edit-module .modal-card-body input[type="text"]').addEventListener('keypress', event => {
-        if (event.code === 'Enter') {
-          document.querySelector('div.edit-module .is-success').dispatchEvent(new Event('click', { bubbles: true }));
-        }
-      });
-
-      document.querySelector('div.edit-module .module-enabled').addEventListener('click', editor.toggleModule);
-      document.querySelector('div.edit-module .module-disabled').addEventListener('click', editor.toggleModule);
-
-      document.querySelector('div.edit-module .is-success').addEventListener('click', event => {
-        const modal = event.target.closest('.modal');
-        modal.classList.remove('is-active');
-
-        editor.renameModule(modal.querySelector('input').value.trim());
-      });
-
-      document.querySelector('div.edit-module .delete-module').addEventListener('click', event => {
-        const modal = event.target.closest('.modal');
-        modal.classList.remove('is-active');
-
-        if (selector.querySelectorAll('option').length > 1) {
-          const to_delete = editor.module;
-
-          // editor.removeModule(to_delete); // not work
-          if (typeof editor.drawflow.drawflow[to_delete] !== 'undefined') {
-            delete editor.drawflow.drawflow[to_delete];
-          }
-
-          for (const option of selector.querySelectorAll('option')) {
-            if (option.value === to_delete) {
-              option.remove();
-            }
-          }
-
-          window.drawflow_save();
-          window.drawflow_select();
-        }
-      });
-
-      document.addEventListener('dblclick', () => {
-        const node = get_node(event.target),
-          is_input = event.target.nodeName.toLowerCase() === 'input',
-          is_textarea = event.target.nodeName.toLowerCase() === 'textarea';
-
-        if (node && ((is_input && event.target.getAttribute('type') === 'text') || is_textarea)) {
-          const elem = document.querySelector('div.edit-value'),
-            textarea = elem.querySelector('textarea'),
-            title = elem.querySelector('.modal-card-title'),
-            name = elem.querySelector('.value-name');
-
-          elem.classList.add('is-active');
-          title.innerText = window.get_block(node.html).title;
-          name.innerText = get_name(event.target);
-          textarea.classList.toggle('has-text-centered', !is_textarea);
-          textarea.value = event.target.value;
-          textarea.focus();
-
-          edit_target = event.target;
-        }
-      });
-
-      document.querySelector('div.edit-value .is-success').addEventListener('click', event => {
-        const node = get_node(event.target),
-          elem = document.querySelector('div.edit-value'),
-          modal = event.target.closest('.modal'),
-          textarea = elem.querySelector('textarea');
-
-        modal.classList.remove('is-active');
-        edit_target.value = (edit_target.nodeName.toLowerCase() === 'input') ? textarea.value.replaceAll('\n', ' ') : textarea.value;
-        edit_target.dispatchEvent(new Event('change', { bubbles: true }));
-        edit_target = false;
-      });
-
-      const section_filter = event => {
-        event.target.closest('.content').classList.toggle(`${event.target.getAttribute('section-filter')}-filter`);
-      };
-      for (const filter of document.querySelectorAll('[section-filter]')) {
-        filter.addEventListener('click', section_filter);
-      }
-
-      document.addEventListener('mousedown', event => {
-        if (!view_locked && event.target === editor.container) {
-          editor.precanvas.dispatchEvent(cloneMouseEvent(event));
-        } else if (view_locked && event.target === editor.precanvas) {
-          event.stopPropagation();
-        }
-      }, true);
-      document.addEventListener('mousemove', event => {
-        if (!view_locked && event.target === editor.container) {
-          editor.precanvas.dispatchEvent(cloneMouseEvent(event));
-        }
-      }, false);
-      document.addEventListener('mouseup', event => {
-        if (!view_locked && event.target === editor.container) {
-          editor.precanvas.dispatchEvent(cloneMouseEvent(event));
-        }
-      }, false);
-
-      window.addEventListener('message', event => {
-        if (event.origin !== 'null') {
-          if (event.data.name === 'config') {
-            setTimeout(() => {
-              _config = event.data.data;
-              if (Object.keys(_config.actions).length) {
-                for (const module_name in _config.actions) {
-                  _config.actions[module_name].data = window.filter_nodes(_config.actions[module_name].data);
-                }
-
-                editor.module = Object.keys(_config.actions)[0];
-                editor.import({ drawflow: _config.actions });
-                window.drawflow_select();
-
-                if (typeof window.drawflow_initializer === 'function') {
-                  window.drawflow_initializer(_config.actions);
-                }
-
-                const module_name = ((_config.settings.module && typeof editor.drawflow.drawflow[_config.settings.module] !== 'undefined') ? _config.settings.module : Object.keys(_config.actions)[0]);
-                if (module_name !== editor.module) {
-                  selector.value = module_name;
-                  editor.changeModule(module_name);
-                }
-
-                updateDisabled();
-              } else {
-                editor.module = 'Default';
-                editor.addModule(editor.module);
-                window.drawflow_save();
-                window.drawflow_select();
-              }
-            }, 100);
-          } else if (event.data.name === 'receive' && typeof window.drawflow_receiver === 'function') {
-            window.drawflow_receiver(event.data.data.source, event.data.data.id, event.data.data.name, event.data.data.data);
-          } else if (event.data.name === 'import') {
-            window.import_nodes(window.filter_nodes(event.data.data));
-          } else if (event.data.name === 'toggle-block' && typeof editor.drawflow.drawflow[event.data.data.module] !== 'undefined' && typeof editor.drawflow.drawflow[event.data.data.module].data[event.data.data.id] !== 'undefined') {
-            editor.drawflow.drawflow[event.data.data.module].data[event.data.data.id].data.data.enabled = event.data.data.enabled;
-
-            const node = window.get_node(event.data.data.id);
-            if (node) {
-              node.elem.classList.toggle('disabled', !event.data.data.enabled);
-            }
-          } else if (event.data.name === 'keyboard') {
-            window.drawflow_receiver(false, 'manager', 'keyboard', event.data.data);
-          }
-        }
-      }, false);
-    </script>
   </body>
 
 </html>

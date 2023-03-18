@@ -5,6 +5,7 @@ const fs = require('node:fs'),
   StreamTransform = require('node:stream').Transform,
   ws = require('ws'),
   temp = require('temp'),
+  active = require('active-win'),
   socket = require('dgram'),
   keyevents = require('node-global-key-listener').GlobalKeyboardListener,
   { request } = require('undici'),
@@ -16,6 +17,11 @@ const VARIABLE_TYPE = Object.freeze({
   NEXT: 2
 });
 
+const OUTPUT_TYPE = Object.freeze({
+  SUCCESS: 'output_1',
+  ERROR: 'output_2'
+});
+
 let _cmd = '',
   _apps = { launched: {}, init: false },
   _keys = [],
@@ -24,6 +30,7 @@ let _cmd = '',
   _variables = {
     globals: {},
     locals: {},
+    queue: {},
     temp: []
   };
 
@@ -130,7 +137,7 @@ const functions = {
     return file_path;
   },
   date_to_vars: (date, prefix, type, module_name, next_data) => {
-    if (typeof date === 'string') {
+    if (typeof date === 'string' || typeof date === 'number') {
       date = new Date(date);
     }
 
@@ -152,6 +159,35 @@ const functions = {
     set_variable(`${prefix ? (prefix + ':') : ''}time:utc:hours`, date.getUTCHours(), type, module_name, next_data);
     set_variable(`${prefix ? (prefix + ':') : ''}time:utc:minutes`, date.getUTCMinutes(), type, module_name, next_data);
     set_variable(`${prefix ? (prefix + ':') : ''}time:utc:seconds`, date.getUTCSeconds(), type, module_name, next_data);
+  },
+  timediff_to_vars: (millis, prefix, type, module_name, next_data) => {
+    if (typeof millis !== 'number') {
+      millis = 0;
+    }
+
+    const seconds = Math.floor(millis / 1000);
+      total = {
+        seconds: seconds,
+        minutes: Math.floor(seconds / 60),
+        hours: Math.floor(seconds / 3600),
+        days: Math.floor(seconds / 86400)
+      },
+      left = {
+        seconds: total.seconds % 60,
+        minutes: total.seconds % 60,
+        hours: total.minutes % 24,
+        days: total.hours
+      };
+
+    set_variable(`${prefix ? (prefix + ':') : ''}time:days`, left.days, type, module_name, next_data);
+    set_variable(`${prefix ? (prefix + ':') : ''}time:hours`, left.hours, type, module_name, next_data);
+    set_variable(`${prefix ? (prefix + ':') : ''}time:minutes`, left.minutes, type, module_name, next_data);
+    set_variable(`${prefix ? (prefix + ':') : ''}time:seconds`, left.seconds, type, module_name, next_data);
+
+    set_variable(`${prefix ? (prefix + ':') : ''}time:total:days`, total.days, type, module_name, next_data);
+    set_variable(`${prefix ? (prefix + ':') : ''}time:total:hours`, total.hours, type, module_name, next_data);
+    set_variable(`${prefix ? (prefix + ':') : ''}time:total:minutes`, total.minutes, type, module_name, next_data);
+    set_variable(`${prefix ? (prefix + ':') : ''}time:total:seconds`, total.seconds, type, module_name, next_data);
   },
   discord_next: (message, module_name, next_data, next) => {
     set_variable('discord:webhook:id', message.id, VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -199,7 +235,7 @@ const functions = {
       set_variable('discord:webhook:embeds:count', 0, VARIABLE_TYPE.NEXT, module_name, next_data);
     }
 
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   },
   spotify_next: (prefix, tracks, module_name, next_data, next) => {
     set_variable(`${prefix}:count`, tracks.length, VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -239,7 +275,7 @@ const functions = {
       set_variable(`${prefix}[0]:artists:count`, 0, VARIABLE_TYPE.NEXT, module_name, next_data);
     }
 
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   },
   twitch_compare: (module_name, receive, data, next_data, next, name, arg, simple, force_receive) => {
     if (receive.id === 'twitch' && receive.name === name && typeof data !== 'undefined') {
@@ -311,7 +347,7 @@ const functions = {
             }
           }
 
-          next();
+          return next(OUTPUT_TYPE.SUCCESS);
         }
       }
     }
@@ -319,6 +355,10 @@ const functions = {
 };
 
 const specials = [
+  'obs-studio-authentification',
+  'obs-studio-connection',
+  'obs-studio-recording',
+  'obs-studio-replay',
   'obs-studio-streaming',
   'obs-studio-studio-mode',
   'obs-studio-switch-scene',
@@ -328,14 +368,41 @@ const specials = [
   'twitch-info',
   'twitch-slow',
   'twitch-subs-only',
-  'twitch-unique-message',
-  'obs-studio-authentification',
-  'obs-studio-connection',
-  'obs-studio-recording',
-  'obs-studio-replay'
+  'twitch-unique-message'
 ];
 
 const actions = {
+  'both-active-window': (module_name, receive, data, next_data, next) => {
+    const title = apply_variables(data.title, module_name, next_data),
+      program = apply_variables(data.program, module_name, next_data);
+
+    active()
+      .then(window => {
+        let check = true;
+        check = (data.type && program.length) ? (window.owner.path === program) : check;
+        check = (!data.type && title.length) ? (window.title === title || window.owner.name === title) : check;
+
+        if (typeof next !== 'undefined' && check) {
+          set_variable('active-window:id', window.id, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('active-window:name', window.title, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('active-window:bounds:x', window.bounds.x, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('active-window:bounds:y', window.bounds.y, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('active-window:bounds:width', window.bounds.width, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('active-window:bounds:height', window.bounds.height, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('active-window:process:id', window.owner.processId, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('active-window:process:name', window.owner.name, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable('active-window:process:path', window.owner.path, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+          next(OUTPUT_TYPE.SUCCESS);
+        } else {
+          next(OUTPUT_TYPE.ERROR);
+        }
+      })
+      .catch(error => {
+        console.error('active-window error:', error);
+        next(OUTPUT_TYPE.ERROR);
+      });
+  },
   'outputs-app-status': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'manager' && receive.name === 'app') {
       if ((receive.data.type === 'add' && data.state) || (receive.data.type === 'remove' && !data.state)) {
@@ -345,7 +412,7 @@ const actions = {
           set_variable('app-status:path', receive.data.application.path, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('app-status:lanched', data.state, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
         }
       }
     }
@@ -378,7 +445,17 @@ const actions = {
         const now = Date.now();
         if (!value || (value + time) < now) {
           set_variable(data.variable, now, VARIABLE_TYPE.GLOBALS);
-          next();
+
+          next(OUTPUT_TYPE.SUCCESS);
+        } else {
+          const end = (value + time);
+
+          functions.date_to_vars(value, 'cooldown:start', VARIABLE_TYPE.NEXT, module_name, next_data);
+          functions.date_to_vars(end, 'cooldown:end', VARIABLE_TYPE.NEXT, module_name, next_data);
+          functions.timediff_to_vars((end - now), 'cooldown:left', VARIABLE_TYPE.NEXT, module_name, next_data);
+          functions.timediff_to_vars((now - value), 'cooldown:past', VARIABLE_TYPE.NEXT, module_name, next_data);
+
+          next(OUTPUT_TYPE.ERROR);
         }
       }
     }
@@ -388,11 +465,16 @@ const actions = {
       name = apply_variables(data.name, module_name, next_data),
       folder = apply_variables(data.folder, module_name, next_data);
 
-    if (url.trim().length && folder.trim().length && fs.existsSync(folder)) {
+    if (url.trim().length && folder.trim().length) {
+      if (!fs.existsSync(folder)) {
+        return next(OUTPUT_TYPE.ERROR);
+      }
+
       functions.load_file(path.join(folder, name), url, true)
-        .then(next)
+        .then(() => next(OUTPUT_TYPE.SUCCESS))
         .catch(error => {
           console.error('download-file error:', error);
+          next(OUTPUT_TYPE.ERROR);
         });
     }
   },
@@ -401,7 +483,8 @@ const actions = {
     if (file.trim().length) {
       fs.readFile(file, 'utf8', (error, data) => {
         if (error) {
-          return console.error('file-read error:', error);
+          console.error('file-read error:', error);
+          return next(OUTPUT_TYPE.ERROR);
         }
 
         const lines = data.split('\n');
@@ -411,7 +494,7 @@ const actions = {
           set_variable(`file-read:line[${i}]`, lines[i].trim(), VARIABLE_TYPE.NEXT, module_name, next_data);
         }
 
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       });
     }
   },
@@ -438,10 +521,11 @@ const actions = {
           set_variable('http-request:status', req.statusCode, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('http-request:body', await req.body.text(), VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
         })
         .catch(error => {
           console.error('http-request error:', error);
+          next(OUTPUT_TYPE.ERROR);
         });
     }
   },
@@ -460,7 +544,7 @@ const actions = {
           set_variable('keyboard-shortcut:virtual', receive.data.event.vKey, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('keyboard-shortcut:state', data.state, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
         }
       }
     }
@@ -481,7 +565,6 @@ const actions = {
             };
 
             if (ps.path === data.program) {
-              console.log('kill-app:', data);
               if (data.children) {
                 child_process.exec(`taskkill /PID ${ps.id} /T /F`, (error, stdout, stderr) => {
                   if (error) {
@@ -505,10 +588,11 @@ const actions = {
       cwd: path.dirname(data.program),
     })
       .on('close', exit_code => {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       })
       .on('error', error => {
         console.error('launch-app error:', data, error);
+        next(OUTPUT_TYPE.ERROR);
       });
   },
   'inputs-notification': (module_name, receive, data, next_data) => {
@@ -543,15 +627,24 @@ const actions = {
       child_process.spawn(_cmd, ['/c', 'explorer', address], {
         cmd: process.env.USERPROFILE,
         detached: true
-      })
-        .on('error', error => {
-          console.error('open-url error:', data, error);
-        });
+      });
+    }
+  },
+  'both-say': (module_name, receive, data, next_data, next) => {
+    const message = apply_variables(data.message, module_name, next_data);
+    if (message.trim().length && data.voice) {
+      _sender('manager', 'speech:say', {
+        voice: data.voice,
+        volume: parseInt(data.volume) || 100,
+        rate: parseFloat(data.rate) || 1,
+        pitch: parseFloat(data.pitch) || .8,
+        text: message
+      });
     }
   },
   'outputs-launch': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'multi-actions' && receive.name === 'launch') {
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'both-self-timer': (module_name, receive, data, next_data, next) => {
@@ -563,7 +656,7 @@ const actions = {
         time *= 60000;
       }
 
-      setTimeout(next, time);
+      setTimeout(() => next(OUTPUT_TYPE.SUCCESS), time);
     }
   },
   'both-socket-request': (module_name, receive, data, next_data, next) => {
@@ -580,10 +673,7 @@ const actions = {
         }
 
         client.close();
-
-        if (!error) {
-          next();
-        }
+        next(error ? OUTPUT_TYPE.ERROR : OUTPUT_TYPE.SUCCESS);
       });
     }
   },
@@ -591,7 +681,7 @@ const actions = {
     const id = parseInt(data.id) || 0;
     if (receive.id === 'multi-actions' && receive.name === 'toggle-block' && (!id || id === receive.data.id)) {
       if (data.state === 'toggle' || receive.data.enabled === (data.state === 'on')) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -616,7 +706,7 @@ const actions = {
           set_variable('usb-detection:serial', receive.data.device.serialNumber, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('usb-detection:connected', data.state, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
         }
       }
     }
@@ -682,9 +772,7 @@ const actions = {
       check = !check;
     }
 
-    if (check) {
-      next();
-    }
+    next(check ? OUTPUT_TYPE.SUCCESS : OUTPUT_TYPE.ERROR);
   },
   'both-variable-increment': (module_name, receive, data, next_data, next) => {
     let value = get_variable(data.variable, undefined, module_name, next_data);
@@ -700,9 +788,10 @@ const actions = {
     if (typeof value === 'number') {
       value += parseInt(data.number);
       set_variable(data.variable, value, scope(data), module_name, next_data);
+      return next(OUTPUT_TYPE.SUCCESS);
     }
 
-    next();
+    next(OUTPUT_TYPE.ERROR);
   },
   'both-variable-remove': (module_name, receive, data, next_data, next) => {
     const _scope = scope(data);
@@ -716,9 +805,10 @@ const actions = {
 
     if (typeof target !== 'undefined' && typeof target[data.variable] !== 'undefined') {
       delete target[data.variable];
+      return next(OUTPUT_TYPE.SUCCESS);
     }
 
-    next();
+    next(OUTPUT_TYPE.ERROR);
   },
   'both-variable-replace': (module_name, receive, data, next_data, next) => {
     const search = apply_variables(data.search, module_name, next_data),
@@ -732,7 +822,7 @@ const actions = {
     }
 
     set_variable(data.variable, value, scope(data), module_name, next_data);
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   },
   'both-variable-setter': (module_name, receive, data, next_data, next) => {
     const type = functions.get_state(data.type, 'string', 'number', 'boolean');
@@ -745,7 +835,7 @@ const actions = {
     }
 
     set_variable(data.variable, value, scope(data), module_name, next_data);
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   },
   'both-websocket-request': (module_name, receive, data, next_data, next) => {
     const url = apply_variables(data.url, module_name, next_data),
@@ -753,13 +843,15 @@ const actions = {
 
     if (url.trim().length && _data.trim().length) {
       const client = new ws(url);
-      client.on('error', error => console.error('websocket-request error:', error));
+      client.on('error', error => {
+        console.error('websocket-request error:', error);
+        next(OUTPUT_TYPE.ERROR);
+      });
 
       client.onopen = () => {
         client.send(_data, () => {
           client.close();
-
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
         });
       };
     }
@@ -900,7 +992,7 @@ const actions = {
       set_variable('obs-studio:authentification', state, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && state === data.state) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -910,14 +1002,45 @@ const actions = {
       set_variable('obs-studio:connection', state, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && state === data.state) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
   'outputs-obs-studio-exit': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'obs-studio' && receive.name === 'ExitStarted') {
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
+  },
+  'both-obs-studio-filters': (module_name, receive, data, next_data, next) => {
+    _sender('obs-studio', 'GetFilters', [data.source])
+      .then(filters => {
+        if (!Array.isArray(filters)) {
+          return next(OUTPUT_TYPE.ERROR);
+        }
+
+        set_variable('obs-studio:filters:count', filters.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+        for (let i = 0; i < filters.length; ++i) {
+          const filter = filters[i];
+
+          set_variable(`obs-studio:filter[${i}]:name`, filter.filterName, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:filter[${i}]:index`, filter.filterIndex, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:filter[${i}]:kind`, filter.filterKind, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:filter[${i}]:enabled`, filter.filterEnabled, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+          if (typeof filter.filterSettings === 'object') {
+            for (const key in filter.filterSettings) {
+              set_variable(`obs-studio:filter[${i}]:settings:${key}`, filter.filterSettings[key], VARIABLE_TYPE.NEXT, module_name, next_data);
+            }
+          }
+        }
+
+        next(OUTPUT_TYPE.SUCCESS);
+      })
+      .catch(error => {
+        console.error('both-obs-studio-sources:', error);
+        next(OUTPUT_TYPE.ERROR);
+      });
   },
   'outputs-obs-studio-recording': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'obs-studio' && receive.name === 'RecordStateChanged' && ['OBS_WEBSOCKET_OUTPUT_STARTED', 'OBS_WEBSOCKET_OUTPUT_STOPPED'].indexOf(receive.data.outputState) >= 0) {
@@ -925,7 +1048,7 @@ const actions = {
       set_variable('obs-studio:recording', state, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && data.state === state) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -939,7 +1062,7 @@ const actions = {
       set_variable('obs-studio:replay', state, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && data.state === state) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -949,11 +1072,34 @@ const actions = {
   },
   'outputs-obs-studio-save-replay': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'obs-studio' && receive.name === 'ReplayBufferSaved') {
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'inputs-obs-studio-save-replay': (module_name, receive, data, next_data) => {
     _sender('obs-studio', 'SaveReplayBuffer');
+  },
+  'both-obs-studio-scenes': (module_name, receive, data, next_data, next) => {
+    _sender('obs-studio', 'GetScenes')
+      .then(scenes => {
+        if (!Array.isArray(scenes)) {
+          return next(OUTPUT_TYPE.ERROR);
+        }
+
+        set_variable('obs-studio:scenes:count', scenes.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+        for (let i = 0; i < scenes.length; ++i) {
+          const scene = scenes[i];
+
+          set_variable(`obs-studio:scene[${i}]:name`, scene.sceneName, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:scene[${i}]:index`, scene.sceneIndex, VARIABLE_TYPE.NEXT, module_name, next_data);
+        }
+
+        next(OUTPUT_TYPE.SUCCESS);
+      })
+      .catch(error => {
+        console.error('both-obs-studio-scenes:', error);
+        next(OUTPUT_TYPE.ERROR);
+      });
   },
   'inputs-obs-studio-set-browser': (module_name, receive, data, next_data) => {
     if (data.source) {
@@ -981,7 +1127,7 @@ const actions = {
       set_variable('obs-studio:streaming', state, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && data.state === state) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -993,8 +1139,8 @@ const actions = {
     if (receive.id === 'obs-studio' && receive.name === 'StudioModeStateChanged') {
       set_variable('obs-studio:studio-mode', receive.data.studioModeEnabled, VARIABLE_TYPE.GLOBALS);
 
-      if (data.state === receive.data.studioModeEnabled) {
-        next();
+      if (typeof next !== 'undefined' && data.state === receive.data.studioModeEnabled) {
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -1003,11 +1149,11 @@ const actions = {
     _sender('obs-studio', 'ToggleStudioMode', [state]);
   },
   'outputs-obs-studio-switch-scene': (module_name, receive, data, next_data, next) => {
-    if (data.scene && receive.id === 'obs-studio' && receive.name === 'CurrentProgramSceneChanged') {
+    if (receive.id === 'obs-studio' && receive.name === 'CurrentProgramSceneChanged') {
       set_variable('obs-studio:switch-scene', receive.data.sceneName, VARIABLE_TYPE.GLOBALS);
 
-      if (!data.scene || receive.data.sceneName.toLowerCase() === data.scene.toLowerCase()) {
-        next();
+      if (typeof next !== 'undefined' && (!data.scene || receive.data.sceneName.toLowerCase() === data.scene.toLowerCase())) {
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -1022,7 +1168,7 @@ const actions = {
         set_variable('obs-studio:source-selected:id', receive.data.sceneItemId, VARIABLE_TYPE.NEXT, module_name, next_data);
         set_variable('obs-studio:source-selected:name', receive.data.sceneName, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       };
 
       if (data.scene && data.source) {
@@ -1030,11 +1176,61 @@ const actions = {
           if (data.scene === receive.data.sceneName && _data && _data.sceneItemId === receive.data.sceneItemId) {
             _next();
           }
-        }).catch(error => {});
+        }).catch(error => {
+          next(OUTPUT_TYPE.ERROR);
+        });
       } else {
         _next();
       }
     }
+  },
+  'both-obs-studio-sources': (module_name, receive, data, next_data, next) => {
+    _sender('obs-studio', 'GetSources', [data.scene])
+      .then(sources => {
+        if (!Array.isArray(sources)) {
+          return next(OUTPUT_TYPE.ERROR);
+        }
+
+        set_variable('obs-studio:sources:count', sources.length, VARIABLE_TYPE.NEXT, module_name, next_data);
+
+        for (let i = 0; i < sources.length; ++i) {
+          const source = sources[i];
+
+          set_variable(`obs-studio:source[${i}]:id`, source.sceneItemId, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:name`, source.sourceName, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:index`, source.sourceIndex, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:type`, source.sourceType, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:kind`, source.inputKind, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:blend`, source.sceneItemBlendMode, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:group`, !!source.isGroup, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:locked`, source.sceneItemLocked, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:enabled`, source.sceneItemEnabled, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:alignment`, source.sceneItemTransform.alignment, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:rotation`, source.sceneItemTransform.rotation, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:width`, source.sceneItemTransform.width, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:height`, source.sceneItemTransform.height, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:source:width`, source.sceneItemTransform.sourceWidth, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:source:height`, source.sceneItemTransform.sourceHeight, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:position:x`, source.sceneItemTransform.positionX, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:position:y`, source.sceneItemTransform.positionY, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:scale:x`, source.sceneItemTransform.scaleX, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:scale:y`, source.sceneItemTransform.scaleY, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:crop:top`, source.sceneItemTransform.cropTop, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:crop:bottom`, source.sceneItemTransform.cropBottom, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:crop:left`, source.sceneItemTransform.cropLeft, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:crop:right`, source.sceneItemTransform.cropRight, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:bounds:type`, source.sceneItemTransform.boundsType, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:bounds:alignment`, source.sceneItemTransform.boundsAlignment, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:bounds:width`, source.sceneItemTransform.boundsWidth, VARIABLE_TYPE.NEXT, module_name, next_data);
+          set_variable(`obs-studio:source[${i}]:transform:bounds:height`, source.sceneItemTransform.boundsHeight, VARIABLE_TYPE.NEXT, module_name, next_data);
+        }
+
+        next(OUTPUT_TYPE.SUCCESS);
+      })
+      .catch(error => {
+        console.error('both-obs-studio-sources:', error);
+        next(OUTPUT_TYPE.ERROR);
+      });
   },
   'outputs-obs-studio-lock-source': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'obs-studio' && receive.name === 'SceneItemLockStateChanged') {
@@ -1044,7 +1240,7 @@ const actions = {
           set_variable('obs-studio:lock-source:name', receive.data.sceneName, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('obs-studio:lock-source:locked', receive.data.sceneItemLocked, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
         }
       };
 
@@ -1055,7 +1251,9 @@ const actions = {
               _next();
             }
           })
-          .catch(error => {});
+          .catch(error => {
+            next(OUTPUT_TYPE.ERROR);
+          });
       } else {
         _next();
       }
@@ -1076,7 +1274,7 @@ const actions = {
           set_variable('obs-studio:toggle-source:scene', receive.data.sceneName, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('obs-studio:toggle-source:enabled', receive.data.sceneItemEnabled, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
         }
       };
 
@@ -1087,7 +1285,9 @@ const actions = {
               _next();
             }
           })
-          .catch(error => {});
+          .catch(error => {
+            next(OUTPUT_TYPE.ERROR);
+          });
       } else {
         _next();
       }
@@ -1107,7 +1307,7 @@ const actions = {
           set_variable('obs-studio:toggle-filter:source', receive.data.sourceName, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('obs-studio:toggle-filter:enabled', receive.data.filterEnabled, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
         }
       };
 
@@ -1131,8 +1331,8 @@ const actions = {
       const state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED');
       set_variable('obs-studio:virtualcam', state, VARIABLE_TYPE.GLOBALS);
 
-      if (data.state === state) {
-        next();
+      if (typeof next !== 'undefined' && data.state === state) {
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -1147,29 +1347,40 @@ const actions = {
     }
   },
   'both-spotify-current-queue': (module_name, receive, data, next_data, next) => {
-    _sender('spotify', 'getQueue').then(data => {
-      functions.spotify_next('spotify:current', ((data.body && data.body.queue) ? [data.body.queue] : []), module_name, next_data, next);
-    });
+    _sender('spotify', 'getQueue')
+      .then(data => {
+        functions.spotify_next('spotify:current', ((data.body && data.body.queue) ? [data.body.queue] : []), module_name, next_data, next);
+      })
+      .catch(error => {
+        console.error('spotify-current-queue error:', error);
+        next(OUTPUT_TYPE.ERROR);
+      });
   },
   'both-spotify-currently-playing': (module_name, receive, data, next_data, next) => {
-    _sender('spotify', 'getCurrentTrack').then(track => {
-      functions.spotify_next('spotify:current', (track ? [track] : []), module_name, next_data, next);
-    });
+    _sender('spotify', 'getCurrentTrack')
+      .then(track => {
+        functions.spotify_next('spotify:current', (track ? [track] : []), module_name, next_data, next);
+      })
+      .catch(error => {
+        console.error('spotify-currently-playing error:', error);
+        next(OUTPUT_TYPE.ERROR);
+      });
   },
   'inputs-spotify-play-pause': (module_name, receive, data, next_data) => {
     const track = apply_variables(data.track, module_name, next_data) || get_variable('spotify:search[0]:uri', '', module_name, next_data),
       play_pause = play => {
         if (play) {
-          _sender('spotify', 'playNow', [(typeof track === 'string' && track.trim().length) ? track : false]);
-        } else {
-          _sender('spotify', 'pauseNow');
+          return _sender('spotify', 'playNow', [(typeof track === 'string' && track.trim().length) ? track : false]);
         }
+
+        return _sender('spotify', 'pauseNow');
       };
 
     if (['on', 'off'].indexOf(data.state) < 0) {
-      _sender('spotify', 'isPlaying').then(is_playing => {
-        play_pause(!is_playing, track);
-      });
+      _sender('spotify', 'isPlaying')
+        .then(is_playing => {
+          play_pause(!is_playing, track);
+        });
     } else {
       play_pause(data.state === 'on');
     }
@@ -1187,14 +1398,19 @@ const actions = {
       _sender('spotify', 'search', [track])
         .then(tracks => {
           functions.spotify_next('spotify:search', tracks, module_name, next_data, next);
+        })
+        .catch(error => {
+          console.error('spotify-search error:', error);
+          next(OUTPUT_TYPE.ERROR);
         });
     }
   },
   'inputs-spotify-shuffle': (module_name, receive, data, next_data) => {
     if (['on', 'off'].indexOf(data.state) < 0) {
-      _sender('spotify', 'isShuffle').then(is_shuffle => {
-        _sender('spotify', 'setShuffle', [!is_shuffle]);
-      });
+      _sender('spotify', 'isShuffle')
+        .then(is_shuffle => {
+          _sender('spotify', 'setShuffle', [!is_shuffle]);
+        });
     } else {
       _sender('spotify', 'setShuffle', [data.state === 'on']);
     }
@@ -1220,14 +1436,14 @@ const actions = {
       _sender('twitch', 'announce', { type: 'Methods', args: [false, message, (data.color ? data.color.toLowerCase() : false), (type === 'BotChat')] });
     }
   },
-  'outputs-twitch-ban': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+  'outputs-twitch-ban': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, output_type => {
     set_variable('twitch:ban:user:id', receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:ban:user:name', receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:ban:user:display', receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:ban:reason', receive.data.data.reason, VARIABLE_TYPE.NEXT, module_name, next_data);
     functions.date_to_vars(receive.data.data.startDate, 'twitch:ban:start', VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   }, 'Ban', 'message', true),
   'inputs-twitch-ban': (module_name, receive, data, next_data) => {
     const user = apply_variables(data.user, module_name, next_data),
@@ -1239,18 +1455,18 @@ const actions = {
   },
   'outputs-twitch-chat-clear': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'twitch' && receive.name === 'ChatClear') {
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'inputs-twitch-chat-clear': (module_name, receive, data, next_data) => {
     _sender('twitch', 'deleteMessage', { type: 'Methods', args: [false] });
   },
-  'outputs-twitch-cheer': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+  'outputs-twitch-cheer': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, output_type => {
     set_variable('twitch:cheer:bits', receive.data.data.bits, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:cheer:message', receive.data.data.message, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:cheer:anonymous', receive.data.data.isAnonymous, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   }, 'Cheer', 'message', true),
   'outputs-twitch-command': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Command', 'command', true),
   'outputs-twitch-community-pay-forward': (module_name, receive, data, next_data, next) => {
@@ -1262,7 +1478,7 @@ const actions = {
       set_variable('twitch:community-pay-forward:original:name', receive.data.subscribe.forward.originalGifterDisplayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:community-pay-forward:original:display', receive.data.subscribe.forward.originalGifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'outputs-twitch-community-sub': (module_name, receive, data, next_data, next) => {
@@ -1276,7 +1492,7 @@ const actions = {
       set_variable('twitch:community-sub:count', receive.data.subscribe.info.count, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:community-sub:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'inputs-twitch-delete-message': (module_name, receive, data, next_data) => {
@@ -1292,7 +1508,7 @@ const actions = {
       set_variable('twitch:emote-only:enabled', receive.data.emote_only.enabled, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && (data.state === 'toggle' || receive.data.emote_only.enabled === (data.state === 'on'))) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -1306,7 +1522,7 @@ const actions = {
     }
 
     const type = (typeof data.type === 'undefined' || data.type) ? 'Command' : 'Message';
-    functions.twitch_compare(module_name, receive, data, next_data, () => {
+    functions.twitch_compare(module_name, receive, data, next_data, output_type => {
       const variable_name = `twitch:users[${get_variable('block:id', -1, module_name, next_data)}]`;
 
       let users = get_variable(variable_name, []);
@@ -1325,24 +1541,26 @@ const actions = {
       }
 
       if ((all && !exists) || (!all && !tmp.length)) {
-        next();
+        return next(OUTPUT_TYPE.SUCCESS);
       }
+
+      next(OUTPUT_TYPE.ERROR);
     }, type, type.toLowerCase(), (type === 'command'));
   },
-  'outputs-twitch-follow': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+  'outputs-twitch-follow': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, output_type => {
     set_variable(['twitch:all:user:id', 'twitch:follow:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable(['twitch:all:user:name', 'twitch:follow:user:name'], receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable(['twitch:all:user:display', 'twitch:follow:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
     functions.date_to_vars(receive.data.data.followDate, 'twitch:follow', VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   }, 'Follow', 'message', true),
   'outputs-twitch-followers-only': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'twitch' && receive.name === 'FollowersOnly') {
       set_variable('twitch:follower-only:enabled', receive.data.follower_only.enabled, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && (data.state === 'toggle' || receive.data.follower_only.enabled === (data.state === 'on'))) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -1358,7 +1576,11 @@ const actions = {
           set_variable('twitch:game:name', game.name, VARIABLE_TYPE.NEXT, module_name, next_data);
           set_variable('twitch:game:image', game.boxArtUrl, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-          next();
+          next(OUTPUT_TYPE.SUCCESS);
+        })
+        .catch(error => {
+          console.error('twitch-game error:', error);
+          next(OUTPUT_TYPE.ERROR);
         });
     }
   },
@@ -1371,7 +1593,7 @@ const actions = {
       set_variable('twitch:gift-paid-upgrade:original:name', receive.data.upgrade.info.gifter, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:gift-paid-upgrade:original:display', receive.data.upgrade.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'outputs-twitch-info': (module_name, receive, data, next_data, next) => {
@@ -1392,7 +1614,7 @@ const actions = {
                 set_variable('twitch:channel:game:image', game.boxArtUrl, VARIABLE_TYPE.GLOBALS);
 
                 if (typeof next !== 'undefined') {
-                  next();
+                  next(OUTPUT_TYPE.SUCCESS);
                 }
               })
               .catch(error => {
@@ -1401,9 +1623,13 @@ const actions = {
                 set_variable('twitch:channel:game:image', '', VARIABLE_TYPE.GLOBALS);
 
                 if (typeof next !== 'undefined') {
-                  next();
+                  next(OUTPUT_TYPE.SUCCESS);
                 }
               });
+          } else {
+            if (typeof next !== 'undefined') {
+              next(OUTPUT_TYPE.ERROR);
+            }
           }
         })
         .catch(error => {
@@ -1412,7 +1638,9 @@ const actions = {
           set_variable('twitch:channel:game:id', receive.data.data.categoryId, VARIABLE_TYPE.GLOBALS);
           set_variable('twitch:channel:game:name', receive.data.data.categoryName, VARIABLE_TYPE.GLOBALS);
 
-          next();
+          if (typeof next !== 'undefined') {
+            next(OUTPUT_TYPE.ERROR);
+          }
         });
     }
   },
@@ -1433,16 +1661,22 @@ const actions = {
               set_variable('twitch:channel:game:name', game.name, VARIABLE_TYPE.NEXT, module_name, next_data);
               set_variable('twitch:channel:game:image', game.boxArtUrl, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-              next();
+              next(OUTPUT_TYPE.SUCCESS);
             })
             .catch(error => {
               set_variable('twitch:channel:game:id', info.gameId, VARIABLE_TYPE.NEXT, module_name, next_data);
               set_variable('twitch:channel:game:name', info.gameName, VARIABLE_TYPE.NEXT, module_name, next_data);
               set_variable('twitch:channel:game:image', '', VARIABLE_TYPE.NEXT, module_name, next_data);
 
-              next();
+              next(OUTPUT_TYPE.SUCCESS);
             });
+        } else {
+          next(OUTPUT_TYPE.ERROR);
         }
+      })
+      .catch(error => {
+        console.error('twitch-info error:', error);
+        next(OUTPUT_TYPE.ERROR);
       });
   },
   'inputs-twitch-info': (module_name, receive, data, next_data) => {
@@ -1453,6 +1687,7 @@ const actions = {
       _sender('twitch', 'updateChannelInfo', { type: 'Methods', args: [false, status, game] });
     }
   },
+  'outputs-twitch-join': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Join', 'user', true),
   'outputs-twitch-message': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Message', 'message', false),
   'inputs-twitch-message': (module_name, receive, data, next_data) => {
     const message = apply_variables(data.message, module_name, next_data),
@@ -1466,6 +1701,7 @@ const actions = {
     _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { nonModeratorChatDelay: parseInt(data.delay), nonModeratorChatDelayEnabled: data.state }] });
   },
   'outputs-twitch-message-remove': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'MessageRemove', 'message', false),
+  'outputs-twitch-part': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, next, 'Part', 'user', true),
   'outputs-twitch-prime-community-gift': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'twitch' && receive.name === 'PrimeCommunityGift') {
       set_variable(['twitch:all:user:id', 'twitch:prime-community-gift:user:id'], (receive.data.user.id || receive.data.subscribe.info.userId), VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1476,7 +1712,7 @@ const actions = {
       set_variable('twitch:prime-community-gift:original:display', receive.data.subscribe.info.gifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:prime-community-gift:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'outputs-twitch-prime-paid-upgrade': (module_name, receive, data, next_data, next) => {
@@ -1486,14 +1722,14 @@ const actions = {
       set_variable(['twitch:all:user:display', 'twitch:prime-paid-upgrade:user:display'], (receive.data.user.display || receive.data.upgrade.info.displayName), VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:prime-paid-upgrade:plan:id', receive.data.upgrade.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
-  'outputs-twitch-raid': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+  'outputs-twitch-raid': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, output_type => {
     set_variable('twitch:raid:channel', receive.data.raid.channel, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:raid:count', receive.data.raid.info.viewerCount, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   }, 'Raid', 'channel', true, () => receive.data.raid.channel),
   'inputs-twitch-raid': (module_name, receive, data, next_data) => {
     const channel = apply_variables(data.game, module_name, next_data);
@@ -1503,7 +1739,7 @@ const actions = {
   },
   'outputs-twitch-raid-cancel': (module_name, receive, data, next_data, next) => {
     if (receive.id === 'twitch' && receive.name === 'RaidCancel') {
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'inputs-twitch-raid-cancel': (module_name, receive, data, next_data) => {
@@ -1521,10 +1757,10 @@ const actions = {
       set_variable('twitch:subscribe:streak', receive.data.subscribe.info.streak, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
-  'outputs-twitch-redemption': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+  'outputs-twitch-redemption': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, output_type => {
     if (receive.data.reward && (!data.reward || data.reward === receive.data.reward.id)) {
       set_variable(['twitch:all:user:id', 'twitch:redemption:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable(['twitch:all:user:name', 'twitch:redemption:user:name'], receive.data.user.name.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1538,7 +1774,7 @@ const actions = {
       set_variable('twitch:redemption:images:2x', receive.data.reward.images.url_2x, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:redemption:images:4x', receive.data.reward.images.url_4x, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   }, 'Redemption', 'message', true),
   'outputs-twitch-reward-gift': (module_name, receive, data, next_data, next) => {
@@ -1553,22 +1789,32 @@ const actions = {
       set_variable('twitch:reward:domain', receive.data.reward.info.domain, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:reward:shared', receive.data.reward.info.gifterGiftCount, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
-  'outputs-twitch-ritual': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+  'outputs-twitch-ritual': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, output_type => {
     set_variable(['twitch:all:user:id', 'twitch:ritual:user:id'], receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable(['twitch:all:user:name', 'twitch:ritual:user:name'], receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable(['twitch:all:user:display', 'twitch:ritual:user:display'], receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:ritual:name', receive.data.ritual.info.ritualName, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:ritual:message', receive.data.ritual.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   }, 'Ritual', 'user', true, () => receive.data.ritual.user),
   'inputs-twitch-shoutout': (module_name, receive, data, next_data) => {
     const user = apply_variables(data.user, module_name, next_data);
     if (user.trim().length) {
       _sender('twitch', 'shoutout', { type: 'Methods', args: [user] });
+    }
+  },
+  'outputs-twitch-stream-offline': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'StreamOffline') {
+      next(OUTPUT_TYPE.SUCCESS);
+    }
+  },
+  'outputs-twitch-stream-online': (module_name, receive, data, next_data, next) => {
+    if (receive.id === 'twitch' && receive.name === 'StreamOnline') {
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'outputs-twitch-slow': (module_name, receive, data, next_data, next) => {
@@ -1577,7 +1823,7 @@ const actions = {
       set_variable('twitch:slow:delay', receive.data.slow.delay, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && (data.state === 'toggle' || receive.data.slow.enabled === (data.state === 'on'))) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
@@ -1593,7 +1839,7 @@ const actions = {
       set_variable('twitch:subscribe:original:name', receive.data.subscribe.info.originalGifterDisplayName.toLowerCase(), VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:original:display', receive.data.subscribe.info.originalGifterDisplayName, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'outputs-twitch-sub': (module_name, receive, data, next_data, next) => {
@@ -1608,7 +1854,7 @@ const actions = {
       set_variable('twitch:subscribe:streak', receive.data.subscribe.info.streak, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'outputs-twitch-sub-extend': (module_name, receive, data, next_data, next) => {
@@ -1620,7 +1866,7 @@ const actions = {
       set_variable('twitch:subscribe:months:end', receive.data.subscribe.info.endMonth, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'outputs-twitch-sub-gift': (module_name, receive, data, next_data, next) => {
@@ -1634,14 +1880,13 @@ const actions = {
       set_variable(['twitch:message', 'twitch:subscribe:message'], receive.data.message || receive.data.subscribe.info.message, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:duration', receive.data.subscribe.info.giftDuration, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:count', receive.data.subscribe.info.gifterGiftCount, VARIABLE_TYPE.NEXT, module_name, next_data);
-      set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:months', receive.data.subscribe.info.months, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:plan:id', receive.data.subscribe.info.plan, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:plan:name', receive.data.subscribe.info.planName, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:streak', receive.data.subscribe.info.streak, VARIABLE_TYPE.NEXT, module_name, next_data);
       set_variable('twitch:subscribe:prime', receive.data.subscribe.info.isPrime, VARIABLE_TYPE.NEXT, module_name, next_data);
 
-      next();
+      next(OUTPUT_TYPE.SUCCESS);
     }
   },
   'outputs-twitch-subs-only': (module_name, receive, data, next_data, next) => {
@@ -1649,13 +1894,13 @@ const actions = {
       set_variable('twitch:subs-only:enabled', receive.data.subscribe_only.enabled, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && (data.state === 'toggle' || receive.data.subscribe_only.enabled === (data.state === 'on'))) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }},
   'inputs-twitch-subs-only': (module_name, receive, data, next_data) => {
     _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { subscriberOnlyModeEnabled: data.state }] });
   },
-  'outputs-twitch-timeout': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
+  'outputs-twitch-timeout': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, output_type => {
     set_variable('twitch:timeout:user:id', receive.data.user.id, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:timeout:user:name', receive.data.user.name, VARIABLE_TYPE.NEXT, module_name, next_data);
     set_variable('twitch:timeout:user:display', receive.data.user.display, VARIABLE_TYPE.NEXT, module_name, next_data);
@@ -1663,7 +1908,7 @@ const actions = {
     functions.date_to_vars(receive.data.data.startDate, 'twitch:timeout:start', VARIABLE_TYPE.NEXT, module_name, next_data);
     functions.date_to_vars(receive.data.data.endDate, 'twitch:timeout:end', VARIABLE_TYPE.NEXT, module_name, next_data);
 
-    next();
+    next(OUTPUT_TYPE.SUCCESS);
   }, 'Timeout', 'user', true, () => receive.data.timeout.user),
   'inputs-twitch-timeout': (module_name, receive, data, next_data) => {
     const user = apply_variables(data.user, module_name, next_data),
@@ -1678,15 +1923,15 @@ const actions = {
       set_variable('twitch:unique-message:enabled', receive.data.r9k.enabled, VARIABLE_TYPE.GLOBALS);
 
       if (typeof next !== 'undefined' && (data.state === 'toggle' || receive.data.r9k.enabled === (data.state === 'on'))) {
-        next();
+        next(OUTPUT_TYPE.SUCCESS);
       }
     }
   },
   'inputs-twitch-unique-message': (module_name, receive, data, next_data) => {
     _sender('twitch', 'updateSettings', { type: 'Methods', args: [false, { uniqueChatModeEnabled: data.state }] });
   },
-  'outputs-twitch-whisper': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, () => {
-    next();
+  'outputs-twitch-whisper': (module_name, receive, data, next_data, next) => functions.twitch_compare(module_name, receive, data, next_data, output_type => {
+    next(output_type);
   }, 'Whisper', 'message', false),
   'inputs-twitch-whisper': (module_name, receive, data, next_data) => {
     const user = apply_variables(data.user, module_name, next_data),
@@ -1792,6 +2037,21 @@ function variables_block(prefix, node, module_name, next_data, first) {
   set_variable(`${prefix}:output:connections`, connections.outputs, VARIABLE_TYPE.NEXT, module_name, next_data);
 }
 
+function get_module_block_id(id) {
+  for (const module_name in _config.actions) {
+    const action = _config.actions[module_name],
+      node = action.data[id];
+
+    if (typeof node !== 'undefined') {
+      return {
+        module_name,
+        action,
+        node
+      };
+    }
+  }
+}
+
 function process_modules(id, name, data) {
   for (const module_name in _config.actions) {
     const action = _config.actions[module_name],
@@ -1826,17 +2086,16 @@ function process_block(module_name, node, next_data, receive, force, direct_next
   }
 
   if ((force || !Object.keys(node.inputs).length) && (direct_next || typeof actions[node.data.type] !== 'undefined')) {
-    const next = node => {
+    const next = (node, output_type, next_data) => {
       variables_block('block:previous', node, module_name, next_data);
 
-      for (const output_index in node.outputs) {
-        const output = node.outputs[output_index].connections;
-        for (const connection of node.outputs[output_index].connections) {
+      if (typeof node.outputs[output_type] !== 'undefined') {
+        for (const connection of node.outputs[output_type].connections) {
           const node = _config.actions[module_name].data[connection.node];
           if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled)) {
             variables_block('block', node, module_name, next_data);
 
-            actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
+            actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, (output_type, _next_data) => next(node, output_type, (_next_data || next_data)));
           }
         }
       }
@@ -1847,22 +2106,7 @@ function process_block(module_name, node, next_data, receive, force, direct_next
     } else if (typeof actions[node.data.type] !== 'undefined' && (typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled || force)) {
       variables_block('block', node, module_name, next_data);
 
-      actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, () => next(node));
-    }
-  }
-}
-
-function get_module_block_id(id) {
-  for (const module_name in _config.actions) {
-    const action = _config.actions[module_name],
-      node = action.data[id];
-
-    if (typeof node !== 'undefined') {
-      return {
-        module_name,
-        action,
-        node
-      };
+      actions[node.data.type](module_name, receive, JSON.parse(JSON.stringify(node.data.data)), next_data, (output_type, _next_data) => next(node, output_type, (_next_data || next_data)));
     }
   }
 }
@@ -2039,6 +2283,9 @@ module.exports = {
               detached: true
             });
           }
+        } else if (data.sort) {
+          _config.settings.sort = data.sort;
+          save_config();
         } else if (data.module) {
           _config.settings.module = data.module;
           save_config();
@@ -2047,14 +2294,16 @@ module.exports = {
           save_config();
         } else if (data.request) {
           if (data.request[1] === 'multi-actions') {
-            return module.exports.receiver(...data.request.slice(1));
+            return module.exports.receiver(...data.request.slice(1, -1));
           }
 
-          _sender(...data.request.slice(1)).then(_data => {
-            if (_data !== null) {
-              _sender('message', 'receive', { source: data.request[0], id: data.request[1], name: data.request[2], data: _data });
-            }
-          }).catch(error => {});
+          _sender(...data.request.slice(1, -1))
+            .then(_data => {
+              if (_data !== null) {
+                _sender('message', 'receive', { source: data.request[0], id: data.request[1], name: data.request[2], data: _data, separate: data.request[4] });
+              }
+            })
+            .catch(error => {});
         } else if (data.test) {
           const action = _config.actions[data.test[0]];
           process_block(data.test[0], action.data[data.test[1]], false, false, true);

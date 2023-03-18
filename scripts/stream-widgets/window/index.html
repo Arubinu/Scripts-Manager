@@ -34,7 +34,7 @@
       div[wid] {
         display: none;
       }
-      body.show div[wid]:not(.is-hide) {
+      div[wid]:not(.is-hide) {
         display: block;
       }
       div[wid],
@@ -94,6 +94,9 @@
       body.edit div.name,
       body.edit #background {
         opacity: 1;
+      }
+      body.edit div.name {
+        cursor: default;
       }
 
       @keyframes flash {

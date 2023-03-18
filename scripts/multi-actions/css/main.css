@@ -1,0 +1,201 @@
+body {
+  overflow: hidden;
+  background-color: #262626;
+}
+
+hr {
+  margin: 6px 0px 15px calc(-40px / 2);
+  width: calc(100% + 40px);
+  height: 1px;
+  background-color: #2a2a2a;
+}
+
+label.radio,
+label.checkbox {
+  display: block;
+  position: relative;
+  margin: .6em 1em !important;
+  padding-left: 1em;
+}
+label.radio span,
+label.checkbox span {
+  padding-left: 2em;
+  vertical-align: 1px;
+}
+input[type="radio"],
+input[type="checkbox"] {
+  position: relative;
+  width: 2em !important;
+  height: initial !important;
+  filter: invert(.83);
+}
+
+#template {
+  display: none;
+}
+
+.hero {
+  position: fixed;
+  width: 100%;
+  z-index: 1 !important;
+}
+button.show-blocks,
+button.import-blocks {
+  margin-top: -5px;
+  margin-bottom: -5px;
+  margin-left: 5px;
+}
+.edit-value .input {
+  height: 120px;
+}
+.delete-module {
+  justify-content: space-between;
+}
+
+input[type="checkbox"]:disabled + span {
+  text-decoration: line-through;
+}
+
+.drag-drawflow {
+  position: relative;
+  display: inline-block;
+  margin: 0.25rem !important;
+  padding: 10px 10px 10px 12px;
+  width: 8em;
+  height: 8em;
+  font-size: 1rem;
+  color: #dbdbdb;
+  text-align: center;
+  vertical-align: top;
+  line-height: 1.5;
+  white-space: nowrap;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.inputs-filter:not(.outputs-filter):not(.both-filter) .drag-drawflow.is-outputs,
+.outputs-filter:not(.inputs-filter):not(.both-filter) .drag-drawflow.is-inputs,
+.inputs-filter.outputs-filter:not(.both-filter) .drag-drawflow.is-inputs.is-outputs,
+.inputs-filter.both-filter:not(.outputs-filter) .drag-drawflow.is-outputs:not(.is-inputs),
+.outputs-filter.both-filter:not(.inputs-filter) .drag-drawflow.is-inputs:not(.is-outputs),
+.both-filter:not(.inputs-filter):not(.outputs-filter) .drag-drawflow.is-inputs:not(.is-outputs),
+.both-filter:not(.inputs-filter):not(.outputs-filter) .drag-drawflow.is-outputs:not(.is-inputs) {
+  display: none;
+}
+[section-filter] {
+  border-radius: 2px;
+}
+.both-filter [section-filter="both"],
+.inputs-filter [section-filter="inputs"],
+.outputs-filter [section-filter="outputs"] {
+  outline: 2px solid rgb(50, 50, 50);
+}
+.drag-drawflow .icon {
+  width: 100%;
+  height: auto;
+  margin-top: 0.6em;
+}
+.drag-drawflow .icon img {
+  max-width: 60%;
+  filter: invert(.8) drop-shadow(2px 2px 6px rgba(0, 0, 0, .6));
+}
+.drag-drawflow .name {
+  overflow: hidden;
+  position: absolute;
+  bottom: 6px;
+  width: calc(100% - (2 * .5em));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.box-drawflow {
+  position: fixed;
+  top: 68px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  height: calc(100% - (68px - 6px)) !important;
+  z-index: -2 !important;
+}
+
+.is-browse,
+.is-command,
+.is-right-button {
+  position: relative;
+}
+
+.is-command input {
+  padding-left: calc(6px + 24px) !important;
+}
+.is-command::before {
+  content: '!';
+  position: absolute;
+  top: 1px;
+  left: -20px;
+  width: 24px;
+  height: 28px;
+  font-size: 1.3em;
+  text-align: center;
+  background-color: rgba(255, 255, 255, .06);
+}
+
+.is-browse input,
+.is-right-button input {
+  padding-right: calc(6px + 24px) !important;
+}
+.is-browse button,
+.is-right-button button {
+  position: absolute;
+  top: 1px;
+  right: -20px;
+  padding-top: 8px;
+  padding-bottom: 0px;
+  width: 24px;
+  height: 28px;
+  color: inherit;
+  font-size: 1em;
+  text-align: center;
+  background-color: rgba(255, 255, 255, .06);
+  border: none;
+  cursor: pointer;
+}
+.is-browse button .fa-xmark,
+.is-right-button button .fa-xmark {
+  vertical-align: 4px;
+}
+
+.fa-circle-info {
+  cursor: pointer;
+}
+
+.container-frame {
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  background-color: rgba(0, 0, 0, .65);
+  z-index: 4;
+}
+.container-frame > div {
+  overflow-x: visible;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: 90%;
+  max-height: 90%;
+  transform: translate(-50%, -50%);
+}
+.container-frame > div > div {
+  position: absolute;
+  top: -1.5em;
+  left: 50%;
+  font-size: 1.5em;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.container-frame > div > img {
+  max-width: 100%;
+  max-height: 100%;
+}

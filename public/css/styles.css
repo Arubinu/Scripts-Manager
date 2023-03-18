@@ -1,4 +1,4 @@
-@import 'share.css';
+@import 'common.css';
 @import 'all.min.css';
 @import 'bulma-dark.min.css';
 
@@ -10,6 +10,25 @@ html, body {
   height: 100vh;
   min-height: 100vh;
   max-height: 100vh;
+}
+
+.loading,
+.disconnected {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  background-color: #363636;
+  z-index: 1000;
+}
+
+.disconnected {
+  background-color: rgba(54, 54, 54, .9);
 }
 
 .menu-label {

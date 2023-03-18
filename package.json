@@ -1,6 +1,6 @@
 {
   "name": "scripts-manager",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Scripts Manager is a tool for streamers, developers, but also anyone who wants to automate actions on their computer.",
   "main": "main.js",
   "scripts": {
@@ -47,6 +47,7 @@
     "@twurple/chat": "^6.0.6",
     "@twurple/eventsub-ws": "^6.0.6",
     "@twurple/pubsub": "^6.0.6",
+    "active-win": "^8.1.0",
     "dgram": "^1.0.1",
     "discord.js": "^14.8.0",
     "electron-custom-notifications": "github:Arubinu/electron-custom-notifications",
@@ -55,6 +56,7 @@
     "node-global-key-listener": "^0.1.1",
     "obs-websocket-js": "^5.0.2",
     "read-ini-file": "^3.0.1",
+    "serve-static": "^1.15.0",
     "spotify-web-api-node": "^5.0.2",
     "temp": "^0.9.4",
     "touchportal-api": "github:Arubinu/touchportal-node-api",

@@ -4,14 +4,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com/repos/Arubinu/Scripts-Manager/releases/latest; script-src 'self'; style-src 'self'; frame-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' blob: https://api.github.com/repos/Arubinu/Scripts-Manager/releases/latest; script-src 'self'; style-src 'self'; frame-src 'self'" />
 
     <title>Scripts Manager</title>
 
+    <link rel="icon" type="image/png" href="./images/logo.png" />
     <link rel="stylesheet" href="./css/styles.css" />
+
+    <script type="text/javascript" src="./js/common.js"></script>
   </head>
 
   <body class="is-fullheight">
+    <div class="loading">
+      <div>Loading ...</div>
+    </div>
+
     <div class="lateral-menu">
       <section class="hero is-info is-fullheight">
         <div class="hero-body">
@@ -29,6 +36,7 @@
         </div>
       </section>
     </div>
+
     <div class="content is-fullheight">
       <iframe src="" scrolling="no"></iframe>
     </div>

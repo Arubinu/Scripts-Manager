@@ -300,29 +300,31 @@ module.exports = {
       return;
     }
 
-    if (typeof functions[name] === 'function') {
-      if (Array.isArray(data) && data.length) {
-        return await functions[name](...data);
-      } else {
-        return await functions[name]();
-      }
-    } else if (typeof instance[name] === 'function') {
-      try {
+    if (_config.default.enabled) {
+      if (typeof functions[name] === 'function') {
         if (Array.isArray(data) && data.length) {
-          return await instance[name](...data);
+          return await functions[name](...data);
         } else {
-          return await instance[name]();
+          return await functions[name]();
         }
-      } catch (e) {
-        if (await refresh_token(e)) {
+      } else if (typeof instance[name] === 'function') {
+        try {
           if (Array.isArray(data) && data.length) {
             return await instance[name](...data);
           } else {
             return await instance[name]();
           }
-        }
+        } catch (e) {
+          if (await refresh_token(e)) {
+            if (Array.isArray(data) && data.length) {
+              return await instance[name](...data);
+            } else {
+              return await instance[name]();
+            }
+          }
 
-        throw e;
+          throw e;
+        }
       }
     }
   }

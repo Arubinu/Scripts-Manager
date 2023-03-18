@@ -46,7 +46,7 @@ function create_window() {
     transparent: true,
     titleBarStyle: 'hidden',
     webPreferences: {
-      preload: path.join(__dirname, 'flash', 'preload.js')
+      preload: path.join(__dirname, 'window', 'preload.js')
     }
   });
 
@@ -55,7 +55,7 @@ function create_window() {
 
   win.setMenu(null);
   win.setIgnoreMouseEvents(true);
-  win.loadFile(path.join(__dirname, 'flash', 'index.html')).then(() => {
+  win.loadFile(path.join(__dirname, 'window', 'index.html')).then(() => {
     set_opacity(_config.settings.opacity);
     set_duration(_config.settings.duration);
 
@@ -64,8 +64,9 @@ function create_window() {
     win.show();
   });
   setInterval(() => {
-    if (_config.default.enabled) {
+    if (_config.default.enabled && win) {
       try {
+        win.setSkipTaskbar(true);
         win.setAlwaysOnTop(true, 'screen-saver');
         win.setVisibleOnAllWorkspaces(true);
       } catch (e) {}
@@ -109,12 +110,16 @@ function save_config() {
 
 function set_opacity(opacity) {
   opacity = Math.max(0, Math.min(100, opacity));
-  win.webContents.send('opacity', opacity);
+  if (win) {
+    win.webContents.send('opacity', opacity);
+  }
 }
 
 function set_duration(duration) {
   duration = Math.max(100, duration);
-  win.webContents.send('duration', duration);
+  if (win) {
+    win.webContents.send('duration', duration);
+  }
 }
 
 function next_screen(index) {
@@ -126,17 +131,22 @@ function next_screen(index) {
     _screen = ((index < screens.length) ? index : 0);
   }
 
-  const bounds = screens[_screen].bounds;
-  win.setPosition(bounds.x, bounds.y);
-  win.setMinimumSize(bounds.width, bounds.height); // fix
-  win.setSize(bounds.width, bounds.height);
+  if (win) {
+    const bounds = screens[_screen].bounds;
+    win.setPosition(bounds.x, bounds.y);
+    win.setMinimumSize(bounds.width, bounds.height); // fix
+    win.setSize(bounds.width, bounds.height);
+  }
 }
 
 function flash_screen(name, force) {
   let now = Date.now();
   if (force || !_last || (_last + (_config.settings.delay * 1000)) < now) {
-    _last = now + (force ? 1000 : 0);
-    win.webContents.send('flash', name);
+    if (win) {
+      _last = now + (force ? 1000 : 0);
+      win.webContents.send('flash', name);
+    }
+
     return true;
   }
 
@@ -175,7 +185,9 @@ module.exports = {
   },
   initialized: () => {
     update_menu();
-    create_window();
+    if (_config.default.enabled) {
+      create_window();
+    }
   },
   receiver: (id, name, data) => {
     if (id === 'manager') {
@@ -183,6 +195,12 @@ module.exports = {
         update_interface();
       } else if (name === 'enabled') {
         _config.default.enabled = data;
+        if (_config.default.enabled && !win) {
+          create_window();
+        } else if (!_config.default.enabled && win) {
+          win.destroy();
+          win = false;
+        }
       }
     } else if (id === 'message') {
       if (typeof data === 'object') {

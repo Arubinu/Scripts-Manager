@@ -24,7 +24,7 @@ let win,
   menus = {},
   addons = {},
   exited = false,
-  manager = {},
+  manager = { default: {} },
   scripts = {},
   tpc_state = false,
   store_clear = false,
@@ -247,7 +247,7 @@ function create_server() {
 
 function create_window() {
   win = new BrowserWindow({
-    show: !manager.default || !manager.default.systray,
+    show: !manager.default.systray,
     icon: APP_ICON,
     width: 1140,
     height: 630,
@@ -523,10 +523,8 @@ async function save_config(type, id, data, override) {
 
   let config_path = path.join(__dirname, type, id);
   if (!fs.existsSync(config_path)) {
-    if (typeof manager === 'object' && typeof manager.default === 'object') {
-      if (typeof manager.default.all === 'string') {
-        config_path = path.join(manager.default.all, type, id);
-      }
+    if (typeof manager.default.all === 'string') {
+      config_path = path.join(manager.default.all, type, id);
     }
   }
 
@@ -555,8 +553,8 @@ async function check_port(port) {
     });
     s.once('listening', () => {
       console.log('listening');
-        resolve();
-        s.close();
+      resolve();
+      s.close();
     });
     s.listen(port);
   });
@@ -976,7 +974,7 @@ app.whenReady().then(() => {
               });
             };
 
-            if (typeof manager.default === 'object' && typeof manager.default.all === 'string') {
+            if (typeof manager.default.all === 'string') {
               const scripts_path = path.join(manager.default.all, 'scripts');
               if (fs.existsSync(scripts_path)) {
                 load_scripts(scripts_path).then(next).catch(next);
@@ -988,7 +986,7 @@ app.whenReady().then(() => {
           };
 
           load_manager_config();
-          if (typeof manager.default === 'object' && typeof manager.default.all === 'string') {
+          if (typeof manager.default.all === 'string') {
             const addons_path = path.join(manager.default.all, 'addons');
             if (fs.existsSync(addons_path)) {
               load_addons(addons_path).then(next).catch(next);

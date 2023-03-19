@@ -1,6 +1,6 @@
 {
   "name": "scripts-manager",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Scripts Manager is a tool for streamers, developers, but also anyone who wants to automate actions on their computer.",
   "main": "main.js",
   "scripts": {

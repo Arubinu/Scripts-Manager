@@ -1970,7 +1970,26 @@
 <table>
   <tr>
     <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-extend.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-extend.webp" alt="" /></a></td>
-    <td>Fires when a user extends their subscription using a Sub Token.</td>
+    <td>Fires when a user extends their subscription using a Sub Token.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:subscribe:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:subscribe:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:subscribe:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+        <li><u class="underline-gray">twitch:subscribe:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent with this subscription notification.</li>
+        <li><u class="underline-gray">twitch:subscribe:months <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the number of total months of subscriptions for the channel.</li>
+        <li><u class="underline-gray">twitch:subscribe:months:end <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> subscription extension end month (1 is january and 12 is december).</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the plan ID of the subscription.</li>
+      </ul>
+    </td>
   </tr>
 </table>
 
@@ -1982,7 +2001,33 @@
 <table>
   <tr>
     <td width="200"><a href="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-gift.webp" target="_blank"><img src="./images/multi-actions/visuals/v2.0/outputs-twitch-sub-gift.webp" alt="" /></a></td>
-    <td>Fires when a user gifts a subscription to a channel to another user.</td>
+    <td>Fires when a user gifts a subscription to a channel to another user.
+      <br /><br /><img src="./images/multi-actions/output.webp" width="12" alt="" /> This block returns the following variables:
+      <ul>
+        <li><u class="underline-gray">twitch:all:user:id and twitch:subscribe:user:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> number representing the Twitch user (does not change on name change).</li>
+        <li><u class="underline-gray">twitch:user:type <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the type of the user (possible values are undefined, 'mod', 'global_mod', 'admin' and 'staff').</li>
+        <li><u class="underline-gray">twitch:all:user:name and twitch:subscribe:user:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username (like the one shown but all lowercase).</li>
+        <li><u class="underline-gray">twitch:all:user:display and twitch:subscribe:user:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username as displayed in chat.</li>
+        <li><u class="underline-gray">twitch:user:color <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> username color displayed in chat.</li>
+        <li><u class="underline-gray">twitch:flags:broadcaster <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from the streamer (the one who owns the chain, so you).</li>
+        <li><u class="underline-gray">twitch:flags:founder <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> the first participants in the chain once the affiliation is activated.</li>
+        <li><u class="underline-gray">twitch:flags:moderator <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the message comes from a channel moderator.</li>
+        <li><u class="underline-gray">twitch:flags:subscriber <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if the user is currently subscribed to the channel.</li>
+        <li><u class="underline-gray">twitch:flags:vip <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> if you have given the role of VIP to this user.</li>
+        <li><u class="underline-gray">twitch:flags:follower <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> lets you know if the user is following the channel.</li>
+        <li><u class="underline-gray">twitch:subscribe:gifter:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> unique identifier of the user receiving the gift.</li>
+        <li><u class="underline-gray">twitch:subscribe:gifter:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of the user who receives the gift in lowercase.</li>
+        <li><u class="underline-gray">twitch:subscribe:gifter:display <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> name of the user who receives the gift including the capital letters chosen by the user.</li>
+        <li><u class="underline-gray">twitch:subscribe:message <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> message sent with this subscription notification.</li>
+        <li><u class="underline-gray">twitch:subscribe:duration <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the duration of the gifted subscription, in months..</li>
+        <li><u class="underline-gray">twitch:subscribe:count <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the number of subscriptions the gifting user has already gifted in total..</li>
+        <li><u class="underline-gray">twitch:subscribe:months <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the number of total months of subscriptions for the channel.</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:id <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the plan ID of the subscription.</li>
+        <li><u class="underline-gray">twitch:subscribe:plan:name <span class="text-lime"><i>(scope: Next, type: String)</i></span>:</u> the plan name of the subscription.</li>
+        <li><u class="underline-gray">twitch:subscribe:streak <span class="text-lime"><i>(scope: Next, type: Number)</i></span>:</u> the number of consecutive months of subscriptions for the channel.</li>
+        <li><u class="underline-gray">twitch:subscribe:prime <span class="text-lime"><i>(scope: Next, type: Boolean)</i></span>:</u> whether the subscription was "paid" for with Twitch Prime.</li>
+      </ul>
+    </td>
   </tr>
 </table>
 

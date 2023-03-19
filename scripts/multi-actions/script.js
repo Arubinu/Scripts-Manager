@@ -319,6 +319,10 @@ const functions = {
 };
 
 const specials = [
+  'obs-studio-authentification',
+  'obs-studio-connection',
+  'obs-studio-recording',
+  'obs-studio-replay',
   'obs-studio-streaming',
   'obs-studio-studio-mode',
   'obs-studio-switch-scene',
@@ -328,11 +332,7 @@ const specials = [
   'twitch-info',
   'twitch-slow',
   'twitch-subs-only',
-  'twitch-unique-message',
-  'obs-studio-authentification',
-  'obs-studio-connection',
-  'obs-studio-recording',
-  'obs-studio-replay'
+  'twitch-unique-message'
 ];
 
 const actions = {
@@ -993,7 +993,7 @@ const actions = {
     if (receive.id === 'obs-studio' && receive.name === 'StudioModeStateChanged') {
       set_variable('obs-studio:studio-mode', receive.data.studioModeEnabled, VARIABLE_TYPE.GLOBALS);
 
-      if (data.state === receive.data.studioModeEnabled) {
+      if (typeof next !== 'undefined' && data.state === receive.data.studioModeEnabled) {
         next();
       }
     }
@@ -1003,10 +1003,10 @@ const actions = {
     _sender('obs-studio', 'ToggleStudioMode', [state]);
   },
   'outputs-obs-studio-switch-scene': (module_name, receive, data, next_data, next) => {
-    if (data.scene && receive.id === 'obs-studio' && receive.name === 'CurrentProgramSceneChanged') {
+    if (receive.id === 'obs-studio' && receive.name === 'CurrentProgramSceneChanged') {
       set_variable('obs-studio:switch-scene', receive.data.sceneName, VARIABLE_TYPE.GLOBALS);
 
-      if (!data.scene || receive.data.sceneName.toLowerCase() === data.scene.toLowerCase()) {
+      if (typeof next !== 'undefined' && (!data.scene || receive.data.sceneName.toLowerCase() === data.scene.toLowerCase())) {
         next();
       }
     }
@@ -1131,7 +1131,7 @@ const actions = {
       const state = (receive.data.outputState === 'OBS_WEBSOCKET_OUTPUT_STARTED');
       set_variable('obs-studio:virtualcam', state, VARIABLE_TYPE.GLOBALS);
 
-      if (data.state === state) {
+      if (typeof next !== 'undefined' && data.state === state) {
         next();
       }
     }
@@ -1412,7 +1412,9 @@ const actions = {
           set_variable('twitch:channel:game:id', receive.data.data.categoryId, VARIABLE_TYPE.GLOBALS);
           set_variable('twitch:channel:game:name', receive.data.data.categoryName, VARIABLE_TYPE.GLOBALS);
 
-          next();
+          if (typeof next !== 'undefined') {
+            next();
+          }
         });
     }
   },

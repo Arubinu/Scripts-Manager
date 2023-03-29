@@ -126,7 +126,7 @@
         elem.addEventListener('input', event => {
           clearTimeout(timeout);
           timeout = setTimeout(() => {
-            window.parent.postMessage({refresh: true}, '*');
+            window.parent.postMessage({ refresh: true }, '*');
           }, 5000);
         });
       }
@@ -142,24 +142,25 @@
         });
       }
 
-      window.addEventListener('message', event => {
-        if (event.origin !== 'null') {
-          if (event.data.name == 'config') {
-            const _config = event.data.data;
+      window.addEventListener('message', _event => {
+        const { to, event, name, method, property, data } = _event.data;
+        if (event.origin !== 'null' && to === 'interface') {
+          if (property === 'config') {
+            const _config = data;
 
             for (const name of ['address', 'password']) {
               document.querySelector(`.${name} input`).value = _config.connection[name];
             }
-          } else if (event.data.name == 'logs') {
-            if (event.data.data) {
+          } else if (property === 'logs') {
+            if (data) {
               const table = document.querySelector('.table > tbody');
-              const update = !Array.isArray(event.data.data);
+              const update = !Array.isArray(data);
 
-              if (update || event.data.data.length) {
+              if (update || data.length) {
                 table.parentElement.classList.add('show');
               }
 
-              for (const row of (update ? [event.data.data] : event.data.data)) {
+              for (const row of (update ? [data] : data)) {
                 if (typeof row === 'undefined') {
                   continue;
                 }
@@ -172,9 +173,9 @@
                 cross.classList.add('fas', 'fa-xmark');
 
                 const columns = [date, type];
-                if (row.type.toLowerCase() == 'connectionopened') {
+                if (row.type.toLowerCase() === 'connectionopened') {
                   columns.forEach(column => column.classList.add('is-info'));
-                } else if (row.type.toLowerCase() == 'connectionclosed') {
+                } else if (row.type.toLowerCase() === 'connectionclosed') {
                   columns.forEach(column => column.classList.add('is-danger'));
                 }
 

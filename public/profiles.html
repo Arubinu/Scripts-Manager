@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' file:" />
+
+    <title>Profiles</title>
+
+    <link rel="stylesheet" href="./css/shared.css" />
+    <link rel="stylesheet" href="./css/profiles.css" />
+  </head>
+
+  <body>
+    <div id="template">
+      <div class="my-4 column is-one-quarter profile">
+        <div class="mx-auto has-background-black-bis">
+          <div class="delete" title="Delete profile">x</div>
+          <figure class="mx-auto image">
+            <div class="fas fa-xmark cross"></div>
+            <input class="is-hidden" />
+            <i class="fas fa-user-secret has-background-black-ter"></i>
+            <img class="has-background-black-ter" src="" />
+          </figure>
+          <input class="px-2 is-size-5 is-italic has-text-light has-text-centered name" placeholder="Profile Name" readonly />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal restart-profile">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Restart required</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="has-text-centered">
+            You want to rename the profile in use
+            <br />If you confirm, the software will restart
+          </div>
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button is-success">Confirm</button>
+          <button class="button" aria-label="close">Cancel</button>
+        </footer>
+      </div>
+    </div>
+
+    <div class="modal delete-profile">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Delete "<span class="name"></span>"</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="has-text-centered">
+            Are you sure you want to delete this profile?
+            <br />This will result in the deletion of all data linked to it
+          </div>
+        </section>
+        <footer class="modal-card-foot is-justify-content-right">
+          <button class="button is-success">Confirm</button>
+          <button class="button" aria-label="close">Cancel</button>
+        </footer>
+      </div>
+    </div>
+
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <p class="subtitle is-size-6 has-text-white-ter">
+            Use multiple setups in parallel (e.g. when you have multiple Twitch channels).
+            <button class="button is-small is-pulled-right restart-app">Restart</button>
+            <button class="button is-small is-pulled-right edit-profiles">Edit</button>
+          </p>
+        </div>
+      </section>
+
+      <div class="m-5 columns is-centered is-vcentered is-multiline profiles">
+        <div class="my-4 column is-one-quarter add_profile">
+          <div class="mx-auto has-background-black-bis">
+            <figure class="mx-auto image">
+              <i class="fas fa-plus has-background-black-ter"></i>
+            </figure>
+            <input class="px-2 is-size-5 is-italic has-text-light has-text-centered name" value="Add" readonly />
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+</html>

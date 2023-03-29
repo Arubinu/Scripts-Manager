@@ -1,0 +1,101 @@
+[select],
+.hero .subtitle button {
+  display: inline-block;
+  position: relative;
+  margin-top: -5px;
+  margin-bottom: -10px;
+  padding: 6px 10px;
+  padding-right: 24px;
+  font-size: .8rem;
+  text-align: left;
+  background-color: rgb(36, 36, 36);
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 3px !important;
+  cursor: pointer;
+}
+.hero .subtitle button.is-selected {
+  background-color: rgb(24, 24, 24);
+}
+.hero .subtitle > .buttons button:last-child {
+  border-bottom-left-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+}
+.hero .subtitle > .buttons button:not(:last-child) {
+  border-bottom-right-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+.hero .subtitle button {
+  padding: 4px 8px;
+  padding-bottom: 5px;
+  height: auto;
+  color: inherit;
+}
+[select] > ul {
+  position: absolute;
+  top: 100%;
+  left: 0px;
+  margin: 0;
+  padding-left: 0;
+  text-align: left;
+  background-color: rgb(51, 51, 51);
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 3px;
+  list-style: none;
+}
+[select].select-top > ul {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+[select].select-bottom > ul {
+  top: unset;
+  bottom: 100%;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+[select].select-right > ul {
+  left: unset;
+  right: 0px;
+}
+[select] > i {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  margin-left: 4px;
+  color: rgb(136, 136, 136);
+  line-height: 14px !important;
+}
+[select] > ul:not(.is-active) {
+  display: none;
+}
+[select] > ul > li {
+  position: relative;
+  padding: 5px 7px;
+  padding-right: calc((2 * 7px) + 14px + 2px);
+  height: 26px;
+  white-space: nowrap;
+}
+[select] > ul > li:hover {
+  background-color: rgba(255, 255, 255, .1);
+}
+[select] > ul > li[selected] {
+  background-color: rgb(84, 103, 117);
+}
+option.disabled,
+[select].disabled,
+[select] > ul > li[disabled] {
+  background-color: rgb(117, 84, 84);
+}
+[select] > ul > li > i {
+  position: absolute;
+  right: 7px;
+  font-size: 1rem;
+  line-height: 19px !important;
+}
+[select] > ul > li[select-move="top"],
+[select] > ul > li[select-move="both"] {
+  border-top: 2px solid rgba(255, 255, 255, .5);
+}
+[select] > ul > li[select-move="both"],
+[select] > ul > li[select-move="bottom"] {
+  border-bottom: 2px solid rgba(255, 255, 255, .5);
+}

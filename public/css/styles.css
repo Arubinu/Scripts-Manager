@@ -1,4 +1,4 @@
-@import 'share.css';
+@import 'common.css';
 @import 'all.min.css';
 @import 'bulma-dark.min.css';
 
@@ -10,6 +10,39 @@ html, body {
   height: 100vh;
   min-height: 100vh;
   max-height: 100vh;
+}
+
+.has-cursor-pointer {
+  pointer-events: initial;
+  cursor: pointer !important;
+  z-index: 10;
+}
+.has-addons .button {
+  border-color: #444;
+}
+
+.login,
+.loading,
+.disconnected {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  background-color: #363636;
+  z-index: 1000;
+}
+
+.login .input {
+  width: 200px;
+}
+
+.disconnected {
+  background-color: rgba(54, 54, 54, .9);
 }
 
 .menu-label {
@@ -28,6 +61,9 @@ html, body {
   outline: 1px solid #333;
   user-select: none;
 }
+body.minimize .lateral-menu {
+  cursor: pointer;
+}
 .lateral-menu hr {
   height: 1px;
   margin: 1.5rem 1em;
@@ -41,17 +77,44 @@ html, body {
 }
 .lateral-menu > section {
   overflow-y: auto;
+  position: relative;
   width: 100%;
   min-height: 100%;
 }
 body[mode="development"] .lateral-menu > section {
   background-color: #b70f0f;
 }
+.lateral-menu > .minimize {
+  position: absolute;
+  top: 1px;
+  right: 8px;
+  padding: 4px;
+  color: #eee;
+  cursor: pointer;
+  z-index: 1;
+}
+.lateral-menu > section > .unminimize {
+  position: absolute;
+  left: -12px;
+  top: calc(50% - (36px / 2));
+  transition: left 500ms ease-in-out;
+}
+body.minimize .lateral-menu > section > .unminimize {
+  left: 1px;
+}
+.lateral-menu > section > .unminimize .fas {
+  display: block;
+}
 .lateral-menu > section > .hero-body {
+  position: relative;
   flex-direction: column;
   align-items: inherit !important;
-  padding: 1.5em;
+  padding: 1em;
   color: #eee;
+  transition: opacity 500ms ease-in-out;
+}
+body.minimize .lateral-menu > section > .hero-body {
+  opacity: 0;
 }
 .lateral-menu a:hover {
   background-color: rgba(255, 255, 255, .2) !important;
@@ -73,9 +136,18 @@ body[mode="development"] .lateral-menu > section {
   width: calc(100% - 300px + 8px);
   color: #eee;
   background-color: #363636;
+  transition: margin-left 500ms ease-in-out, width 500ms ease-in-out;
+}
+body.minimize .content {
+  margin-left: 15px;
+  width: calc(100% - 15px + 8px);
 }
 .content.is-scrollbar {
   width: calc(100% - 300px);
+}
+body.minimize .content.is-scrollbar {
+  margin-left: 15px;
+  width: calc(100% - 15px);
 }
 
 .content > iframe {
@@ -91,7 +163,7 @@ body[mode="development"] .lateral-menu > section {
 [state]::before {
   content: ' ';
   position: absolute;
-  left: -1.6rem;
+  left: -1.4rem;
   margin-right: .5rem;
   width: 18px;
   height: 18px;

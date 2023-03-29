@@ -1,0 +1,14 @@
+{
+  "name": "mastodon",
+  "version": "1.0.0",
+  "description": "",
+  "main": "addon.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Arubinu",
+  "license": "ISC",
+  "dependencies": {
+    "masto": "^5.10.0"
+  }
+}

@@ -218,10 +218,11 @@
         document.execCommand('copy');
       });
 
-      window.addEventListener('message', event => {
-        if (event.origin !== 'null') {
-          if (event.data.name == 'config') {
-            _config = event.data.data;
+      window.addEventListener('message', _event => {
+        const { to, event, name, method, property, data } = _event.data;
+        if (event.origin !== 'null' && to === 'interface') {
+          if (property === 'config') {
+            _config = data;
 
             if (_config.wait && _config.connection.bot_token) {
               document.querySelector('.bot-generate').classList.remove('is-active');
@@ -240,16 +241,16 @@
             document.querySelector('.bot_token input').classList.toggle('is-warning', (_config.refresh === 2 || _config.refresh === 3));
 
             document.querySelector('.token .button').setAttribute('external-link', _config.authorize);
-          } else if (event.data.name == 'logs') {
-            if (event.data.data) {
+          } else if (property === 'logs') {
+            if (data) {
               const table = document.querySelector('.table > tbody');
-              const update = !Array.isArray(event.data.data);
+              const update = !Array.isArray(data);
 
-              if (update || event.data.data.length) {
+              if (update || data.length) {
                 table.parentElement.classList.add('show');
               }
 
-              for (const row of (update ? [event.data.data] : event.data.data)) {
+              for (const row of (update ? [data] : data)) {
                 if (typeof row === 'undefined') {
                   continue;
                 }
@@ -268,16 +269,16 @@
                 cross.classList.add('fas', 'fa-xmark');
 
                 const columns = [date, type, from, fol, sub, vip, mod, brd];
-                if (row.type == 'AuthenticationSuccess') {
+                if (row.type === 'AuthenticationSuccess') {
                   columns.forEach(column => column.classList.add('is-info'));
-                } else if (row.type == 'Reconnect') {
+                } else if (row.type === 'Reconnect') {
                   columns.forEach(column => column.classList.add('is-warning'));
-                } else if (row.type == 'Disconnected') {
+                } else if (row.type === 'Disconnected') {
                   columns.forEach(column => column.classList.add('is-danger'));
                 }
 
                 date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
-                type.innerText = row.type[0].toUpperCase() + row.type.substr(1);
+                type.innerText = row.type[0].toUpperCase() + row.type.substring(1);
                 from.innerText = (row.user ? (row.user.name || '') : '');
 
                 if (row.flags) {

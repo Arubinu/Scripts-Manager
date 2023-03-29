@@ -73,3 +73,32 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+/* Hero Buttons */
+.hero .button.is-pulled-right {
+  margin-top: -5px;
+  margin-bottom: -5px;
+  margin-left: 5px;
+}
+
+/* Sizes */
+.is-fullheight {
+  min-height: 100vh;
+}
+
+/* Vertical align */
+.table td.is-vcentered,
+.table th.is-vcentered {
+  vertical-align: middle;
+}
+
+.columns.is-vcentered {
+  align-items: center;
+}
+
+/* Password eye */
+.control.has-icons-right .icon > .fa-eye,
+.control.has-icons-right .icon > .fa-eye-slash {
+  pointer-events: initial;
+  cursor: pointer;
+}

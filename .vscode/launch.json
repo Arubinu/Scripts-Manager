@@ -1,0 +1,15 @@
+{
+  "version": "3.0.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Main Process",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "args" : ["--trace-warnings", "."],
+      "env": { "NODE_TOOLS": "true" },
+      "outputCapture": "std"
+    }
+  ]
+}

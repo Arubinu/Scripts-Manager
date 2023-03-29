@@ -152,7 +152,7 @@
       function update_buttons() {
         const buttons = document.querySelectorAll('.screen .buttons .button');
         for (let i = 0; i < buttons.length; ++i) {
-          buttons[i].classList.toggle('is-selected', (i == _config.settings.screen));
+          buttons[i].classList.toggle('is-selected', (i === _config.settings.screen));
         }
       }
 
@@ -183,31 +183,32 @@
         });
       }
 
-      window.addEventListener('message', event => {
-        if (event.origin !== 'null') {
-          if (event.data.name == 'config') {
-            _config = event.data.data;
+      window.addEventListener('message', _event => {
+        const { to, event, name, method, property, data } = _event.data;
+        if (event.origin !== 'null' && to === 'interface') {
+          if (property === 'config') {
+            _config = data;
 
             for (const name of ['round', 'scale', 'opacity']) {
               document.querySelector(`.${name} input`).value = _config.settings[name];
             }
 
             changes = false;
-            const anchor = _config.settings.anchor[0][0].toUpperCase() + _config.settings.anchor[0].substr(1) + '-' + _config.settings.anchor[1][0].toUpperCase() + _config.settings.anchor[1].substr(1);
+            const anchor = _config.settings.anchor[0][0].toUpperCase() + _config.settings.anchor[0].substring(1) + '-' + _config.settings.anchor[1][0].toUpperCase() + _config.settings.anchor[1].substring(1);
             document.querySelector(`.anchor > [title="${anchor}"]`).click();
             changes = true;
 
             update_buttons();
-          } else if (event.data.name == 'screens') {
+          } else if (property === 'screens') {
             const buttons = document.querySelector('.screen .buttons');
             buttons.innerHTML = '';
 
-            for (let i = 0; i < event.data.data; ++i) {
+            for (let i = 0; i < data; ++i) {
               const button = document.createElement('button');
               button.innerText = (i + 1).toString();
 
               button.classList.add('button');
-              if (i == _config.settings.screen) {
+              if (i === _config.settings.screen) {
                 button.classList.add('is-selected');
               }
 
@@ -216,7 +217,7 @@
                 update_buttons();
 
                 event.target.blur();
-                window.parent.postMessage({screen: _config.settings.screen}, '*');
+                window.parent.postMessage({ screen: _config.settings.screen }, '*');
               });
 
               buttons.appendChild(button);

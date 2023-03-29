@@ -1,13 +1,19 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const editor = window.editor,
-    drawflow = document.querySelector('.box-drawflow'),
+window.drawflow_loader = editor => {
+  const drawflow = document.querySelector('.box-drawflow'),
+    blocks_box = document.querySelector('.blocks-drawflow'),
+    search = document.querySelector('.search input'),
     show_blocks = document.querySelector('.show-blocks'),
+    export_blocks = document.querySelector('.export-blocks'),
+    lateral_blocks = document.querySelector('.lateral-blocks'),
     options = document.querySelector('#template .drawflow-options').cloneNode(true),
-    options_test = options.querySelector('.test-action'),
     options_delete = options.querySelector('.delete-action'),
     options_export = options.querySelector('.export-action'),
+    options_rename = options.querySelector('.rename-action'),
     options_select = options.querySelector('.select-action'),
     options_toggle = options.querySelector('.toggle-action'),
+    options_test_ok = options.querySelector('.test-ok-action'),
+    options_test_fail = options.querySelector('.test-fail-action'),
+    options_duplicate = options.querySelector('.duplicate-action'),
     button_export = document.querySelector('.container .hero-body input.export'),
     button_import = document.querySelector('.container .hero-body input.import');
 
@@ -15,20 +21,53 @@ document.addEventListener('DOMContentLoaded', () => {
     double_click = 0,
     global_datas = {},
     radios_index = {},
+    request_list = {},
     node_selected = -1,
     multi_move = false,
     multi_selection = {},
     mobile_item_selec = '',
     mobile_last_move = null;
 
-  function request(source_id, id, name, data) {
-    window.parent.postMessage({ request: [source_id, id, name, (data || [])] }, '*');
+  function request(source_id, event, name, method, property, data, separate) {
+    const list_key = `${name}:${method}:${property}`;
+
+    let to_process = false;
+    if (!separate) {
+      if (typeof request_list[list_key] === 'undefined') {
+        to_process = true;
+        request_list[list_key] = [];
+      }
+
+      if (to_process || request_list[list_key].indexOf(source_id) < 0) {
+        if (to_process || !request_list[list_key].length) {
+          to_process = true;
+        }
+
+        request_list[list_key].push(source_id);
+      }
+    }
+
+    if (separate || to_process) {
+      window.parent.postMessage({ request: {
+        event,
+        id: 'TN:' + '6d756c74692d616374696f6e73' + Math.random().toString(16).slice(2),
+        name,
+        method,
+        property,
+        data: data || [],
+        separate,
+        source_id
+      } }, '*');
+    }
   }
 
   function drag(event) {
     const elem = event.target.closest('.drag-drawflow');
 
-    document.body.classList.remove('show-blocks');
+    if (!blocks_box.classList.contains('lateral-blocks')) {
+      document.body.classList.remove('show-blocks');
+    }
+
     if (event.type === 'touchstart') {
       mobile_item_selec = elem.getAttribute('data-node');
     } else {
@@ -99,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return Object.assign(
       { elem },
-      editor.drawflow.drawflow[editor.module].data[parseInt(elem.getAttribute('id').substr(5))]
+      editor.drawflow.drawflow[editor.module].data[parseInt(elem.getAttribute('id').substring(5))]
     );
   }
 
@@ -208,11 +247,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    let id_string = `[${node.id}]`;
     node_elem.classList.toggle('disabled', !(typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled));
     const title_box = node_elem.querySelector('.title-box');
+
     if (title_box) {
-      title_box.setAttribute('title', `${id_string} ${block.tooltip ? block.tooltip : block.title}`);
+      const title = title_box.querySelector('span'),
+        id_string = `[${node.id}]`;
+
+      title.innerText = node.data.data.block_title || (block.tooltip ? block.tooltip : block.title);
+      title_box.setAttribute('title', `${id_string} ${title.innerText}`);
     }
 
     if (block.width && block.width > 0) {
@@ -551,14 +594,199 @@ document.addEventListener('DOMContentLoaded', () => {
         set_value(data_elem, data_elem.value);
       }
     },
+    accounts: (id, elem, data, set_data, receive, receive_data) => {
+      const select = elem.querySelector('select[name="account"]');
+      if (!select.children.length) {
+        if (receive || global_datas.accounts) {
+          if (typeof receive_data === 'object') {
+            global_datas.accounts = receive_data;
+          }
+
+          const selected = select.value || data.account || 'Broadcaster';
+
+          select.innerHTML = '';
+
+          let names = [];
+          for (const type in global_datas.accounts) {
+            const account = type[0].toUpperCase() + type.substring(1).toLowerCase();
+            names.push(account);
+
+            const option = document.createElement('option');
+            option.value = account;
+            option.innerText = account;
+            select.appendChild(option);
+          }
+
+          if (selected && names.indexOf(selected) < 0) {
+            const option = document.createElement('option');
+            option.classList.add('disabled');
+            option.value = selected;
+            option.innerText = 'Not Found';
+
+            select.appendChild(option);
+          }
+
+          select.value = selected;
+        } else if (!receive) {
+          request(id, 'addon', 'twitch', 'call', 'GetAccounts', { type: 'Methods', args: [] });
+        }
+      }
+    },
+    streamlabs_scene_source: (id, elem, data, set_data, receive, receive_data) => {
+      const selects = elem.querySelectorAll('select');
+      if (receive || global_datas.streamlabs_scene_source) {
+        if (receive) {
+          global_datas.streamlabs_scene_source = receive_data;
+
+          global_datas.streamlabs_scene_source.sort(sort_object('name'));
+          for (const scene of global_datas.streamlabs_scene_source) {
+            scene.nodes.sort(sort_object('name'));
+          }
+        }
+
+        // source
+        const scenes_changed = () => {
+          const value = selects[0].value;
+          if (value && selects.length > 1) {
+            const selected = selects[1].value || data.source;
+
+            selects[1].innerHTML = '';
+            selects[1].appendChild(document.createElement('option'));
+
+            let names = [];
+            for (const scene of global_datas.streamlabs_scene_source) {
+              if (scene.name === value) {
+                for (const source of scene.nodes) {
+                  names.push(source.name);
+
+                  const option = document.createElement('option');
+                  option.value = source.name;
+                  option.innerText = source.name;
+                  selects[1].appendChild(option);
+                }
+              }
+            }
+
+            if (selected && names.indexOf(selected) < 0) {
+              const option = document.createElement('option');
+              option.classList.add('disabled');
+              option.value = selected;
+              option.innerText = selected;
+
+              selects[1].appendChild(option);
+            }
+
+            selects[1].value = selected;
+          }
+        };
+
+        if (selects.length > 1) {
+          if (!elem.classList.contains('block-init')) {
+            elem.classList.add('block-init');
+            selects[0].addEventListener('change', scenes_changed, false);
+          }
+        }
+
+        // scene
+        const selected = selects[0].value || data.scene;
+
+        selects[0].innerHTML = '';
+        selects[0].appendChild(document.createElement('option'));
+
+        let names = [];
+        for (const scene of global_datas.streamlabs_scene_source) {
+          names.push(scene.name);
+
+          const option = document.createElement('option');
+          option.value = scene.name;
+          option.innerText = scene.name;
+          selects[0].appendChild(option);
+        }
+
+        if (selected && names.indexOf(selected) < 0) {
+          const option = document.createElement('option');
+          option.classList.add('disabled');
+          option.value = selected;
+          option.innerText = selected;
+
+          selects[0].appendChild(option);
+        }
+
+        selects[0].value = selected;
+        scenes_changed();
+      } else if (!receive) {
+        if (data.scene) {
+          const option = document.createElement('option');
+          option.value = data.scene;
+          option.innerText = data.scene;
+
+          selects[0].innerHTML = '';
+          selects[0].appendChild(option);
+        }
+
+        if (data.source) {
+          const option = document.createElement('option');
+          option.value = data.source;
+          option.innerText = data.source;
+
+          selects[1].innerHTML = '';
+          selects[1].appendChild(option);
+        }
+
+        request(id, 'addon', 'streamlabs', 'call', 'ScenesService.getScenes');
+      }
+    },
+    streamlabs_audio_sources: (id, elem, data, set_data, receive, receive_data) => {
+      const select = elem.querySelector('select');
+      if (receive || global_datas.streamlabs_audio_source) {
+        if (receive) {
+          global_datas.streamlabs_audio_source = receive_data;
+
+          global_datas.streamlabs_audio_source.sort(sort_object('name'));
+        }
+
+        const selected = select.value || data.source;
+
+        select.innerHTML = '';
+        select.appendChild(document.createElement('option'));
+
+        let names = [];
+        for (const source of global_datas.streamlabs_audio_source) {
+          names.push(source.name);
+
+          const option = document.createElement('option');
+          option.value = source.name;
+          option.innerText = source.name;
+          select.appendChild(option);
+        }
+
+        select.value = selected;
+      } else if (!receive) {
+        if (data.source) {
+          const option = document.createElement('option');
+          option.value = data.source;
+          option.innerText = data.source;
+
+          select.innerHTML = '';
+          select.appendChild(option);
+        }
+
+        request(id, 'addon', 'streamlabs', 'call', 'AudioService.getSources');
+      }
+    },
     scene_source: (id, elem, data, set_data, receive, receive_data) => {
       const selects = elem.querySelectorAll('select');
       if (receive || global_datas.scene_source) {
         if (receive) {
           global_datas.scene_source = receive_data;
 
-          global_datas.scene_source.sort(sort_object('sceneName'));
-          for (const scene of global_datas.scene_source) {
+          global_datas.scene_source.scenes.sort(sort_object('sceneName'));
+          for (const scene of global_datas.scene_source.scenes) {
+            scene.sources.sort(sort_object('sourceName'));
+          }
+
+          global_datas.scene_source.groups.sort(sort_object('sourceName'));
+          for (const scene of global_datas.scene_source.groups) {
             scene.sources.sort(sort_object('sourceName'));
           }
         }
@@ -573,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selects[1].appendChild(document.createElement('option'));
 
             let names = [];
-            for (const scene of global_datas.scene_source) {
+            for (const scene of [...global_datas.scene_source.scenes, ...global_datas.scene_source.groups]) {
               if (scene.sceneName === value) {
                 for (const source of scene.sources) {
                   names.push(source.sourceName);
@@ -613,13 +841,30 @@ document.addEventListener('DOMContentLoaded', () => {
         selects[0].appendChild(document.createElement('option'));
 
         let names = [];
-        for (const scene of global_datas.scene_source) {
+        for (const scene of global_datas.scene_source.scenes) {
           names.push(scene.sceneName);
 
           const option = document.createElement('option');
           option.value = scene.sceneName;
           option.innerText = scene.sceneName;
           selects[0].appendChild(option);
+        }
+
+        if (global_datas.scene_source.groups.length) {
+          const optgroup = document.createElement('option');
+          optgroup.setAttribute('disabled', '');
+          optgroup.classList.add('optgroup');
+          optgroup.innerText = 'Groups';
+          selects[0].appendChild(optgroup);
+
+          for (const group of global_datas.scene_source.groups) {
+            names.push(group.sourceName);
+
+            const option = document.createElement('option');
+            option.value = group.sourceName;
+            option.innerText = group.sourceName;
+            selects[0].appendChild(option);
+          }
         }
 
         if (selected && names.indexOf(selected) < 0) {
@@ -652,7 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
           selects[1].appendChild(option);
         }
 
-        request(id, 'obs-studio', 'GetScenes', [true]);
+        request(id, 'addon', 'obs-studio', 'call', 'GetScenesAndGroups', [true]);
       }
     },
     source_filter: (id, elem, data, set_data, receive, receive_data, block_name, with_scenes) => {
@@ -666,8 +911,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (receive) {
           if (with_scenes) {
             let tmp = { sources: [], names: [] };
-            for (const scene of receive_data)
-            {
+            for (const scene of receive_data) {
               for (const source of scene.sources) {
                 if (tmp.names.indexOf(source.sourceName) < 0) {
                   tmp.names.push(source.sourceName);
@@ -676,8 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
 
-            for (const scene of receive_data)
-            {
+            for (const scene of receive_data) {
               if (tmp.names.indexOf(scene.sceneName) < 0) {
                 tmp.names.push(scene.sceneName);
                 tmp.sources.push({
@@ -793,32 +1036,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (with_scenes) {
-          request(id, 'obs-studio', 'GetScenes', [true, (selects.length > 1)]);
+          request(id, 'addon', 'obs-studio', 'call', 'GetScenes', [true, (selects.length > 1)]);
         } else {
-          request(id, 'obs-studio', 'GetSources', ['', (selects.length > 1)]);
+          request(id, 'addon', 'obs-studio', 'call', 'GetSources', ['', (selects.length > 1)]);
         }
       }
     },
-    accounts: (id, elem, data, set_data, receive, receive_data) => {
-      const select = elem.querySelector('select[name="account"]');
+    speech_voices: (id, elem, data, set_data, receive, receive_data) => {
+      const select = elem.querySelector('select[name="voice"]');
       if (!select.children.length) {
-        if (receive || global_datas.accounts) {
+        if (receive || global_datas.voices) {
           if (typeof receive_data === 'object') {
-            global_datas.accounts = receive_data;
+            global_datas.voices = receive_data;
+
+            global_datas.voices.sort(sort_object('lang'));
           }
 
-          const selected = select.value || data.account || 'Broadcaster';
+          const selected = select.value || data.voice;
 
           select.innerHTML = '';
+          select.appendChild(document.createElement('option'));
 
           let names = [];
-          for (const type in global_datas.accounts) {
-            const account = type[0].toUpperCase() + type.substring(1).toLowerCase();
-            names.push(account);
+          for (const voice of global_datas.voices) {
+            names.push(voice.name);
 
             const option = document.createElement('option');
-            option.value = account;
-            option.innerText = account;
+            option.value = voice.name;
+            option.innerText = voice.name;
             select.appendChild(option);
           }
 
@@ -833,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           select.value = selected;
         } else if (!receive) {
-          request(id, 'twitch', 'GetAccounts', { type: 'Methods', args: [] });
+          request(id, 'method', 'speech', 'voices');
         }
       }
     },
@@ -883,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', () => {
           select.appendChild(option);
         }
 
-        request(id, 'manager', 'usb:devices');
+        request(id, 'method', 'usb', 'devices');
       }
     },
     state: (id, elem, data, set_data, receive, receive_data, arg, callback) => {
@@ -1032,6 +1277,37 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const blocks = {
+    'both-active-window': {
+      title: 'Active Window',
+      help: 'active-window',
+      icon: 'application',
+      inputs: 1,
+      outputs: 2,
+      body: bodys.file('Application', 'program', 'active-window') + bodys.text('Window Title', 'title') + bodys.state('Type', false, 'Application', 'Window Title'),
+      init: (id, elem, data, set_data, first) => {
+        const change_state = state => {
+          state = state ? 'program' : 'title';
+
+          for (const input of elem.querySelectorAll(`input[name="program"], input[name="title"]`)) {
+            const name = input.getAttribute('name'),
+              elem = level_elem(input);
+
+            elem.previousElementSibling.style.display = ((name === state) ? 'block' : 'none');
+            elem.style.display = ((name === state) ? 'block' : 'none');
+          }
+
+          elem.setAttribute('select-type', state);
+        };
+
+        functions.state(id, elem, data, set_data, false, false, 'type', change_state);
+      },
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        if (!elem.classList.contains('block-init')) {
+          elem.classList.add('block-init');
+          browse_fas(id, 'file', elem.querySelector('.active-window button'), 'program', false, 'exe');
+        }
+      }]
+    },
     'outputs-app-status': {
       title: 'App Status',
       help: 'app-status',
@@ -1056,7 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.file('File', false, 'audio-play') + bodys.number('Volume', false, 100, 1, 0, 100, { suffix: '%' }) + bodys.select('Device', false, false, false, true),
-      register: [['manager', 'audio:list']],
+      register: [['audio', 'list']],
       update: (id, elem, data, set_data, receive, receive_data) => {
         functions.number(id, elem, data, set_data, receive, receive_data, 'volume', 0, 100);
         functions.select(id, elem, data, set_data, receive, receive_data, 'device');
@@ -1108,7 +1384,7 @@ document.addEventListener('DOMContentLoaded', () => {
             select.appendChild(option);
           }
 
-          request(id, 'manager', 'audio:devices');
+          request(id, 'method', 'audio', 'devices');
         }
       }
     },
@@ -1124,7 +1400,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'cooldown',
       icon: 'cooldown',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Variable name', 'variable') + bodys.number_unit('Time', 'seconds', 1000, 100, 1, undefined, ['Milliseconds', 'Seconds', 'Minutes']),
       init: (id, elem, data, set_data, first) => {
         if (!data.variable) {
@@ -1143,7 +1419,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'download-file',
       icon: 'download',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('URL') + bodys.text('File name', 'name') + bodys.file('Folder', false, 'download-file'),
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
@@ -1157,7 +1433,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'file-read',
       icon: 'file',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.file('File', false, 'file-read'),
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
@@ -1172,7 +1448,7 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'file',
       inputs: 1,
       outputs: 0,
-      body: bodys.file('File', false, 'file-write') + bodys.textarea('Content', false) + bodys.checkbox('Separator', false, 1) + bodys.checkbox('Add at the end', 'append', 1),
+      body: bodys.file('File', false, 'file-write') + bodys.textarea('Content') + bodys.checkbox('Separator', false, 1) + bodys.checkbox('Add at the end', 'append', 1),
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
           elem.classList.add('block-init');
@@ -1185,7 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'http-request',
       icon: 'request',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('URL') + bodys.text('Method'),
       update: functions.trim
     },
@@ -1220,10 +1496,10 @@ document.addEventListener('DOMContentLoaded', () => {
           input.dispatchEvent(new Event('change', { bubbles: true }));
         });
       },
-      register: [['manager', 'keyboard']],
+      register: [['method', 'keyboard']],
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (receive && node_selected === id && !document.querySelector('.edit-value.is-active')) {
-          const keys = receive_data.down.normal,
+          const keys = receive_data.down.normal.filter(Boolean),
             input = elem.querySelector('input[name="keys"]');
 
           if (typeof last_data === 'object' && last_data.id === id && Array.isArray(last_data.data) && keys.length >= last_data.data.length) {
@@ -1253,7 +1529,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'launch-app',
       icon: 'launch',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.file('Application', 'program', 'launch-app'),
       update: (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
@@ -1301,6 +1577,40 @@ document.addEventListener('DOMContentLoaded', () => {
       body: bodys.text('Address'),
       update: functions.trim
     },
+    'both-say': {
+      title: 'Say',
+      help: 'say',
+      icon: 'announce',
+      inputs: 1,
+      outputs: 1,
+      body: bodys.text('Message') + bodys.select('Voice', false, false, false, true) + bodys.number('Volume', false, 100, 1, 1, 100, true) + bodys.number('Rate', false, 1, .1, .1, 10, true) + bodys.number('Pitch', false, .8, .1, 0, 2, true) + bodys.state(false, false, 'Start', 'Stop'),
+      register: [['speech', 'voices']],
+      init: (id, elem, data, set_data, first) => {
+        const change_state = state => {
+          const names = ['start', 'stop'];
+          state = names[state ? 0 : 1];
+
+          for (const input of elem.querySelectorAll(`input[name="start"], input[name="stop"]`)) {
+            const name = input.getAttribute('name'),
+              elem = level_elem(input);
+
+            elem.previousElementSibling.style.display = ((name === state) ? 'block' : 'none');
+            elem.style.display = (name === state) ? 'block' : 'none';
+          }
+
+          const is_stop = (state !== 'start');
+          for (const name of ['message', 'pitch', 'rate', 'voice', 'volume']) {
+            elem.querySelector(`[name="${name}"]`).classList.toggle('is-hidden', is_stop);
+            elem.querySelector(`[name="${name}"]`).previousElementSibling.classList.toggle('is-hidden', is_stop);
+          }
+        };
+
+        functions.state(id, elem, data, set_data, false, false, false, change_state);
+      },
+      update: [functions.trim, functions.speech_voices, (id, elem, data, set_data, receive, receive_data) => {
+        functions.select(id, elem, data, set_data, receive, receive_data, 'voice');
+      }]
+    },
     'outputs-launch': {
       title: 'Scripts Manager Launch',
       help: 'scripts-manager-launch',
@@ -1331,7 +1641,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'socket-request',
       icon: 'request',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('IPv4', 'host') + bodys.number('Port', false, 3000, 1, 1) + bodys.text('Data'),
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         functions.number(id, elem, data, set_data, receive, receive_data, 'port', 1);
@@ -1369,18 +1679,19 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Device') + bodys.state(false, false, 'Connection', 'Disconnection'),
-      register: [['manager', 'usb:devices']],
+      register: [['usb', 'devices']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
       update: functions.usb_devices
     },
     'both-variable-condition': {
-      title: 'Variable Condition',
+      type: 'variable',
+      title: 'Condition',
       help: 'variable-condition',
       icon: 'variable-condition',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Value 1') + bodys.select('Condition') + bodys.text('Value 2', 'string') + bodys.text('Value 2', 'number', '0') + bodys.select('Value 2', 'boolean', ['false', 'true']) + bodys.state_toggle('Variable type', 'type', 'String', 'Boolean', 'Number'),
       init: (id, elem, data, set_data, first) => {
         const conditions = {
@@ -1444,7 +1755,8 @@ document.addEventListener('DOMContentLoaded', () => {
       update: functions.trim
     },
     'both-variable-increment': {
-      title: 'Variable Increment',
+      type: 'variable',
+      title: 'Increment',
       help: 'variable-increment',
       icon: 'variable-increment',
       inputs: 1,
@@ -1458,7 +1770,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }]
     },
     'both-variable-remove': {
-      title: 'Variable Remove',
+      type: 'variable',
+      title: 'Remove',
       help: 'variable-remove',
       icon: 'variable-remove',
       inputs: 1,
@@ -1470,7 +1783,8 @@ document.addEventListener('DOMContentLoaded', () => {
       update: functions.trim
     },
     'both-variable-replace': {
-      title: 'Variable Replace',
+      type: 'variable',
+      title: 'Replace',
       help: 'variable-replace',
       icon: 'rename',
       inputs: 1,
@@ -1482,7 +1796,8 @@ document.addEventListener('DOMContentLoaded', () => {
       update: functions.trim
     },
     'both-variable-setter': {
-      title: 'Variable Setter',
+      type: 'variable',
+      title: 'Setter',
       help: 'variable-setter',
       icon: 'variable-setter',
       inputs: 1,
@@ -1512,7 +1827,7 @@ document.addEventListener('DOMContentLoaded', () => {
       help: 'websocket-request',
       icon: 'request',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('URL') + bodys.text('Data'),
       update: functions.trim
     },
@@ -1524,8 +1839,8 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'webhook',
       width: 500,
       inputs: 1,
-      outputs: 1,
-      body: '<div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL<i class="fas fa-circle-info is-pulled-right"></i></p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div></div><p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea><p>Inline 1<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
+      outputs: 2,
+      body: '<div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL<i class="fas fa-circle-info is-pulled-right"></i></p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="is-browse discord-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" level="1" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div><div class="column"><p>Big Image</p><div class="is-browse discord-big-image"><input name="big-image" type="text" class="has-text-centered" level="1" readonly /><button><i class="fas fa-ellipsis"></i></button></div></div></div><p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea><p>Inline 1<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
           elem.classList.add('block-init');
@@ -1547,7 +1862,127 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'webhook',
       width: 500,
       inputs: 1,
+      outputs: 2,
+      body: '<p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea>',
+      update: functions.trim
+    },
+    'outputs-guilded-member-banned': {
+      type: 'guilded',
+      title: 'Member Banned',
+      help: 'guilded---member-banned',
+      tooltip: 'Guilded - Member Banned',
+      icon: 'ban',
+      inputs: 0,
+      outputs: 1
+    },
+    'outputs-guilded-member-joined': {
+      type: 'guilded',
+      title: 'Member Joined',
+      help: 'guilded---member-joined',
+      tooltip: 'Guilded - Member Joined',
+      icon: 'join',
+      inputs: 0,
+      outputs: 1
+    },
+    'outputs-guilded-member-removed': {
+      type: 'guilded',
+      title: 'Member Removed',
+      help: 'guilded---member-removed',
+      tooltip: 'Guilded - Member Removed',
+      icon: 'part',
+      inputs: 0,
+      outputs: 1
+    },
+    'outputs-guilded-member-updated': {
+      type: 'guilded',
+      title: 'Member Updated',
+      help: 'guilded---member-updated',
+      tooltip: 'Guilded - Member Updated',
+      icon: 'snap',
+      inputs: 0,
+      outputs: 1
+    },
+    'outputs-guilded-member-unbanned': {
+      type: 'guilded',
+      title: 'Member Unbanned',
+      help: 'guilded---member-unbanned',
+      tooltip: 'Guilded - Member Unbanned',
+      icon: 'unban',
+      inputs: 0,
+      outputs: 1
+    },
+    'outputs-guilded-message': {
+      type: 'guilded',
+      title: 'Message',
+      help: 'guilded---message',
+      tooltip: 'Guilded - Message',
+      icon: 'message',
+      inputs: 0,
       outputs: 1,
+      body: bodys.textarea('Message') + bodys.match,
+      update: functions.trim
+    },
+    'inputs-guilded-message': {
+      type: 'guilded',
+      title: 'Message',
+      help: 'guilded---message',
+      tooltip: 'Guilded - Message',
+      icon: 'message',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.textarea('Message'),
+      update: functions.trim
+    },
+    'outputs-guilded-message-deleted': {
+      type: 'guilded',
+      title: 'Message Deleted',
+      help: 'guilded---message-deleted',
+      tooltip: 'Guilded - Message Deleted',
+      icon: 'message-remove',
+      inputs: 0,
+      outputs: 1
+    },
+    'outputs-guilded-message-updated': {
+      type: 'guilded',
+      title: 'Message Updated',
+      help: 'guilded---message-updated',
+      tooltip: 'Guilded - Message Updated',
+      icon: 'message-updated',
+      inputs: 0,
+      outputs: 1
+    },
+    'both-mastodon-message': {
+      type: 'mastodon',
+      title: 'Message',
+      help: 'mastodon---message',
+      tooltip: 'Mastodon - Message',
+      icon: 'message',
+      inputs: 1,
+      outputs: 1,
+      body: bodys.textarea('Message') + bodys.select('Visibility', false, ['Public', 'Unlisted', 'Private', 'Direct'], false, true),
+      update: functions.trim
+    },
+    'inputs-guilded-webhook-embed': {
+      type: 'guilded',
+      title: 'Webhook Embed',
+      help: 'guilded---webhook-embed',
+      tooltip: 'Guilded - Webhook Embed',
+      icon: 'webhook',
+      width: 500,
+      inputs: 1,
+      outputs: 0,
+      body: '<div class="columns"><div class="column"><p>Title</p><input name="title" type="text" class="has-text-centered" /></div><div class="column"><p>URL</p><input name="url" type="url" class="has-text-centered" /></div></div><div class="columns"><div class="column"><p>Thumbnail</p><div class="guilded-thumbnail"><input name="thumbnail" type="text" class="has-text-centered" /></div></div><div class="column"><p>Big Image</p><div class="guilded-big-image"><input name="big-image" type="text" class="has-text-centered" /></div></div></div><p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea><p>Inline 1<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-1-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-1-content" type="text" class="has-text-centered" placeholder="Content" /></div></div><p>Inline 2<i class="fas fa-eye-slash"></i></p><div class="columns clear"><div class="column"><input name="inline-2-title" type="text" class="has-text-centered" placeholder="Title" /></div><div class="column"><input name="inline-2-content" type="text" class="has-text-centered" placeholder="Content" /></div></div>',
+      update: functions.trim
+    },
+    'inputs-guilded-webhook-message': {
+      type: 'guilded',
+      title: 'Webhook Message',
+      help: 'guilded---webhook-message',
+      tooltip: 'Guilded - Webhook Message',
+      icon: 'webhook',
+      width: 500,
+      inputs: 1,
+      outputs: 0,
       body: '<p>Webhook<i class="fas fa-eye-slash"></i></p><input name="webhook" type="url" class="has-text-centered" /><p>Message<i class="fas fa-eye-slash"></i></p><textarea name="message" style="height: 120px; resize: none;"></textarea>',
       update: functions.trim
     },
@@ -1573,6 +2008,20 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1
     },
+    'both-obs-studio-filters': {
+      type: 'obs-studio',
+      title: 'Filters',
+      help: 'obs-studio---filters',
+      tooltip: 'OBS Studio - Filters',
+      icon: 'toggle',
+      inputs: 1,
+      outputs: 2,
+      body: bodys.select('Source name', 'source'),
+      register: [['obs-studio', 'call', 'GetScenes'], ['obs-studio', 'call', 'SceneListChanged']],
+      update: (id, elem, data, set_data, receive, receive_data) => {
+        functions.source_filter(id, elem, data, set_data, receive, receive_data, 'both-obs-studio-filters', true);
+      }
+    },
     'outputs-obs-studio-lock-source': {
       type: 'obs-studio',
       title: 'Lock Source',
@@ -1582,7 +2031,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state(false, false, 'On', 'Off'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenesAndGroups'], ['obs-studio', 'call', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1597,7 +2046,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenesAndGroups'], ['obs-studio', 'call', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1673,6 +2122,15 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
     },
+    'both-obs-studio-scenes': {
+      type: 'obs-studio',
+      title: 'Scenes',
+      help: 'obs-studio---scenes',
+      tooltip: 'OBS Studio - Scenes',
+      icon: 'studio',
+      inputs: 1,
+      outputs: 2
+    },
     'inputs-obs-studio-set-browser': {
       type: 'obs-studio',
       title: 'Set Browser',
@@ -1682,7 +2140,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Source name', 'source') + bodys.text('URL'),
-      register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetSources'], ['obs-studio', 'call', 'SceneListChanged']],
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (receive && Array.isArray(receive_data)) {
           for (let i = (receive_data.length - 1); i >= 0; --i) {
@@ -1704,7 +2162,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Source name', 'source') + bodys.file('File', false, 'image-file'),
-      register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetSources'], ['obs-studio', 'call', 'SceneListChanged']],
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
           elem.classList.add('block-init');
@@ -1731,7 +2189,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Source name', 'source') + bodys.file('File', false, 'media-file'),
-      register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetSources'], ['obs-studio', 'call', 'SceneListChanged']],
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (!elem.classList.contains('block-init')) {
           elem.classList.add('block-init');
@@ -1758,7 +2216,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Source name', 'source') + bodys.text('Text'),
-      register: [['obs-studio', 'GetSources'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetSources'], ['obs-studio', 'call', 'SceneListChanged']],
       update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
         if (receive && Array.isArray(receive_data)) {
           for (let i = (receive_data.length - 1); i >= 0; --i) {
@@ -1780,7 +2238,19 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenesAndGroups'], ['obs-studio', 'call', 'SceneListChanged']],
+      update: functions.scene_source
+    },
+    'both-obs-studio-sources': {
+      type: 'obs-studio',
+      title: 'Sources',
+      help: 'obs-studio---sources',
+      tooltip: 'OBS Studio - Sources',
+      icon: 'layers',
+      inputs: 1,
+      outputs: 2,
+      body: bodys.select('Scene name', 'scene'),
+      register: [['obs-studio', 'call', 'GetScenesAndGroups'], ['obs-studio', 'call', 'SceneListChanged']],
       update: functions.scene_source
     },
     'outputs-obs-studio-streaming': {
@@ -1818,7 +2288,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Scene name', 'scene'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenesAndGroups'], ['obs-studio', 'call', 'SceneListChanged']],
       update: functions.scene_source
     },
     'inputs-obs-studio-switch-scene': {
@@ -1830,7 +2300,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Scene name', 'scene'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenesAndGroups'], ['obs-studio', 'call', 'SceneListChanged']],
       update: functions.scene_source
     },
     'outputs-obs-studio-toggle-filter': {
@@ -1842,7 +2312,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Source name', 'source') + bodys.select('Filter name', 'filter') + bodys.state(false, false, 'Show', 'Hide'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenes'], ['obs-studio', 'call', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1859,7 +2329,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Source name', 'source') + bodys.select('Filter name', 'filter') + bodys.state_toggle(false, false, 'Show', 'Hide'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenes'], ['obs-studio', 'call', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1876,7 +2346,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state(false, false, 'Show', 'Hide'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenesAndGroups'], ['obs-studio', 'call', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1891,7 +2361,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'Show', 'Hide'),
-      register: [['obs-studio', 'GetScenes'], ['obs-studio', 'SceneListChanged']],
+      register: [['obs-studio', 'call', 'GetScenesAndGroups'], ['obs-studio', 'call', 'SceneListChanged']],
       init: (id, elem, data, set_data, first) => {
         functions.state(id, elem, data, set_data);
       },
@@ -1941,7 +2411,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Spotify - Current Queue',
       icon: 'playlist',
       inputs: 1,
-      outputs: 1
+      outputs: 2
     },
     'both-spotify-currently-playing': {
       type: 'spotify',
@@ -1950,7 +2420,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Spotify - Currently Playing',
       icon: 'music',
       inputs: 1,
-      outputs: 1
+      outputs: 2
     },
     'inputs-spotify-play-pause': {
       type: 'spotify',
@@ -1999,7 +2469,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Spotify - Search',
       icon: 'search',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Track'),
       update: functions.trim
     },
@@ -2042,6 +2512,156 @@ document.addEventListener('DOMContentLoaded', () => {
         elem.querySelector('.block-id').innerText = id;
       }
     },
+    'inputs-streamlabs-mute': {
+      type: 'streamlabs',
+      title: 'Mute',
+      help: 'streamlabs---mute',
+      tooltip: 'Streamlabs - Mute',
+      icon: 'mute',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.select('Audio name', 'source') + bodys.state_toggle(false, false, 'On', 'Off', 'Toggle'),
+      register: [['streamlabs', 'call', 'AudioService.getSources']],
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: functions.streamlabs_audio_sources
+    },
+    'outputs-streamlabs-recording': {
+      type: 'streamlabs',
+      title: 'Recording',
+      help: 'streamlabs---recording',
+      tooltip: 'Streamlabs - Recording',
+      icon: 'recording',
+      inputs: 0,
+      outputs: 1,
+      body: bodys.state(),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
+    },
+    'inputs-streamlabs-recording': {
+      type: 'streamlabs',
+      title: 'Recording',
+      help: 'streamlabs---recording',
+      tooltip: 'Streamlabs - Recording',
+      icon: 'recording',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.state_toggle(false),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
+    },
+    'outputs-streamlabs-replay': {
+      type: 'streamlabs',
+      title: 'Replay',
+      help: 'streamlabs---replay',
+      tooltip: 'Streamlabs - Replay',
+      icon: 'replay',
+      inputs: 0,
+      outputs: 1,
+      body: bodys.state(),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
+    },
+    'inputs-streamlabs-replay': {
+      type: 'streamlabs',
+      title: 'Replay',
+      help: 'streamlabs---replay',
+      tooltip: 'Streamlabs - Replay',
+      icon: 'replay',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.state_toggle(false),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
+    },
+    'outputs-streamlabs-save-replay': {
+      type: 'streamlabs',
+      title: 'Save Replay',
+      help: 'streamlabs---save-replay',
+      tooltip: 'Streamlabs - Save Replay',
+      icon: 'replay',
+      inputs: 0,
+      outputs: 1
+    },
+    'inputs-streamlabs-save-replay': {
+      type: 'streamlabs',
+      title: 'Save Replay',
+      help: 'streamlabs---save-replay',
+      tooltip: 'Streamlabs - Save Replay',
+      icon: 'replay',
+      inputs: 1,
+      outputs: 0,
+    },
+    'outputs-streamlabs-streaming': {
+      type: 'streamlabs',
+      title: 'Streaming',
+      help: 'streamlabs---streaming',
+      tooltip: 'Streamlabs - Streaming',
+      icon: 'streaming',
+      inputs: 0,
+      outputs: 1,
+      body: bodys.state(),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
+    },
+    'inputs-streamlabs-streaming': {
+      type: 'streamlabs',
+      title: 'Streaming',
+      help: 'streamlabs---streaming',
+      tooltip: 'Streamlabs - Streaming',
+      icon: 'streaming',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.state_toggle(false),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      }
+    },
+    'outputs-streamlabs-switch-scene': {
+      type: 'streamlabs',
+      title: 'Switch Scene',
+      help: 'streamlabs---switch-scene',
+      tooltip: 'Streamlabs - Switch Scene',
+      icon: 'shuffle',
+      inputs: 0,
+      outputs: 1,
+      body: bodys.select('Scene name', 'scene'),
+      register: [['streamlabs', 'call', 'ScenesService.getScenes']],
+      update: functions.streamlabs_scene_source
+    },
+    'inputs-streamlabs-switch-scene': {
+      type: 'streamlabs',
+      title: 'Switch Scene',
+      help: 'streamlabs---switch-scene',
+      tooltip: 'Streamlabs - Switch Scene',
+      icon: 'shuffle',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.select('Scene name', 'scene'),
+      register: [['streamlabs', 'call', 'ScenesService.getScenes']],
+      update: functions.streamlabs_scene_source
+    },
+    'inputs-streamlabs-toggle-source': {
+      type: 'streamlabs',
+      title: 'Toggle Source',
+      help: 'streamlabs---toggle-source',
+      tooltip: 'Streamlabs - Toggle Source',
+      icon: 'toggle',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.select('Scene name', 'scene') + bodys.select('Source name', 'source') + bodys.state_toggle(false, false, 'Show', 'Hide'),
+      register: [['streamlabs', 'call', 'ScenesService.getScenes']],
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: functions.streamlabs_scene_source
+    },
     'outputs-twitch-action': {
       type: 'twitch',
       title: 'Action',
@@ -2062,7 +2682,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.text('Message') + bodys.select('Account', false, false, false, true),
-      register: [['twitch', 'GetAccounts']],
+      register: [['twitch', 'call', 'GetAccounts']],
       update: [functions.trim, functions.accounts, (id, elem, data, set_data, receive, receive_data) => {
         functions.select(id, elem, data, set_data, receive, receive_data, 'account');
       }]
@@ -2087,7 +2707,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.text('Message') + bodys.select('Color', false, ['Primary', 'Blue', 'Green', 'Orange', 'Purple'], false, true) + bodys.select('Account', false, false, false, true),
-      register: [['twitch', 'GetAccounts']],
+      register: [['twitch', 'call', 'GetAccounts']],
       update: [functions.trim, functions.accounts, (id, elem, data, set_data, receive, receive_data) => {
         functions.select(id, elem, data, set_data, receive, receive_data, 'color');
         functions.select(id, elem, data, set_data, receive, receive_data, 'account');
@@ -2283,7 +2903,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Twitch - Game',
       icon: 'game',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Game'),
       update: functions.trim
     },
@@ -2312,7 +2932,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tooltip: 'Twitch - Info',
       icon: 'info',
       inputs: 1,
-      outputs: 1,
+      outputs: 2,
       body: bodys.text('Channel'),
       update: functions.trim
     },
@@ -2326,6 +2946,15 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 0,
       body: bodys.text('Status') + bodys.text('Game'),
       update: functions.trim
+    },
+    'outputs-twitch-join': {
+      type: 'twitch',
+      title: 'Join',
+      help: 'twitch---join',
+      tooltip: 'Twitch - Join',
+      icon: 'join',
+      inputs: 0,
+      outputs: 1
     },
     'outputs-twitch-message': {
       type: 'twitch',
@@ -2347,7 +2976,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 1,
       outputs: 0,
       body: bodys.text('Message') + bodys.select('Account', false, false, false, true),
-      register: [['twitch', 'GetAccounts']],
+      register: [['twitch', 'call', 'GetAccounts']],
       update: [functions.trim, functions.accounts, (id, elem, data, set_data, receive, receive_data) => {
         functions.select(id, elem, data, set_data, receive, receive_data, 'account');
       }]
@@ -2378,6 +3007,15 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 1,
       body: bodys.text('Message') + bodys.match + bodys.viewers(),
       update: functions.trim
+    },
+    'outputs-twitch-part': {
+      type: 'twitch',
+      title: 'Part',
+      help: 'twitch---part',
+      tooltip: 'Twitch - Part',
+      icon: 'part',
+      inputs: 0,
+      outputs: 1
     },
     'outputs-twitch-prime-community-gift': {
       type: 'twitch',
@@ -2446,7 +3084,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs: 0,
       outputs: 1,
       body: bodys.select('Reward'),
-      register: [['twitch', 'GetAllRewards']],
+      register: [['twitch', 'call', 'GetAllRewards']],
       update: (id, elem, data, set_data, receive, receive_data) => {
         const select = elem.querySelector('select');
         if (!select.children.length) {
@@ -2481,7 +3119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             select.value = selected;
           } else if (!receive) {
-            request(id, 'twitch', 'GetAllRewards', { type: 'Methods:convert', args: [false, false] });
+            request(id, 'addon', 'twitch', 'call', 'GetAllRewards', { type: 'Methods:convert', args: [false, false] });
           }
         }
       }
@@ -2514,6 +3152,24 @@ document.addEventListener('DOMContentLoaded', () => {
       outputs: 0,
       body: bodys.text('User'),
       update: functions.trim
+    },
+    'outputs-twitch-stream-offline': {
+      type: 'twitch',
+      title: 'Stream Offline',
+      help: 'twitch---stream-offline',
+      tooltip: 'Twitch - Stream Offline',
+      icon: 'bye',
+      inputs: 0,
+      outputs: 1
+    },
+    'outputs-twitch-stream-online': {
+      type: 'twitch',
+      title: 'Stream Online',
+      help: 'twitch---stream-online',
+      tooltip: 'Twitch - Stream Online',
+      icon: 'start',
+      inputs: 0,
+      outputs: 1
     },
     'outputs-twitch-slow': {
       type: 'twitch',
@@ -2688,6 +3344,47 @@ document.addEventListener('DOMContentLoaded', () => {
       body: bodys.text('User') + bodys.text('Message'),
       update: functions.trim
     },
+    'both-voicemeeter-get-settings': {
+      type: 'voicemeeter',
+      title: 'Get Settings',
+      help: 'voicemeeter---get-settings',
+      tooltip: 'Voicemeeter - Get Settings',
+      icon: 'ajust',
+      inputs: 1,
+      outputs: 1
+    },
+    'inputs-voicemeeter-set-setting': {
+      type: 'voicemeeter',
+      title: 'Set Setting',
+      help: 'voicemeeter---set-setting',
+      tooltip: 'Voicemeeter - Set Setting',
+      icon: 'ajust',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.select('Parameter', 'param', ['audibility', 'color_x', 'color_y', 'comp', 'eqgain1', 'eqgain2', 'eqgain3', 'fx_x', 'fx_y', 'gate', 'gain', 'mc', 'mono', 'pan_x', 'pan_y', 'solo'], false, true) + bodys.select('Type', false, ['Strip', 'Bus'], false, true) + bodys.number('Number', 'num', 0, 1, 0, 7, true, true) + bodys.text('Value'),
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        functions.select(id, elem, data, set_data, receive, receive_data, 'num');
+        functions.select(id, elem, data, set_data, receive, receive_data, 'type');
+        functions.select(id, elem, data, set_data, receive, receive_data, 'param');
+      }]
+    },
+    'inputs-voicemeeter-mute': {
+      type: 'voicemeeter',
+      title: 'Mute',
+      help: 'voicemeeter---mute',
+      tooltip: 'Voicemeeter - Mute',
+      icon: 'mute',
+      inputs: 1,
+      outputs: 0,
+      body: bodys.select('Type', false, ['Strip', 'Bus'], false, true) + bodys.number('Number', 'num', 0, 1, 0, 7, true, true) + bodys.state_toggle(false, false, 'Mute', 'Unmute', 'Toggle'),
+      init: (id, elem, data, set_data, first) => {
+        functions.state(id, elem, data, set_data);
+      },
+      update: [functions.trim, (id, elem, data, set_data, receive, receive_data) => {
+        functions.select(id, elem, data, set_data, receive, receive_data, 'num');
+        functions.select(id, elem, data, set_data, receive, receive_data, 'type');
+      }]
+    },
   };
 
   function drawflow_initializer(actions) {
@@ -2700,18 +3397,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function drawflow_save() {
-    window.parent.postMessage({ save: editor.export().drawflow }, '*');
+    if (!window.loading) {
+      window.parent.postMessage({ save: editor.export().drawflow }, '*');
+    }
   }
 
-  function drawflow_select() {
-    const selector = document.querySelector('.modules');
+  function drawflow_select(sort) {
+    const selector = document.querySelector('[select="module"]');
 
-    selector.innerHTML = '';
+    selector.removeAll();
+    if (Array.isArray(sort)) {
+      for (const name of sort) {
+        if (typeof editor.drawflow.drawflow[name] !== 'undefined') {
+          selector.addItem(name);
+        }
+      }
+    } else {
+      sort = [];
+    }
+
     for (const name in editor.drawflow.drawflow) {
-      const option = document.createElement('option');
-      option.value = name;
-      option.innerText = name;
-      selector.appendChild(option);
+      if (sort.indexOf(name) < 0) {
+        selector.addItem(name);
+      }
     }
 
     const current = editor.module;
@@ -2720,22 +3428,38 @@ document.addEventListener('DOMContentLoaded', () => {
       module_name = Object.keys(editor.drawflow.drawflow)[0];
     }
 
-    selector.value = module_name;
+    selector.setValue(module_name);
     if (module_name !== current) {
+      if (!window.loading) {
+        window.loading = true;
+        setTimeout(() => {
+          window.loading = false;
+        }, 1000);
+      }
       editor.changeModule(module_name);
     }
   }
 
-  function drawflow_receiver(source, id, name, data) {
+  function drawflow_receiver(source, name, method, property, data, separate) {
+    const list_key = `${name}:${method}:${property}`;
     try {
       for (const i in editor.drawflow.drawflow[editor.module].data) {
         const node = get_node(i),
           block = blocks[node.data.type];
 
-        if ((source === false || node.id === source) && typeof block !== 'undefined' && Array.isArray(block.register)) {
+        let source_check = source === false || (separate && node.id === source);
+        if (!source_check && !separate && Array.isArray(request_list[list_key])) {
+          const pos = request_list[list_key].indexOf(node.id);
+          if (pos >= 0) {
+            source_check = true;
+            request_list[list_key].splice(pos, 1);
+          }
+        }
+
+        if (source_check && typeof block !== 'undefined' && Array.isArray(block.register)) {
           let check = false;
           for (const item of block.register) {
-            check = check || (item[0] === id && item[1] === name);
+            check = check || (((!item[0] && !name) || item[0] === name) && item[1] === method && ((!item[2] && !property) || item[2] === property));
           }
 
           if (check) {
@@ -2754,8 +3478,8 @@ document.addEventListener('DOMContentLoaded', () => {
   for (const name in blocks) {
     const block_data = blocks[name],
       block_icon = `./icons/${block_data.icon}.webp`,
-      block = document.querySelector('#template .block-drawflow').cloneNode(true),
-      button = document.querySelector('#template .drag-drawflow').cloneNode(true),
+      block = document.querySelector('#template > .block-drawflow').cloneNode(true),
+      button = document.querySelector('#template > .drag-drawflow').cloneNode(true),
       title = block.querySelector('.title-box span'),
       icon = block.querySelector('.title-box img'),
       body = block.querySelector('.box');
@@ -2807,7 +3531,39 @@ document.addEventListener('DOMContentLoaded', () => {
   drawflow.addEventListener('dragover', event => event.preventDefault(), false);
 
   show_blocks.addEventListener('click', () => {
-    document.body.classList.toggle('show-blocks');
+    const show = !document.body.classList.contains('show-blocks');
+    document.body.classList.toggle('show-blocks', show);
+
+    if (show) {
+      search.focus();
+      search.select();
+    }
+
+    window.parent.postMessage({ toggle: show }, '*');
+  }, false);
+  lateral_blocks.addEventListener('click', () => {
+    const elem = blocks_box,
+      lateral = !elem.classList.contains('lateral-blocks');
+
+    elem.classList.toggle('lateral-blocks', lateral);
+    lateral_blocks.classList.toggle('is-selected', lateral);
+
+    window.parent.postMessage({ lateral: lateral }, '*');
+  }, false);
+
+  search.addEventListener('keyup', () => {
+    const value = search.value.trim().toLowerCase(),
+      blocks = blocks_box.querySelectorAll('.drag-drawflow'),
+      sections = blocks_box.querySelectorAll(':scope .content');
+
+    for (const block of blocks) {
+      const name = block.querySelector('.name').innerText.toLowerCase();
+      block.classList.toggle('is-hidden', (value.length && name.indexOf(value) < 0));
+    }
+
+    for (const section of sections) {
+      section.classList.toggle('is-hidden', !section.querySelectorAll('.drag-drawflow:not(.is-hidden)').length);
+    }
   }, false);
 
   document.addEventListener('dragstart', drag_event, false);
@@ -2831,11 +3587,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       options_toggle.querySelector('.far, .fas').classList.add((typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled) ? 'fas' : 'far');
       options_toggle.querySelector('.far, .fas').classList.remove((typeof node.data.data.enabled !== 'boolean' || node.data.data.enabled) ? 'far' : 'fas');
-      if (!Object.keys(node.inputs).length) {
-        options_export.style.removeProperty('display');
-      } else {
-        options_export.style.display = 'none';
-      }
 
       options.style.top = `${event.clientY}px`;
       options.style.left = `${event.clientX}px`;
@@ -2852,11 +3603,23 @@ document.addEventListener('DOMContentLoaded', () => {
     node.elem.classList.toggle('disabled', !node.data.data.enabled);
     set_data(node.id, node.data.data);
 
-    request(node.id, 'multi-actions', 'toggle-block', { id: node.id, module: editor.module, enabled: node.data.data.enabled });
+    request(node.id, 'script', 'multi-actions', 'call', 'toggle-block', { id: node.id, module: editor.module, enabled: node.data.data.enabled });
 
     options.style.display = 'none';
   }, false);
-  options_test.addEventListener('click', event => {
+  options_rename.addEventListener('click', event => {
+    const node = options_target,
+      elem = document.querySelector('div.rename-block'),
+      input = elem.querySelector('.input');
+
+    elem.classList.add('is-active');
+    input.value = (node.data.data.block_title || blocks[node.html].title);
+    input.focus();
+    input.select();
+
+    options.style.display = 'none';
+  }, false);
+  options_test_ok.addEventListener('click', event => {
     const node = options_target;
     if (typeof node.inputs.input_1 !== 'undefined') {
       window.parent.postMessage({ test: [editor.module, node.id] }, '*');
@@ -2868,40 +3631,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
     options.style.display = 'none';
   }, false);
+  options_test_fail.addEventListener('click', event => {
+    const node = options_target;
+    if (typeof node.outputs.output_2 !== 'undefined') {
+      for (const connection of node.outputs.output_2.connections) {
+        window.parent.postMessage({ test: [editor.module, parseInt(connection.node)] }, '*');
+      }
+    }
+
+    options.style.display = 'none';
+  }, false);
   options_select.addEventListener('click', event => {
-    const node = options_target,
-      select_connections = (node, selected) => {
-        if (!node) {
-          return;
-        } else if (typeof selected === 'undefined') {
-          selected = [];
-        }
-
-        let outputs = [];
-        if (typeof node.outputs.output_1 !== 'undefined') {
-          for (const connection of node.outputs.output_1.connections) {
-            outputs.push(parseInt(connection.node));
-          }
-        }
-
-        let inputs = [];
-        if (typeof node.inputs.input_1 !== 'undefined') {
-          for (const connection of node.inputs.input_1.connections) {
-            inputs.push(parseInt(connection.node));
-          }
-        }
-
-        selected.push(node.id);
-        multi_selection[node.id] = get_node(node.id);
-        node.elem.classList.add('selected');
-        for (const id of outputs.concat(inputs)) {
-          if (id !== node.id && selected.indexOf(id) < 0) {
-            select_connections(get_node(id), selected);
-          }
-        }
-      };
-
+    const node = options_target;
     select_connections(node);
+
+    options.style.display = 'none';
+  }, false);
+  options_export.addEventListener('click', event => {
+    if (document.location.search.substring(1).split('&').indexOf('internal') < 0) {
+      event.stopPropagation();
+
+      const name = `${event.target.getAttribute('browse-file-name')}.${event.target.getAttribute('browse-file-ext')}`;
+      window.text_to_file(name, JSON.stringify(export_nodes(options_target.id), null, '  '), 'application/json');
+    }
+
+    options.style.display = 'none';
+  }, true);
+  options_export.querySelector('input').addEventListener('change', event => {
+    window.parent.postMessage({ export: { path: event.target.value, data: JSON.stringify(export_nodes(options_target.id), null, '  ') } }, '*');
+  }, false);
+  export_blocks.addEventListener('click', event => {
+    if (document.location.search.substring(1).split('&').indexOf('internal') < 0) {
+      event.stopPropagation();
+
+      const name = `${event.target.getAttribute('browse-file-name')}.${event.target.getAttribute('browse-file-ext')}`;
+      window.text_to_file(name, JSON.stringify(export_module(editor.module), null, '  '), 'application/json');
+    }
+  }, true);
+  button_export.addEventListener('change', event => {
+    window.parent.postMessage({ export: { path: event.target.value, data: JSON.stringify(export_module(editor.module), null, '  ') } }, '*');
+  }, false);
+  button_import.addEventListener('change', event => {
+    if (!event.target.value.indexOf('blob:')) {
+      fetch(event.target.value)
+        .then(res => {
+          URL.revokeObjectURL(event.target.value);
+          return res.text();
+        })
+        .then(data => {
+          window.message_event({
+            origin: 'drawflow',
+            data: {
+              name: 'import',
+              data: JSON.parse(data)
+            }
+          });
+        });
+    } else {
+      window.parent.postMessage({ import: { path: event.target.value } }, '*');
+    }
+  }, false);
+  options_duplicate.addEventListener('click', event => {
+    const node = options_target;
+    select_connections(node);
+
+    let first = null;
+    for (const sid in multi_selection) {
+      const node = get_node(sid);
+      if (!first || node.pos_x < first.pos_x || node.pos_y < first.pos_y) {
+        first = node;
+      }
+    }
+
+    setTimeout(() => {
+      let first_copy = null;
+      let relations = {};
+      for (const sid in multi_selection) {
+        const node = get_node(sid),
+          type = node.html,
+          pos_x = (typeof event.touches !== 'undefined') ? event.touches[0].clientX : event.clientX,
+          pos_y = (typeof event.touches !== 'undefined') ? event.touches[0].clientY : event.clientY,
+          diff_x = node.pos_x - first.pos_x,
+          diff_y = node.pos_y - first.pos_y;
+
+        const id = add_node(type, (pos_x + diff_x), (pos_y + diff_y), Object.assign({}, node.data.data)),
+          copy = get_node(id);
+
+        relations[id] = node;
+        if (!first_copy) {
+          first_copy = copy;
+        }
+
+        copy.elem.dispatchEvent(new Event('mousedown', { bubbles: true }));
+        copy.elem.dispatchEvent(new Event('mouseup', { bubbles: true }));
+      }
+
+      let relations_reverse = {};
+      for (const id in relations) {
+        relations_reverse[relations[id].id] = parseInt(id);
+      }
+
+      for (const id in relations) {
+        const node = relations[id];
+        for (const name in node.outputs) {
+          for (const connection of node.outputs[name].connections) {
+            editor.addConnection(parseInt(id), relations_reverse[parseInt(connection.node)], name, connection.output);
+          }
+        }
+      }
+
+      select_connections(first_copy);
+    }, 10);
 
     options.style.display = 'none';
   }, false);
@@ -2914,18 +3754,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     options.style.display = 'none';
   }, false);
-  options_export.addEventListener('click', event => {
-    options.style.display = 'none';
-  }, false);
-  options_export.querySelector('input').addEventListener('change', event => {
-    window.parent.postMessage({ export: { path: event.target.value, data: JSON.stringify(export_nodes(options_target.id)) } }, '*');
-  }, false);
-  button_export.addEventListener('change', event => {
-    window.parent.postMessage({ export: { path: event.target.value, data: JSON.stringify(export_module(editor.module)) } }, '*');
-  }, false);
-  button_import.addEventListener('change', event => {
-    window.parent.postMessage({ import: { path: event.target.value } }, '*');
-  }, false);
+
+  document.querySelector('div.rename-block .is-success').addEventListener('click', event => {
+    const node = options_target,
+      modal = event.target.closest('.modal');
+
+    editor.renameNode(node.id, modal.querySelector('.input').value);
+
+    modal.classList.remove('is-active');
+  });
 
   document.querySelector('div.delete-blocks .is-success').addEventListener('click', event => {
     const node = options_target,
@@ -2936,15 +3773,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let outputs = [];
-        if (typeof node.outputs.output_1 !== 'undefined') {
-          for (const connection of node.outputs.output_1.connections) {
+        for (const name in node.outputs) {
+          for (const connection of node.outputs[name].connections) {
             outputs.push(parseInt(connection.node));
           }
         }
 
         let inputs = [];
-        if (typeof node.inputs.input_1 !== 'undefined') {
-          for (const connection of node.inputs.input_1.connections) {
+        for (const name in node.inputs) {
+          for (const connection of node.inputs[name].connections) {
             inputs.push(parseInt(connection.node));
           }
         }
@@ -2970,6 +3807,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function block_exists(name) {
     return typeof blocks[name] !== 'undefined';
+  }
+
+  function select_connections(node, selected) {
+    if (!node) {
+      return;
+    } else if (typeof selected === 'undefined') {
+      selected = [];
+    }
+
+    let outputs = [];
+    for (const name in node.outputs) {
+      for (const connection of node.outputs[name].connections) {
+        outputs.push(parseInt(connection.node));
+      }
+    }
+
+    let inputs = [];
+    for (const name in node.inputs) {
+      for (const connection of node.inputs[name].connections) {
+        inputs.push(parseInt(connection.node));
+      }
+    }
+
+    selected.push(node.id);
+    multi_selection[node.id] = get_node(node.id);
+    node.elem.classList.add('selected');
+    for (const id of outputs.concat(inputs)) {
+      if (id !== node.id && selected.indexOf(id) < 0) {
+        select_connections(get_node(id), selected);
+      }
+    }
   }
 
   function filter_nodes(nodes) {
@@ -3035,8 +3903,24 @@ document.addEventListener('DOMContentLoaded', () => {
     return reindex_nodes(nodes);
   }
 
-  function export_nodes(id, nodes) {
+  function export_nodes(id, nodes, passe) {
     const reindex = !nodes;
+
+    if (!passe) {
+      let node = get_node(id),
+        already = [];
+
+      while (typeof node.inputs.input_1 !== 'undefined' && node.inputs.input_1.connections.length) {
+        const tmp = parseInt(node.inputs.input_1.connections[0].node);
+        if (already.indexOf(tmp) >= 0) {
+          break;
+        }
+        already.push(tmp);
+
+        id = tmp;
+        node = get_node(id);
+      }
+    }
 
     nodes = nodes || {};
     if (typeof nodes[id] === 'undefined') {
@@ -3063,7 +3947,7 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let c = (connections.length - 1); c >= 0; --c) {
               const cid = parseInt(connections[c].node);
               if (cid !== id && typeof nodes[cid] === 'undefined') {
-                export_nodes(cid, nodes);
+                export_nodes(cid, nodes, true);
               }
             }
           }
@@ -3119,8 +4003,10 @@ document.addEventListener('DOMContentLoaded', () => {
       for (const node of drawflow.querySelectorAll('[id^="node-"]')) {
         node.classList.remove('selected');
       }
+      reset_selection();
     }
   }, true);
+
   drawflow.addEventListener('blur', event => {
     let check = false;
     for (const id in editor.drawflow.drawflow[editor.module].data) {
@@ -3152,7 +4038,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reset_selection();
 
     setTimeout(() => {
-      document.querySelector('.export-blocks').setAttribute('browse-file-name', editor.module);
+      export_blocks.setAttribute('browse-file-name', editor.module);
     }, 10);
   });
   editor.on('nodeUnselected', reset_selection);
@@ -3213,6 +4099,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // adds support for multiple selection of blocks
   document.addEventListener('mousedown', event => {
     const node = get_node(event.target);
     if (node && node_selected !== node.id && event.target.closest('input, select')) {
@@ -3273,9 +4160,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // prevent blocks from being deleted with the keyboard key
+  window.addEventListener('keydown', event => {
+    if (event.key === 'Delete') {
+      event.stopPropagation();
+    }
+  }, true);
+
   window.get_name = get_name;
   window.get_node = get_node;
   window.get_block = get_block;
+  window.set_data = set_data;
   window.block_exists = block_exists;
   window.filter_nodes = filter_nodes;
   window.import_nodes = import_nodes;
@@ -3284,4 +4179,4 @@ document.addEventListener('DOMContentLoaded', () => {
   window.drawflow_select = drawflow_select;
   window.drawflow_receiver = drawflow_receiver;
   window.drawflow_initializer = drawflow_initializer;
-});
+};

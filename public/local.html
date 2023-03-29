@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' blob: https://api.github.com/repos/Arubinu/Scripts-Manager/releases/latest; script-src 'self'; style-src 'self'; frame-src 'self'" />
+
+    <title>Scripts Manager</title>
+
+    <link rel="icon" type="image/png" href="./images/logo.png" />
+    <link rel="stylesheet" href="./css/styles.css" />
+
+    <script type="text/javascript" src="./js/enums.js"></script>
+    <script type="text/javascript" src="./js/store.js"></script>
+    <script type="text/javascript" src="./js/shared.js"></script>
+    <script type="text/javascript" src="./js/common.js"></script>
+    <script type="text/javascript" src="./js/local.js"></script>
+  </head>
+
+  <body class="is-fullheight">
+    <div class="loading">
+      <div>Loading ...</div>
+    </div>
+    <div class="disconnected is-hidden">
+      <div>Disconnected ...</div>
+    </div>
+    <div class="login has-text-centered">
+      <div class="field has-addons">
+        <div class="control is-expanded">
+          <input class="input has-text-centered is-two-thirds" type="password" placeholder="Password" />
+        </div>
+        <div class="control">
+          <a class="button is-dark">
+            OK
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="lateral-menu">
+      <div class="fas fa-angles-left minimize"></div>
+      <section class="hero is-info is-fullheight">
+        <div class="is-size-7 unminimize">
+          <i class="fas fa-angles-right"></i>
+          <i class="fas fa-angles-right"></i>
+          <i class="fas fa-angles-right"></i>
+        </div>
+        <div class="hero-body">
+          <aside class="menu">
+            <p class="menu-label">General</p>
+            <ul class="menu-list manager-list">
+              <li><a data-target="manager:settings">Settings</a></li>
+              <li><a data-target="manager:about" class="is-active">About</a></li>
+            </ul>
+            <p class="menu-label">Addons</p>
+            <ul class="menu-list addon-list"></ul>
+            <p class="menu-label">Scripts</p>
+            <ul class="menu-list script-list"></ul>
+          </aside>
+        </div>
+      </section>
+    </div>
+
+    <div class="content is-fullheight">
+      <iframe src="" scrolling="no"></iframe>
+    </div>
+  </body>
+
+</html>

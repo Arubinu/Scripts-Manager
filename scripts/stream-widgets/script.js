@@ -1,27 +1,35 @@
 const path = require('node:path'),
   uniqid = require('uniqid'),
   keyevents = require('node-global-key-listener').GlobalKeyboardListener,
-  { screen, BrowserWindow, ipcMain } = require('electron');
+  {
+    screen,
+    ipcMain,
+    BrowserWindow
+  } = require('electron'),
+  sm = require('./sm-comm');
 
-let win = null,
-  _edit = false,
-  _screen = 0,
-  _config = {},
-  _sender = null,
-  _default = {
-    settings: {
-      screen: 0
-    },
-    presets: {},
-    widgets: {}
-  };
+let comm = null,
+  intervals = {};
 
+
+// Basic methods
 function is_numeric(n) {
   return (!isNaN(parseFloat(n)) && isFinite(n));
 }
 
+function update_interface() {
+  const screens = screen.getAllDisplays();
+
+  comm.send('manager', 'interface', 'config', false, this.config);
+  comm.send('manager', 'interface', 'screens', false, screens.length);
+}
+
+function save_config() {
+  comm.send('manager', 'config', 'override', false, this.config);
+}
+
 function create_window() {
-  win = new BrowserWindow({
+  this.win = new BrowserWindow({
     show: false,
     width: 1920,
     height: 1080,
@@ -35,91 +43,117 @@ function create_window() {
     transparent: true,
     titleBarStyle: 'hidden',
     webPreferences: {
-      preload: path.join(__dirname, 'widgets', 'preload.js')
+      partition: 'stream-widgets',
+      nodeIntegrationInWorker: false,
+      preload: path.join(__dirname, 'window', 'preload.js')
     }
   });
 
-  _screen = _config.settings.screen;
-  next_screen(_screen);
+  this.screen.call(this, false, false, [false, this.config.settings.screen, true]);
 
-  win.setMenu(null);
-  win.setIgnoreMouseEvents(true);
-  win.loadFile(path.join(__dirname, 'widgets', 'index.html')).then(() => {
-    ipcMain.handle('edit', (event, data) => {
-      if (typeof _config.widgets[data.id] !== 'undefined') {
-        let widget = JSON.parse(_config.widgets[data.id]);
-        for (const attr of ['x', 'y', 'width', 'height']) {
-          if (typeof data[attr]  !== 'undefined') {
-            widget[attr] = data[attr];
+  this.win.setMenu(null);
+  this.win.setIgnoreMouseEvents(true);
+  this.win.loadFile(path.join(__dirname, 'window', 'index.html')).then(() => {
+    if (!this.init) {
+      this.init = true;
+      ipcMain.handle('edit', (event, data) => {
+        if (typeof this.config.widgets[data.id] !== 'undefined') {
+          let widget = JSON.parse(this.config.widgets[data.id]);
+          for (const attr of ['x', 'y', 'width', 'height']) {
+            if (typeof data[attr]  !== 'undefined') {
+              widget[attr] = data[attr];
+            }
           }
+
+          this.config.widgets[data.id] = JSON.stringify(widget);
+          comm.send('manager', 'interface', 'add', false, { id: data.id, widget: this.config.widgets[data.id] });
+          save_config.call(this);
         }
-
-        _config.widgets[data.id] = JSON.stringify(widget);
-        _sender('message', 'add', { id: data.id, widget: _config.widgets[data.id] });
-        save_config();
-      }
-    });
-
-    for (const widget_index in _config.widgets) {
-      const widget = JSON.parse(_config.widgets[widget_index]);
-      win.webContents.send('add', { id: widget_index, widget });
+      });
     }
 
-    //win.webContents.openDevTools();
-    win.webContents.send('enabled', _config.default.enabled);
-    win.setAlwaysOnTop(true, 'screen-saver');
-    win.setVisibleOnAllWorkspaces(true);
-    win.show();
+    for (const widget_index in this.config.widgets) {
+      const widget = JSON.parse(this.config.widgets[widget_index]);
+      this.win.webContents.send('add', { id: widget_index, widget });
+    }
+    this.win.webContents.send('enabled', this.config.default.enabled);
+    this.win.setAlwaysOnTop(true, 'screen-saver');
+    this.win.setVisibleOnAllWorkspaces(true);
+    this.win.show();
   });
-  setInterval(() => {
-    if (_config.default.enabled) {
+
+  if (intervals.top) {
+    clearInterval(intervals.top);
+  }
+
+  intervals.top = setInterval(() => {
+    if (this.config.default.enabled && this.win) {
       try {
-        win.setAlwaysOnTop(true, 'screen-saver');
-        win.setVisibleOnAllWorkspaces(true);
+        this.win.setSkipTaskbar(true);
+        this.win.setAlwaysOnTop(true, 'screen-saver');
+        this.win.setVisibleOnAllWorkspaces(true);
       } catch (e) {}
     }
   }, 100);
-}
 
-function update_interface() {
-  const screens = screen.getAllDisplays();
-
-  _sender('message', 'config', _config);
-  _sender('message', 'screens', screens.length);
-}
-
-function save_config() {
-  _sender('manager', 'config:override', _config);
-}
-
-function next_screen(index) {
-  const screens = screen.getAllDisplays();
-  if (typeof index === 'undefined') {
-    _screen = ((_screen + 1) % screens.length);
-    _config.settings.screen = _screen;
-  } else {
-    _screen = ((index < screens.length) ? index : 0);
+  if (intervals.screens) {
+    clearInterval(intervals.screens);
   }
 
-  const bounds = screens[_screen].bounds;
-  win.setPosition(bounds.x, bounds.y);
-  win.setMinimumSize(bounds.width, bounds.height); // fix
-  win.setSize(bounds.width, bounds.height);
+  let screens = screen.getAllDisplays().length,
+    timeout = 0;
 
-  win.webContents.send('flash');
+  intervals.screens = setInterval(() => {
+    if (this.config.default.enabled && this.win) {
+      let tmp = screen.getAllDisplays().length;
+      if (tmp !== screens) {
+        clearTimeout(timeout);
+
+        screens = tmp;
+        timeout = setTimeout(() => {
+          this.screen.call(this, false, false, []);
+        }, 5000);
+      }
+    }
+  }, 1000);
+}
+
+function update_menu() {
+  comm.send('manager', 'menu', 'set', false, [{
+    label: 'Edit Mode',
+    type: 'checkbox',
+    checked: !!this.edit,
+    click : () => {
+      if (this.config.default.enabled && this.win) {
+        this.edit = !this.edit;
+        update_menu.call(this);
+        this.win.setIgnoreMouseEvents(!this.edit);
+        this.win.webContents.send('edit', this.edit);
+      }
+    }
+  }, {
+    label: 'Next Screen',
+    click : () => {
+      this.screen.call(this, false, false, [true]);
+      update_interface.call(this);
+      save_config.call(this);
+    }
+  }]);
 }
 
 function edit_widget(name, callback) {
-  for (const id in _config.widgets) {
-    const widget = JSON.parse(_config.widgets[id]);
+  for (const id in this.config.widgets) {
+    const widget = JSON.parse(this.config.widgets[id]);
     if (widget.name === name) {
       callback(widget);
 
-      _config.widgets[id] = JSON.stringify(widget);
-      win.webContents.send('add', { id, widget });
+      this.config.widgets[id] = JSON.stringify(widget);
+      if (this.win) {
+        this.win.webContents.send('add', { id, widget });
+      }
 
-      update_interface();
-      save_config();
+      update_interface.call(this);
+      save_config.call(this);
 
       break;
     }
@@ -127,106 +161,169 @@ function edit_widget(name, callback) {
 }
 
 
-module.exports = {
-  init: (origin, config, sender) => {
-    _sender = sender;
-    _config = config;
+// Shared methods
+class Shared {
+  win = null;
+  edit = false;
+  init = false;
+  default = {
+    settings: {
+      screen: 0
+    },
+    presets: {},
+    widgets: {}
+  };
 
-    for (const section in _default) {
-      if (typeof _config[section] !== 'object') {
-        _config[section] = {};
+  constructor(config, vars) {
+    this.vars = vars;
+    this.config = config;
+
+    for (const section in this.default) {
+      if (typeof this.config[section] !== 'object') {
+        this.config[section] = {};
       }
 
-      for (const name in _default[section]) {
-        const config_value = _config[section][name];
-        const default_value = _default[section][name];
+      for (const name in this.default[section]) {
+        const config_value = this.config[section][name];
+        const default_value = this.default[section][name];
         const config_type = typeof config_value;
         const default_type = typeof default_value;
         if (config_type !== default_type) {
           if (default_type === 'number' && config_type === 'string' && is_numeric(config_value)) {
-            _config[section][name] = parseFloat(config_value);
+            this.config[section][name] = parseFloat(config_value);
           } else {
-            _config[section][name] = default_value;
+            this.config[section][name] = default_value;
           }
         }
       }
     }
-  },
-  initialized: () => {
-    _sender('manager', 'menu', [ { label: 'Edit Mode', click : () => {
-      if (_config.default.enabled) {
-        _edit = true;
-        win.setIgnoreMouseEvents(!_edit);
-        win.webContents.send('edit', _edit);
-      }
-    } }, { label: 'Next Screen', click : () => {
-      next_screen();
-      update_interface();
-      save_config();
-    } }]);
 
     (new keyevents()).addListener(event => {
       if (event.name === 'ESCAPE' && event.state === 'DOWN') {
-        _edit = false;
-        win.setIgnoreMouseEvents(!_edit);
-        win.webContents.send('edit', _edit);
+        this.edit = false;
+        update_menu.call(this);
+        if (this.win) {
+          this.win.setIgnoreMouseEvents(!this.edit);
+          this.win.webContents.send('edit', this.edit);
+        }
       }
     });
 
-    create_window();
-  },
-  receiver: (id, name, data) => {
-    if (id === 'manager') {
-      if (name === 'show') {
-        update_interface();
-      } else if (name === 'enabled') {
-        _config.default.enabled = data;
-        win.webContents.send('enabled', _config.default.enabled);
-      }
-    } else if (name === 'websocket') {
-      if (typeof data === 'object' && data.target === 'stream-widgets') {
-        if (data.name === 'toggle-widget' && typeof data.data === 'object' && typeof data.data.name === 'string') {
-          edit_widget(data.data.name, widget => {
-            widget.hide = (typeof data.data.state === 'boolean') ? !data.data.state : !widget.hide;
-          });
-        } else if (data.name === 'replace-url' && typeof data.data === 'object' && typeof data.data.name === 'string' && typeof data.data.url === 'string') {
-          edit_widget(data.data.name, widget => {
-            widget.url = data.data.url;
-          });
-        } else if (data.name === 'next-screen') {
-          next_screen();
-          update_interface();
-          save_config();
-        }
-      }
-    }
-
-    if (id === 'message') {
-      if (typeof data === 'object') {
-        const name = Object.keys(data)[0];
-
-        if (name === 'create') {
-          const id = uniqid();
-          _config.widgets[id] = data[name].widget;
-          win.webContents.send('add', { id, widget: JSON.parse(_config.widgets[id]) });
-          _sender('message', 'add', { id, widget: _config.widgets[id] });
-        } else if (name === 'update') {
-          const id = data[name].id;
-          _config.widgets[id] = data[name].widget;
-          win.webContents.send('add', { id, widget: JSON.parse(_config.widgets[id]) });
-        } else if (name === 'delete') {
-          const id = data[name].id;
-          delete _config.widgets[id];
-          win.webContents.send('remove', { id });
-        } else if (typeof data[name] === typeof _config.settings[name]) {
-          _config.settings[name] = data[name];
-        }
-        save_config();
-
-        if (name === 'screen') {
-          next_screen(data.screen);
-        }
-      }
+    update_menu.call(this);
+    if (this.config.default.enabled) {
+      create_window.call(this);
     }
   }
+
+  async show(id, property, data) {
+    if (data) {
+      update_interface.call(this);
+    }
+  }
+
+  async enable(id, property, data) {
+    this.config.default.enabled = data;
+    if (this.config.default.enabled && !this.win) {
+      create_window.call(this);
+    } else if (!this.config.default.enabled && this.win) {
+      this.win.destroy();
+      this.win = null;
+    }
+  }
+
+  async interface(id, property, data) {
+    if (property === 'create') {
+      const id = uniqid();
+      this.config.widgets[id] = data.widget;
+      if (this.win) {
+        this.win.webContents.send('add', { id, widget: JSON.parse(this.config.widgets[id]) });
+      }
+
+      comm.send('manager', 'interface', 'add', false, { id, widget: this.config.widgets[id] });
+    } else if (property === 'refresh') {
+      const id = data.id;
+      if (this.win) {
+        this.win.webContents.send('refresh', { id });
+      }
+    } else if (property === 'update') {
+      const id = data.id;
+      this.config.widgets[id] = data.widget;
+      if (this.win) {
+        this.win.webContents.send('add', { id, widget: JSON.parse(this.config.widgets[id]) });
+      }
+    } else if (property === 'delete') {
+      const id = data.id;
+      delete this.config.widgets[id];
+      if (this.win) {
+        this.win.webContents.send('remove', { id });
+      }
+    } else if (typeof data === typeof this.config.settings[property]) {
+      this.config.settings[property] = data;
+    }
+    save_config.call(this);
+
+    if (property === 'screen') {
+      this.screen.call(this, false, false, [false, data]);
+    }
+  }
+
+  async websocket(id, property, data) {
+    if (property === 'toggle-widget' && typeof data.name === 'string') {
+      edit_widget.call(this, data.name, widget => {
+        widget.hide = (typeof data.state === 'boolean') ? !data.state : !widget.hide;
+      });
+    } else if (property === 'replace-url' && typeof data.name === 'string' && typeof data.url === 'string') {
+      edit_widget.call(this, data.name, widget => {
+        widget.url = data.url;
+      });
+    } else if (property === 'next-screen') {
+      this.screen.call(this, false, false, [true]);
+      update_interface.call(this);
+      save_config.call(this);
+    }
+  }
+
+  async screen(id, property, data) {
+    let index = data[1];
+    const [next, _, no_flash] = data;
+    if (['undefined', 'number'].indexOf(typeof index) < 0) {
+      throw new TypeError('please specify a screen number or leave it blank');
+    }
+
+    const screens = screen.getAllDisplays();
+    if (typeof index !== 'number') {
+      index = this.config.settings.screen;
+    }
+
+    if (index < 0 || index >= screens.length) {
+      index = 0;
+    }
+
+    if (next) {
+      index = (index + 1) % screens.length;
+    }
+
+    this.config.settings.screen = index;
+    if (this.win) {
+      const bounds = screens[index].bounds;
+      this.win.setPosition(bounds.x, bounds.y);
+      this.win.setMinimumSize(bounds.width, bounds.height); // fix
+      this.win.setSize(bounds.width, bounds.height);
+
+      if (!no_flash) {
+        this.win.webContents.send('flash');
+      }
+    }
+
+    return this.config.settings.screen;
+  }
+}
+
+module.exports = sender => {
+  comm = new sm(Shared, sender);
+  return {
+    receive: (data) => {
+      return comm.receive(data);
+    }
+  };
 };

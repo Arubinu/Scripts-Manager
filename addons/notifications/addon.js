@@ -3,25 +3,16 @@ const fs = require('node:fs'),
   https = require('node:https'),
   StreamTransform = require('node:stream').Transform,
   temp = require('temp'),
-  notifications = require('electron-custom-notifications');
+  notifications = require('electron-custom-notifications'),
+  sm = require('./sm-comm');
 
 const PATH_ICON = path.join(__dirname, '..', '..', 'public', 'images', 'logo.png'),
   BASE64_ICON = fs.readFileSync(PATH_ICON, 'base64');
 
-let _config = {},
-  _screen = 0,
-  _sender = null,
-  _timeout = 0,
-  _default = {
-    settings: {
-      round: 0,
-      scale: 100,
-      anchor: ['bottom', 'right'],
-      screen: 0,
-      opacity: 100
-    }
-  };
+let comm = null;
 
+
+// Basic methods
 function is_numeric(n) {
   return (!isNaN(parseFloat(n)) && isFinite(n));
 }
@@ -29,32 +20,20 @@ function is_numeric(n) {
 function update_interface() {
   const screens = notifications.getScreens();
 
-  _sender('message', 'config', _config);
-  _sender('message', 'screens', screens.length);
+  comm.send('manager', 'interface', 'config', false, this.config);
+  comm.send('manager', 'interface', 'screens', false, screens.length);
 }
 
 function save_config() {
-  set_style();
-  _sender('manager', 'config:override', _config);
-}
-
-function next_screen(index) {
-  const screens = notifications.getScreens();
-  if (typeof index === 'undefined') {
-    _screen = ((_screen + 1) % screens.length);
-    _config.settings.screen = _screen;
-  } else {
-    _screen = ((index < screens.length) ? index : 0);
-  }
-
-  notifications.setScreen(_screen);
+  set_style.call(this);
+  comm.send('manager', 'config', 'override', false, this.config);
 }
 
 function set_style() {
-  const round = (Math.max(0, Math.min(100, _config.settings.round)) * .5).toFixed(0),
-    scale = (Math.max(0, Math.min(100, _config.settings.scale)) / 100).toFixed(2).replace('.00', ''),
-    anchor = _config.settings.anchor.join(' '),
-    opacity = (Math.max(0, Math.min(100, _config.settings.opacity)) / 100).toFixed(2).replace('.00', '');
+  const round = (Math.max(0, Math.min(100, this.config.settings.round)) * .5).toFixed(0),
+    scale = (Math.max(0, Math.min(100, this.config.settings.scale)) / 100).toFixed(2).replace('.00', ''),
+    anchor = this.config.settings.anchor.join(' '),
+    opacity = (Math.max(0, Math.min(100, this.config.settings.opacity)) / 100).toFixed(2).replace('.00', '');
 
   if (anchor.indexOf('left') >= 0) {
     notifications.toLeft();
@@ -117,15 +96,11 @@ function load_file(name, data) {
   });
 }
 
-const functions = {
-  GetScreens: async () => {
-    return notifications.getScreens();
-  },
-  SetScreen: async index => {
-    next_screen(index);
-  },
-  ShowNotification: async (message, title, icon, timeout) => {
-    if (_config.default.enabled && message.length) {
+
+// Additional methods
+class Additional {
+  static async ShowNotification(message, title, icon, timeout) {
+    if (message.length) {
       if (icon) {
         if (icon.indexOf('://') >= 0) {
           icon = await load_file('icon', icon);
@@ -148,131 +123,194 @@ const functions = {
       });
     }
   }
-};
+}
 
 
-module.exports = {
-  init: (origin, config, sender, vars) => {
-    _sender = sender;
-    _config = config;
+// Shared methods
+class Shared {
+  timeout = 0;
+  default = {
+    settings: {
+      round: 0,
+      scale: 100,
+      anchor: ['bottom', 'right'],
+      screen: 0,
+      opacity: 100
+    }
+  };
 
-    for (const section in _default) {
-      if (typeof _config[section] !== 'object') {
-        _config[section] = {};
+  constructor(config, vars) {
+    this.vars = vars;
+    this.config = config;
+
+    for (const section in this.default) {
+      if (typeof this.config[section] !== 'object') {
+        this.config[section] = {};
       }
 
-      for (const name in _default[section]) {
-        const config_value = _config[section][name];
-        const default_value = _default[section][name];
+      for (const name in this.default[section]) {
+        const config_value = this.config[section][name];
+        const default_value = this.default[section][name];
         const config_type = typeof config_value;
         const default_type = typeof default_value;
         if (config_type !== default_type) {
           if (default_type === 'number' && config_type === 'string' && is_numeric(config_value)) {
-            _config[section][name] = parseFloat(config_value);
+            this.config[section][name] = parseFloat(config_value);
           } else {
-            _config[section][name] = default_value;
+            this.config[section][name] = default_value;
           }
         }
       }
     }
 
-    set_style();
+    set_style.call(this);
     notifications.setContainerWidth(350);
     notifications.setDefaultTemplate(`
-<notification id="%id%" class="animated fadeInUp">
-  <div class="logo" style="background-image: url('data:image/png;base64,%logo%');"></div>
-  <div class="content">
-    <h1>%title%</h1>
-    <p>%body%</p>
-  </div>
-</notification>`);
+  <notification id="%id%" class="animated fadeInUp">
+    <div class="logo" style="background-image: url('data:image/png;base64,%logo%');"></div>
+    <div class="content">
+      <h1>%title%</h1>
+      <p>%body%</p>
+    </div>
+  </notification>`);
 
-    _screen = _config.settings.screen;
-    next_screen(_screen);
-  },
-  initialized: () => {
-    _sender('manager', 'menu', [
+    this.screen.call(this, false, false, [false, this.config.settings.screen]);
+
+    comm.send('manager', 'menu', 'set', false, [
       { label: 'Next Screen', click : () => {
-        next_screen();
-        update_interface();
-        save_config();
+        this.screen.call(this, false, false, [true]);
+        update_interface.call(this);
+        save_config.call(this);
 
-        functions.ShowNotification(`Screen: ${_screen + 1}`, 'Screen change');
+        if (this.config.default.enabled) {
+          Additional.ShowNotification(`Screen: ${this.config.settings.screen + 1}`, 'Screen change');
+        }
       } }
     ]);
-  },
-  receiver: async (id, name, data) => {
-    if (id === 'manager') {
-      if (name === 'show') {
-        update_interface();
-      } else if (name === 'enabled') {
-        _config.default.enabled = data;
-      }
 
-      return;
-    } else if (id === 'message') {
-      if (typeof data === 'object') {
-        const name = Object.keys(data)[0];
-        if (typeof data[name] === typeof _config.settings[name]) {
-          _config.settings[name] = data[name];
-        }
-        save_config();
+    let screens = notifications.getScreens().length,
+      timeout = 0;
 
-        if (name === 'screen') {
-          next_screen(data.screen);
+    setInterval(() => {
+      if (this.config.default.enabled && this.win) {
+        let tmp = notifications.getScreens().length;
+        if (tmp !== screens) {
+          clearTimeout(timeout);
 
-          if (_config.default.enabled) {
-            functions.ShowNotification(`Screen: ${_screen + 1}`, 'Screen change');
-          }
-        } else if (_config.default.enabled) {
-          clearTimeout(_timeout);
-          _timeout = setTimeout(() => {
-            functions.ShowNotification(`${name[0].toUpperCase() + name.substring(1)}: ${Array.isArray(data[name]) ? data[name].join(' ') : data[name]}`, 'Notification settings');
-          }, 2000 );
+          screens = tmp;
+          timeout = setTimeout(() => {
+            this.screen.call(this, false, false, []);
+          }, 5000);
         }
       }
+    }, 1000);
+  }
 
-      return;
-    } else if (id === 'methods') {
-      if (name === 'websocket') {
-        if (typeof data === 'object' && data.target === 'notifications') {
-          if (data.name === 'corner') {
-            const anchors = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
+  async show(id, property, data) {
+    if (data) {
+      update_interface.call(this);
+    }
+  }
 
-            let anchor = '';
-            if (data.data && anchors.indexOf(data.data) >= 0) {
-              anchor = data.data;
-              _config.settings.anchor = data.data.split('-');
-            } else {
-              if (Array.isArray(_config.settings.anchor)) {
-                anchor = _config.settings.anchor.join('-');
-              }
+  async enable(id, property, data) {
+    this.config.default.enabled = data;
+  }
 
-              const pos = anchors.indexOf(anchor) + 1;
-              _config.settings.anchor = anchors[pos % anchors.length].split('-');
-            }
+  async interface(id, property, data) {
+    if (typeof data === typeof this.config.settings[property]) {
+      this.config.settings[property] = data;
+    }
+    save_config.call(this);
 
-            update_interface();
-            save_config();
-          } else if (data.name === 'next-screen') {
-            next_screen();
-            update_interface();
-            save_config();
-          }
+    if (property === 'screen') {
+      this.screen.call(this, false, false, [false, data.screen]);
+
+      if (this.config.default.enabled) {
+        Additional.ShowNotification(`Screen: ${this.config.settings.screen + 1}`, 'Screen change');
+      }
+    } else if (this.config.default.enabled) {
+      clearTimeout(this.timeout);
+      this.timeout = setTimeout(() => {
+        if (this.config.default.enabled) {
+          Additional.ShowNotification(`${property[0].toUpperCase() + property.substring(1)}: ${Array.isArray(data) ? data.join(' ') : data}`, 'Notification settings');
         }
+      }, 2000 );
+    }
+  }
+
+  async websocket(id, property, data) {
+    console.log('websocket notifications:', { property, data });
+    if (property === 'corner') {
+      const anchors = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
+
+      let anchor = '';
+      if (typeof data === 'string' && anchors.indexOf(data) >= 0) {
+        anchor = data;
+        this.config.settings.anchor = data.split('-');
+      } else {
+        if (Array.isArray(this.config.settings.anchor)) {
+          anchor = this.config.settings.anchor.join('-');
+        }
+
+        const pos = anchors.indexOf(anchor) + 1;
+        this.config.settings.anchor = anchors[pos % anchors.length].split('-');
       }
 
-      return;
+      update_interface.call(this);
+      save_config.call(this);
+    } else if (property === 'next-screen') {
+      this.screen.call(this, false, false, [true]);
+      update_interface.call(this);
+      save_config.call(this);
+    }
+  }
+
+  async create(id, property, data) {
+    return await Additional.ShowNotification(...data);
+  }
+
+  async screen(id, property, data) {
+    let index = data[1];
+    const next = data[0];
+    if (['undefined', 'number'].indexOf(typeof index) < 0) {
+      throw new TypeError('please specify a screen number or leave it blank');
     }
 
-    if (_config.default.enabled) {
-      if (typeof functions[name] === 'function') {
-        if (Array.isArray(data) && data.length) {
-          return await functions[name](...data);
-        } else {
-          return await functions[name]();
-        }
+    const screens = notifications.getScreens();
+    if (typeof index !== 'number') {
+      index = this.config.settings.screen;
+    }
+
+    if (index < 0 || index >= screens.length) {
+      index = 0;
+    }
+
+    if (next) {
+      index = (index + 1) % screens.length;
+    }
+
+    this.config.settings.screen = index;
+    notifications.setScreen(this.config.settings.screen);
+
+    return this.config.settings.screen;
+  }
+
+  async call(id, property, data) {
+    if (this.config.default.enabled) {
+      if (Array.isArray(data) && data.length) {
+        return await Additional[property](...data);
+      } else {
+        return await Additional[property]();
       }
     }
   }
+}
+
+module.exports = sender => {
+  comm = new sm(Shared, sender);
+  return {
+    receive: (data) => {
+      return comm.receive(data);
+    }
+  };
 };

@@ -1,0 +1,82 @@
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+.is-selected {
+  background-color: rgba(0, 0, 0, .5) !important;
+}
+.is-narrow,
+.is-narrow-top {
+  border-top: 1px solid #555;
+}
+.is-narrow,
+.is-narrow-bottom {
+  border-bottom: 1px solid #555;
+}
+
+.widgets > div {
+  padding: .7em 1em;
+  cursor: pointer;
+}
+.widgets > div:hover {
+  background-color: rgba(255, 255, 255, .3);
+}
+
+.anchor-column {
+  margin: auto;
+  width: 165px;
+  height: 175px;
+  min-width: 165px;
+  max-width: 165px;
+}
+
+.anchor {
+  overflow: visible;
+  position: relative;
+  width: 100px;
+  height: 100px;
+  background-color: rgb(102, 102, 102);
+}
+.anchor > div {
+  position: absolute;
+  width: calc(8px * 2);
+  height: calc(8px * 2);
+  background-color: rgb(200, 200, 200);
+  border: 2px solid rgba(255, 255, 255, .5);
+  cursor: pointer;
+}
+.anchor > div.is-selected {
+  outline: 2px solid rgba(255, 255, 255, .5);
+  border: none;
+}
+.anchor > .top,
+.anchor > .top-left,
+.anchor > .top-right {
+  top: -8px;
+}
+.anchor > .right,
+.anchor > .top-right,
+.anchor > .bottom-right {
+  right: -8px;
+}
+.anchor > .bottom,
+.anchor > .bottom-left,
+.anchor > .bottom-right {
+  bottom: -8px;
+}
+.anchor > .left,
+.anchor > .top-left,
+.anchor > .bottom-left {
+  left: -8px;
+}
+.anchor > .left,
+.anchor > .right,
+.anchor > .middle {
+  top: calc(50% - 8px);
+}
+.anchor > .top,
+.anchor > .bottom,
+.anchor > .middle {
+  left: calc(50% - 8px);
+}

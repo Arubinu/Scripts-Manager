@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'" />
+
+    <title>Voicemeeter</title>
+
+    <link id="config_stylesheet" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <p class="subtitle is-size-6 has-text-white-ter">Links to Voicemeeter for scripts that require this feature.</p>
+          <p class="subtitle is-size-7 has-text-white-ter">If the connection is not made while Voicemeeter is launched, restart Scripts Manager</p>
+        </div>
+      </section>
+    </div>
+
+    <script type="text/javascript">
+      window.addEventListener('message', _event => {
+        const { to, event, name, method, property, data } = _event.data;
+        if (event.origin !== 'null' && to === 'interface') {
+          if (property === 'config') {
+            const _config = data;
+          }
+        }
+      }, false);
+    </script>
+  </body>
+
+</html>

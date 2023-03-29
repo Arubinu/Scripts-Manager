@@ -1,0 +1,124 @@
+#template {
+  display: none;
+}
+
+.profiles {
+  position: fixed;
+  top: calc(20px + (2 * 24px));
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+}
+
+.add_profile {
+  opacity: .6;
+}
+
+.add_profile > div,
+body.edit .profile > div {
+  position: relative;
+  outline: 2px dashed rgba(255, 255, 255, .2);
+}
+body.edit .profile .delete,
+body.edit .profile figure:hover > .cross:not(.is-hidden) {
+  display: block !important;
+}
+body:not(.edit) .add_profile {
+  display: none;
+}
+
+.profile.is-selected {
+  background-color: transparent;
+}
+.profile > div,
+.add_profile > div,
+.profile figure > img,
+.profile figure > .fas,
+.add_profile figure > .fas {
+  border-radius: 8px;
+  cursor: pointer;
+}
+.profile > div,
+.add_profile > div {
+  width: 150px;
+}
+.profile.is-current > div {
+  background-color: #949494 !important;
+}
+.profile.is-selected > div {
+  background-color: #0f81cc !important;
+}
+.profile figure,
+.add_profile figure {
+  position: relative;
+  width: 150px;
+  height: 150px;
+}
+.profile figure > .fas,
+.add_profile figure > .fas {
+  padding-top: 10px;
+  width: 150px;
+  height: 150px;
+  font-size: 130px;
+  text-align: center;
+}
+.add_profile figure > .fas.fa-plus {
+  padding-top: 30px;
+  font-size: 90px;
+}
+.profile figure > .fas.fa-file-import {
+  padding-top: 30px;
+  padding-right: 10px;
+  font-size: 90px;
+}
+.profile figure > .cross {
+  display: none;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  opacity: .5;
+  z-index: 1;
+  pointer-events: none;
+}
+.profile .name,
+.add_profile .name {
+  overflow: hidden;
+  width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  cursor: pointer;
+}
+.profile .name:not([readonly]) {
+  cursor: text;
+}
+.profile .delete {
+  position: absolute;
+  display: none;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  max-width: initial;
+  max-height: initial;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 21px;
+  color: rgb(50, 50, 50);
+  background: #4ea9ff;
+  border: 2px solid #4ea9ff;
+  border-radius: 50%;
+  box-shadow: none;
+  cursor: pointer;
+  z-index: 1;
+}
+.profile .delete::after,
+.profile .delete::before {
+  background: transparent;
+}

@@ -5,6 +5,13 @@
   --background-box-title: rgb(54, 59, 61);
 }
 
+.outputs > .output_2 {
+  background-color: #ff7979 !important;
+}
+.connection.output_2 > .main-path:not(.selected) {
+  stroke: #ff7979;
+}
+
 .drawflow .drawflow-node {
   background: var(--background-color);
   border: 1px solid var(--border-color);
@@ -193,4 +200,175 @@
 
 .drawflow .connection .point.selected, .drawflow .connection .point:hover {
   fill: #4ea9ff;
+}
+
+/* custom */
+.drawflow {
+  background-color: #363636;
+  outline: 2px dashed rgba(255, 255, 255, .65);
+}
+
+.drawflow-node.block-note {
+  padding: 0 12px !important;
+  width: auto !important;
+  text-align: center;
+  background-color: rgba(255, 255, 255, .15) !important;
+  border: none !important;
+  border-radius: 15px !important;
+  box-shadow: 0 0px 3px 2px rgba(255, 255, 255, .15) !important;
+  z-index: 6 !important;
+}
+.drawflow-node.block-note [contenteditable] {
+  font-size: 1.3rem;
+  white-space: nowrap;
+  outline: none !important;
+  cursor: text;
+}
+
+.drawflow-node .title-box {
+  position: relative;
+  padding-right: 2rem !important;
+}
+.drawflow-node .title-box > .icons {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.drawflow-node .title-box > .icons .fas {
+  margin-right: .9rem;
+  cursor: pointer;
+}
+.drawflow-options {
+  display: none;
+  position: fixed;
+  top: 3rem;
+  left: 3rem;
+  min-width: 8rem;
+  background-color: rgb(34, 34, 34);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.drawflow-options > li {
+  padding: .2rem 1rem;
+  cursor: pointer;
+}
+.drawflow-options > li.top-separator {
+  border-top: 1px solid var(--border-color);
+}
+.drawflow-options > li.bottom-separator {
+  border-bottom: 1px solid var(--border-color);
+}
+.drawflow-options > li:hover {
+  background-color: rgba(255, 255, 255, .08);
+}
+.drawflow-options > li:first-child {
+  padding-top: .5rem;
+}
+.drawflow-options > li:last-child {
+  padding-bottom: .5rem;
+}
+.drawflow-options > li > .far,
+.drawflow-options > li > .fas {
+  float: right;
+  line-height: 1.5rem;
+  margin-left: 1rem;
+}
+
+.drag-drawflow.is-outputs,
+.drawflow-node .is-outputs .title-box {
+  position: relative;
+}
+.drag-drawflow.is-inputs::before,
+.drag-drawflow.is-outputs::before,
+.drawflow-node .is-inputs .title-box::before,
+.drawflow-node .is-outputs .title-box::before {
+  content: '';
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 10px;
+  height: calc(50px - 1px);
+  border-top-left-radius: 4px;
+}
+.drawflow-inputs-color,
+.drag-drawflow.is-inputs::before,
+.drawflow-node .is-inputs .title-box::before {
+  background-color: rgba(230, 126, 34, .7);
+}
+.drawflow-outputs-color,
+.drag-drawflow.is-outputs::before,
+.drawflow-node .is-outputs .title-box::before {
+  background-color: rgba(46, 204, 113, .7);
+}
+.drawflow-both-color,
+.drag-drawflow.is-inputs.is-outputs::before,
+.drawflow-node .is-inputs.is-outputs .title-box::before {
+  background-color: rgba(155, 89, 182, .7);
+}
+.drawflow-node .column:first-child input {
+  margin: 0px -10px 0px -20px;
+  width: calc(100% + (2 * 15px) + 1px);
+}
+.drawflow-node .column:not(:first-child) input {
+  margin: 0px -20px 0 -12px;
+  width: calc(100% + (2 * 15px) + 1px);
+}
+.drawflow-node .columns {
+  margin-bottom: 0px;
+}
+.drawflow-node .columns > .column {
+  padding-bottom: 0px;
+}
+.drawflow-node .columns.clear {
+  clear: both;
+}
+.drawflow-node .columns.clear > .column {
+  padding-top: .15rem;
+}
+.drawflow-node .column:first-child .is-browse button {
+  right: -10px;
+}
+.drawflow-node select > .optgroup {
+  font-weight: bold;
+  color: #aaa;
+  background-color: #555;
+}
+
+.blocks-drawflow {
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: fixed;
+  top: -100%;
+  right: 0px;
+  bottom: 100%;
+  left: 0px;
+  width: 100%;
+  min-height: calc(100% - 68px);
+  background-color: #555;
+  transition: all 500ms ease-in-out;
+  z-index: -1 !important;
+  transform: translate3d(0,0,0); /* fix */
+}
+.blocks-drawflow.lateral-blocks {
+  top: 68px;
+  right: -329px;
+  bottom: 100%;
+  left: unset;
+  width: 329px;
+  height: calc(100% - 68px);
+}
+.blocks-drawflow h5 {
+  background-color: rgba(0, 0, 0, .2);
+}
+.drag-drawflow::before {
+  height: 100% !important;
+  border-bottom-left-radius: 4px;
+}
+body.show-blocks .blocks-drawflow:not(.lateral-blocks) {
+  top: 68px;
+  bottom: 0px;
+}
+body.show-blocks .blocks-drawflow.lateral-blocks {
+  right: 0px;
 }

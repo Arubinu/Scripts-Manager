@@ -2,7 +2,8 @@ const path = require('node:path'),
   querystring = require('node:querystring'),
   spotify = require('spotify-web-api-node'),
   WebApiRequest = require(path.join(path.dirname(require.resolve('spotify-web-api-node')), 'webapi-request')),
-  HttpManager = require(path.join(path.dirname(require.resolve('spotify-web-api-node')), 'http-manager'));
+  HttpManager = require(path.join(path.dirname(require.resolve('spotify-web-api-node')), 'http-manager')),
+  sm = require('./sm-comm');
 
 const {
   client_id: CLIENT_ID,
@@ -10,10 +11,7 @@ const {
   scopes: SCOPES,
 } = require('./auth.json');
 
-let _vars = {},
-  _config = {},
-  _sender = null,
-  _refresh = false,
+let comm = null,
   instance = new spotify();
 
 instance.getQueue = function(callback) {
@@ -23,12 +21,14 @@ instance.getQueue = function(callback) {
     .execute(HttpManager.get, callback);
 };
 
+
+// Basic methods
 function update_interface() {
-  _sender('message', 'config', Object.assign({
+  comm.send('manager', 'interface', 'config', false, Object.assign({
     authorize: instance.createAuthorizeURL(SCOPES, ''),
-    redirect_url: `${_vars.http}/spotify/authorize`,
-    refresh: _refresh
-  }, _config));
+    redirect_url: `${this.vars.http}/spotify/authorize`,
+    refresh: this.refresh
+  }, this.config));
 }
 
 async function refresh_token(error) {
@@ -36,8 +36,8 @@ async function refresh_token(error) {
     if (error.body.error.message === 'The access token expired') {
       const data = await instance.refreshAccessToken();
 
-      _config.connection.access_token = data.body.access_token;
-      instance.setAccessToken(_config.connection.access_token);
+      this.config.connection.access_token = data.body.access_token;
+      instance.setAccessToken(this.config.connection.access_token);
 
       return true;
     }
@@ -46,29 +46,32 @@ async function refresh_token(error) {
   return false;
 }
 
-const functions = {
-  search: async function(track) {
+
+// Additional methods
+class Additional {
+  static async search(track) {
     try {
       const data = await instance.searchTracks(track);
       if (typeof data.body === 'object' && typeof data.body.tracks === 'object' && Array.isArray(data.body.tracks.items) && data.body.tracks.items.length) {
         return data.body.tracks.items;
       }
     } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.search(...arguments);
+      if (await refresh_token.call(this, e)) {
+        return Additional.search(...arguments);
       }
 
       throw e;
     }
-  },
-  addToQueue: async function(track, device) {
+  }
+
+  static async addToQueue(track, device) {
     try {
       if (!device) {
-        device = await functions.getActiveDevice();
+        device = await Additional.getActiveDevice();
       }
 
       if (track.indexOf('spotify:')) {
-        const tracks = await functions.search(track);
+        const tracks = await Additional.search(track);
         if (tracks.length) {
           return await instance.addToQueue(tracks[0].uri, { device_id: device && device.id });
         }
@@ -78,21 +81,22 @@ const functions = {
 
       return false;
     } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.addToQueue(...arguments);
+      if (await refresh_token.call(this, e)) {
+        return Additional.addToQueue(...arguments);
       }
 
       throw e;
     }
-  },
-  playNow: async function(track, device) {
+  }
+
+  static async playNow(track, device) {
     try {
       if (!device) {
-        device = await functions.getActiveDevice();
+        device = await Additional.getActiveDevice();
       }
       if (track) {
         if (track.indexOf('spotify:')) {
-          const tracks = await functions.search(track);
+          const tracks = await Additional.search(track);
           if (tracks.length) {
             return await instance.play({
               device_id: device && device.id,
@@ -111,44 +115,47 @@ const functions = {
 
       return false;
     } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.playNow(...arguments);
+      if (await refresh_token.call(this, e)) {
+        return Additional.playNow(...arguments);
       }
 
       throw e;
     }
-  },
-  pauseNow: async function(device) {
+  }
+
+  static async pauseNow(device) {
     try {
       if (!device) {
-        device = await functions.getActiveDevice();
+        device = await Additional.getActiveDevice();
       }
 
       return await instance.pause({ device_id: device && device.id });
     } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.pauseNow(...arguments);
+      if (await refresh_token.call(this, e)) {
+        return Additional.pauseNow(...arguments);
       }
 
       throw e;
     }
-  },
-  getDevices: async function() {
+  }
+
+  static async getDevices() {
     try {
       const data = await instance.getMyDevices();
 
       return data.body.devices;
     } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.getDevices(...arguments);
+      if (await refresh_token.call(this, e)) {
+        return Additional.getDevices(...arguments);
       }
 
       throw e;
     }
-  },
-  getActiveDevice: async function() {
+  }
+
+  static async getActiveDevice() {
     try {
-      const devices = await functions.getDevices();
+      const devices = await Additional.getDevices();
 
       if (devices.length >= 0) {
         for (const device of devices) {
@@ -160,69 +167,78 @@ const functions = {
         return devices[0];
       }
     } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.getActiveDevice(...arguments);
-      }
-
-      throw e;
-    }
-  },
-  getCurrentTrack: async function() {
-    try {
-      const data = await instance.getMyCurrentPlaybackState();
-      return data.body && data.body.item;
-    } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.getCurrentTrack(...arguments);
-      }
-
-      throw e;
-    }
-  },
-  isPlaying: async function() {
-    try {
-      const data = await instance.getMyCurrentPlaybackState();
-      return data.body && data.body.is_playing;
-    } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.isPlaying(...arguments);
-      }
-
-      throw e;
-    }
-  },
-  isShuffle: async function() {
-    try {
-      const data = await instance.getMyCurrentPlaybackState();
-
-      return data.body && data.body.shuffle_state;
-    } catch (e) {
-      if (await refresh_token(e)) {
-        return functions.isShuffle(...arguments);
+      if (await refresh_token.call(this, e)) {
+        return Additional.getActiveDevice(...arguments);
       }
 
       throw e;
     }
   }
-};
+
+  static async getCurrentTrack() {
+    try {
+      const data = await instance.getMyCurrentPlaybackState();
+      return data.body && data.body.item;
+    } catch (e) {
+      if (await refresh_token.call(this, e)) {
+        return Additional.getCurrentTrack(...arguments);
+      }
+
+      throw e;
+    }
+  }
+
+  static async isPlaying() {
+    try {
+      const data = await instance.getMyCurrentPlaybackState();
+      return data.body && data.body.is_playing;
+    } catch (e) {
+      if (await refresh_token.call(this, e)) {
+        return Additional.isPlaying(...arguments);
+      }
+
+      throw e;
+    }
+  }
+
+  static async isShuffle() {
+    try {
+      const data = await instance.getMyCurrentPlaybackState();
+
+      return data.body && data.body.shuffle_state;
+    } catch (e) {
+      if (await refresh_token.call(this, e)) {
+        return Additional.isShuffle(...arguments);
+      }
+
+      throw e;
+    }
+  }
+}
 
 
-module.exports = {
-  init: (origin, config, sender, vars) => {
-    _vars = vars;
-    _sender = sender;
-    _config = config;
+// Shared methods
+class Shared {
+  refresh = false;
 
-    instance.setRedirectURI(`${_vars.http}/spotify/authorize`);
-  },
-  initialized: () => {
-    instance.setClientId(_config.connection.client_id || CLIENT_ID);
-    instance.setClientSecret(_config.connection.client_secret || CLIENT_SECRET);
-    if (_config.connection.access_token) {
-      instance.setAccessToken(_config.connection.access_token);
+  constructor(config, vars) {
+    this.vars = vars;
+    this.config = config;
+
+    comm.send('method', 'http', 'register', false, [{
+      route: '/spotify/authorize',
+      code: 200,
+      type: 'text/html'
+    }]);
+
+    instance.setClientId(this.config.connection.client_id || CLIENT_ID);
+    instance.setClientSecret(this.config.connection.client_secret || CLIENT_SECRET);
+    instance.setRedirectURI(`${this.vars.http}/spotify/authorize`);
+    if (this.config.connection.access_token) {
+      instance.setAccessToken(this.config.connection.access_token);
 
       let scopes = {
-        saved: _config.connection.scopes,
+        saved: this.config.connection.scopes,
         current: SCOPES
       };
       scopes.current.sort();
@@ -231,99 +247,108 @@ module.exports = {
       }
 
       if (JSON.stringify(scopes.saved) !== JSON.stringify(scopes.current)) {
-        _refresh = true;
-        _sender('manager', 'state', 'warning');
+        this.refresh = true;
+        comm.send('manager', 'state', 'set', false, 'warning');
       }
     }
-    if (_config.connection.refresh_token) {
-      instance.setRefreshToken(_config.connection.refresh_token);
+
+    if (this.config.connection.refresh_token) {
+      instance.setRefreshToken(this.config.connection.refresh_token);
     }
-  },
-  receiver: async (id, name, data) => {
-    if (id === 'manager') {
-      if (name === 'show') {
-        update_interface();
-      } else if (name === 'enabled') {
-        _config.default.enabled = data;
-      }
+  }
 
-      return;
-    } else if (id === 'message') {
-      if (typeof data === 'object') {
-        const name = Object.keys(data)[0];
+  async show(id, property, data) {
+    if (data) {
+      update_interface.call(this);
+    }
+  }
 
-        if (typeof data[name] === typeof _config.connection[name]) {
-          _config.connection[name] = data[name];
+  async enable(id, property, data) {
+    this.config.default.enabled = data;
+  }
 
-          instance.setClientId(_config.connection.client_id || CLIENT_ID);
-          instance.setClientSecret(_config.connection.client_secret || CLIENT_SECRET);
-          instance.setAccessToken(_config.connection.access_token);
-          instance.setRefreshToken(_config.connection.refresh_token);
+  async interface(id, property, data) {
+    if (typeof data === typeof this.config.connection[property]) {
+      this.config.connection[property] = data;
 
-          update_interface();
-        }
-        _sender('manager', 'config', _config);
-      }
+      instance.setClientId(this.config.connection.client_id || CLIENT_ID);
+      instance.setClientSecret(this.config.connection.client_secret || CLIENT_SECRET);
+      instance.setAccessToken(this.config.connection.access_token);
+      instance.setRefreshToken(this.config.connection.refresh_token);
 
-      return;
-    } else if (id === 'methods') {
-      const url = '/spotify/authorize';
-
-      if (name === 'http' && data.req && data.req.url.split('?')[0] === url) {
-        const search = querystring.parse(data.req.url.split('?')[1]);
-
-        data.res.writeHead(200);
-        data.res.end(`<h1 style="font-family: sans-serif;">You can now close this page ...</h1>`);
-
-        if (typeof search.code === 'string') {
-          instance.authorizationCodeGrant(search.code).then(data => {
-            _config.connection.access_token = data.body.access_token;
-            _config.connection.refresh_token = data.body.refresh_token;
-            _config.connection.scopes = SCOPES;
-
-            instance.setAccessToken(_config.connection.access_token);
-            instance.setRefreshToken(_config.connection.refresh_token);
-
-            _refresh = false;
-            _sender('manager', 'state');
-            _sender('manager', 'config', _config);
-
-            update_interface();
-          }, err => {
-            console.log('Spotify: Something went wrong!', err);
-          });
-        }
-
-        return true;
-      }
-
-      return;
+      update_interface.call(this);
     }
 
-    if (typeof functions[name] === 'function') {
-      if (Array.isArray(data) && data.length) {
-        return await functions[name](...data);
+    comm.send('manager', 'config', 'save', false, this.config);
+  }
+
+  async http(id, property, data) {
+    if (data.register.route === '/spotify/authorize') {
+      const pos = Math.min(data.url.indexOf('?'), data.url.indexOf('&')),
+        search = querystring.parse(data.url.substr(pos + 1));
+
+      if (typeof search.code === 'string') {
+        instance.authorizationCodeGrant(search.code).then(data => {
+          this.config.connection.access_token = data.body.access_token;
+          this.config.connection.refresh_token = data.body.refresh_token;
+          this.config.connection.scopes = SCOPES;
+
+          instance.setAccessToken(this.config.connection.access_token);
+          instance.setRefreshToken(this.config.connection.refresh_token);
+
+          this.refresh = false;
+          comm.send('manager', 'state', 'unset');
+          comm.send('manager', 'config', 'save', false, this.config);
+
+          update_interface.call(this);
+          comm.send('done', undefined, 'response', false, { content: '<h1 style="font-family: sans-serif;">You can now close this page ...</h1>' }, id);
+        }, err => {
+          comm.send('done', undefined, 'response', false, { content: `<h1 style="font-family: sans-serif;">Something went wrong!</h1>${err}` }, id);
+        });
+
+        throw new Error('NO_RESPONSE');
       } else {
-        return await functions[name]();
-      }
-    } else if (typeof instance[name] === 'function') {
-      try {
-        if (Array.isArray(data) && data.length) {
-          return await instance[name](...data);
-        } else {
-          return await instance[name]();
-        }
-      } catch (e) {
-        if (await refresh_token(e)) {
-          if (Array.isArray(data) && data.length) {
-            return await instance[name](...data);
-          } else {
-            return await instance[name]();
-          }
-        }
-
-        throw e;
+        return { content: `<h1 style="font-family: sans-serif;">Something went wrong!</h1>` };
       }
     }
   }
+
+  async call(id, property, data) {
+    if (this.config.default.enabled) {
+      if (typeof Additional[property] === 'function') {
+        if (Array.isArray(data) && data.length) {
+          return await Additional[property].call(this, ...data);
+        } else {
+          return await Additional[property].call(this);
+        }
+      } else {
+        try {
+          if (Array.isArray(data) && data.length) {
+            return await instance[property](...data);
+          } else {
+            return await instance[property]();
+          }
+        } catch (e) {
+          if (await refresh_token.call(this, e)) {
+            if (Array.isArray(data) && data.length) {
+              return await instance[property](...data);
+            } else {
+              return await instance[property]();
+            }
+          }
+
+          throw e;
+        }
+      }
+    }
+  }
+}
+
+module.exports = sender => {
+  comm = new sm(Shared, sender);
+  return {
+    receive: (data) => {
+      return comm.receive(data);
+    }
+  };
 };

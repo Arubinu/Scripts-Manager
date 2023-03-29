@@ -1,0 +1,14 @@
+{
+  "name": "streamlabs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "addon.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Arubinu",
+  "license": "ISC",
+  "dependencies": {
+    "sockjs-client": "^1.6.1"
+  }
+}

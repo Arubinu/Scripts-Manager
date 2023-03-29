@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" />
+
+    <title>Guilded</title>
+
+    <link id="config_stylesheet" rel="stylesheet" />
+    <style type="text/css">
+      .has-cursor-pointer {
+        pointer-events: initial;
+        cursor: pointer !important;
+        z-index: 10;
+      }
+      .has-addons .button {
+        border-color: #444;
+      }
+      .table {
+        background-color: transparent;
+      }
+      .table:not(.show) {
+        display: none;
+      }
+      .table > tbody,
+      .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+        background-color: rgba(0, 0, 0, .2);
+      }
+      .table > thead > tr > th:first-child {
+        width: 175px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <section class="hero is-small has-background-grey-dark">
+        <div class="hero-body">
+          <p class="subtitle is-size-6 has-text-white-ter">Links to Streamlabs Desktop for scripts that require this feature.</p>
+        </div>
+      </section>
+
+      <div class="m-5">
+        <div class="field is-horizontal mt-2 mb-5 p-2">
+          <div class="field-label is-normal">
+            <label class="label">Token:</label>
+          </div>
+          <div class="field-body">
+            <div class="field token">
+              <div class="control ml-6 pl-6 has-icons-right">
+                <input class="input has-text-centered is-two-thirds" type="password" />
+                <span class="icon is-small is-right">
+                  <i class="fas fa-eye-slash has-cursor-pointer has-text-grey-lighter"></i>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <table class="table is-fullwidth is-striped mb-5">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script type="text/javascript">
+      let timeout = 0;
+
+        for (const name of ['token']) {
+          const elem = document.querySelector(`.${name} input`);
+          const callback = function(event) {
+            let data = {};
+            data[name] = elem.value;
+
+            window.parent.postMessage(data, '*');
+          };
+
+          elem.addEventListener('blur', callback);
+          elem.addEventListener('input', event => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+              window.parent.postMessage({ refresh: true }, '*');
+            }, 5000);
+          });
+        }
+
+      for (const elem of document.querySelectorAll('.fa-eye, .fa-eye-slash')) {
+        elem.addEventListener('click', event => {
+          const slash = event.target.matches('.fa-eye-slash');
+
+          event.target.classList.remove(slash ? 'fa-eye-slash' : 'fa-eye');
+          event.target.classList.add(slash ? 'fa-eye' : 'fa-eye-slash');
+
+          event.target.parentElement.previousElementSibling.setAttribute('type', (slash ? 'text' : 'password'));
+        });
+      }
+
+      window.addEventListener('message', _event => {
+        const { to, event, name, method, property, data } = _event.data;
+        if (event.origin !== 'null' && to === 'interface') {
+          if (property === 'config') {
+            const _config = data;
+
+            for (const name of ['token']) {
+              document.querySelector(`.${name} input`).value = _config.connection[name];
+            }
+          } else if (property === 'logs') {
+            if (data) {
+              const table = document.querySelector('.table > tbody');
+              const update = !Array.isArray(data);
+
+              if (update || data.length) {
+                table.parentElement.classList.add('show');
+              }
+
+              for (const row of (update ? [data] : data)) {
+                if (typeof row === 'undefined') {
+                  continue;
+                }
+
+                const tr = document.createElement('tr');
+                const date = document.createElement('td');
+                const type = document.createElement('td');
+
+                const cross = document.createElement('i');
+                cross.classList.add('fas', 'fa-xmark');
+
+                const columns = [date, type];
+                if (row.type.toLowerCase() === 'connectionopened') {
+                  columns.forEach(column => column.classList.add('is-info'));
+                } else if (row.type.toLowerCase() === 'connectionclosed') {
+                  columns.forEach(column => column.classList.add('is-danger'));
+                }
+
+                date.innerText = new Date(row.date).toLocaleDateString() + ' ' + new Date(row.date).toLocaleTimeString();
+                type.innerText = row.type;
+
+                tr.appendChild(date);
+                tr.appendChild(type);
+
+                table[update ? 'prepend' : 'appendChild'](tr);
+              }
+            }
+          }
+        }
+      }, false);
+    </script>
+  </body>
+
+</html>

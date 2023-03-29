@@ -185,10 +185,6 @@ ipcRenderer.on('flash', (event, data) => {
   setTimeout(() => { document.body.classList.add(data || 'flash'); }, 20);
 });
 
-ipcRenderer.on('enabled', (event, data) => {
-  document.body.classList.toggle('show', data);
-});
-
 ipcRenderer.on('add', (event, data) => {
   let widget = get_widget(data.id);
   if (!widget) {
@@ -245,6 +241,14 @@ ipcRenderer.on('add', (event, data) => {
   }
 
   update_widget(data.id);
+});
+
+ipcRenderer.on('refresh', (event, data) => {
+  if (typeof _widgets[data.id] !== 'undefined') {
+    _widgets[data.id].iframe.setAttribute('src', '');
+    _widgets[data.id].iframe.innerHTML = '';
+    _widgets[data.id].iframe.setAttribute('src', _widgets[data.id].url);
+  }
 });
 
 ipcRenderer.on('remove', (event, data) => {

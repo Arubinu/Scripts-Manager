@@ -183,6 +183,8 @@ function convert(obj) {
         keys = ['autoFulfill', 'backgroundColor', 'broadcasterDisplayName', 'broadcasterId', 'broadcasterName', 'cooldownExpiryDate', 'cost', 'globalCooldown', 'id', 'isEnabled', 'isInStock', 'isPaused', 'maxRedemptionsPerStream', 'maxRedemptionsPerUserPerStream', 'prompt', 'redemptionsThisStream', 'title', 'userInputRequired'];
       } else if (name === 'HelixChannel') {
         keys = ['delay', 'displayName', 'gameId', 'gameName', 'id', 'language', 'name', 'title'];
+      } else if (name === 'HelixClip') {
+        keys = ['broadcasterDisplayName', 'broadcasterId', 'creationDate', 'creatorDisplayName', 'creatorId', 'duration', 'embedUrl', 'gameId', 'id', 'language', 'thumbnailUrl', 'title', 'url', 'videoId', 'views', 'vodOffset'];
       } else if (name === 'HelixGame') {
         keys = ['boxArtUrl', 'id', 'name'];
       }
@@ -467,7 +469,7 @@ async function connect(clientId, accessToken, botAccessToken, callback) {
   });
 
   // Subscribes to events that represent a user following a channel.
-  ws_listeners.ChannelFollow = await ws_listener.onChannelFollow(channel.id, async e => {
+  ws_listeners.ChannelFollow = await ws_listener.onChannelFollow(channel.id, channel.id, async e => {
     callback(await get('Follow', null, null, null, {
       user: {
         id: e.userId,
@@ -1110,7 +1112,7 @@ async function disconnect() {
 
 async function exec(type, name, args) {
   let c = null;
-  name = name[0].toLowerCase() + name.substr(1);
+  name = name[0].toLowerCase() + name.substring(1);
 
   try {
     if (type === 'API') {
@@ -1237,7 +1239,7 @@ async function get(type, msg, message, user, merge) {
       display: msg.userInfo ? msg.userInfo.displayName : (msg.userDisplayName ? msg.userDisplayName : null)
     },
     color: msg.userInfo ? msg.userInfo.color : null,
-    message: is_command ? message.substr(1) : message,
+    message: is_command ? message.substring(1) : message,
     isCheer: msg.isCheer,
     isHighlight: msg.isHighlight,
     isRedemption: msg.isRedemption,

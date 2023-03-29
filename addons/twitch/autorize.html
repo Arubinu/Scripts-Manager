@@ -1,0 +1,24 @@
+<script type="text/javascript">
+  const socket = new WebSocket(`ws://${document.location.host}?token={{TOKEN}}`);
+
+  socket.onopen = event => {
+    socket.send(JSON.stringify({
+      to: 'extension',
+      event: 'addon',
+      name: 'twitch',
+      method: 'autorize',
+      data: {
+        url: document.location.pathname,
+        data: document.location.hash
+      }
+    }));
+
+    document.body.innerHTML = '<h1 style="font-family: sans-serif;">You can now close this page ...</h1>';
+    document.head.innerHTML = '';
+  };
+
+  socket.onerror = error => {
+    document.body.innerHTML = `<pre>${JSON.stringify(error, null, '  ')}</pre>`;
+    document.head.innerHTML = '';
+  };
+</script>

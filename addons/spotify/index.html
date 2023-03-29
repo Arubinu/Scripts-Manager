@@ -155,10 +155,11 @@
         });
       }
 
-      window.addEventListener('message', event => {
-        if (event.origin !== 'null') {
-          if (event.data.name == 'config') {
-            const _config = event.data.data;
+      window.addEventListener('message', _event => {
+        const { to, event, name, method, property, data } = _event.data;
+        if (event.origin !== 'null' && to === 'interface') {
+          if (property === 'config') {
+            const _config = data;
 
             for (const name of ['access_token', 'refresh_token', 'client_id', 'client_secret']) {
               document.querySelector(`.${name} input`).value = _config.connection[name];

@@ -4,31 +4,56 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com/repos/Arubinu/Scripts-Manager/releases/latest; script-src 'self'; style-src 'self'; frame-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' blob: https://api.github.com/repos/Arubinu/Scripts-Manager/releases/latest; script-src 'self'; style-src 'self'; frame-src 'self'" />
 
     <title>Scripts Manager</title>
 
+    <link rel="icon" type="image/png" href="./images/logo.png" />
     <link rel="stylesheet" href="./css/styles.css" />
+    <link rel="stylesheet" href="./css/titlebar.css" />
+
+    <script type="text/javascript" src="./js/enums.js"></script>
+    <script type="text/javascript" src="./js/store.js"></script>
+    <script type="text/javascript" src="./js/common.js"></script>
   </head>
 
   <body class="is-fullheight">
+    <div class="titlebar has-background-grey-dark has-text-white">
+      <div class="is-inline-block has-text-white title">Scripts Manager</div>
+      <div class="fas fa-x is-pulled-right close-window"></div>
+      <div class="far fa-square is-pulled-right maximize-window"></div>
+      <div class="fas fa-window-minimize is-pulled-right minimize-window"></div>
+    </div>
+
+    <div class="loading">
+      <div>Loading ...</div>
+    </div>
+
     <div class="lateral-menu">
+      <div class="fas fa-angles-left minimize"></div>
       <section class="hero is-info is-fullheight">
+        <div class="is-size-7 unminimize">
+          <i class="fas fa-angles-right"></i>
+          <i class="fas fa-angles-right"></i>
+          <i class="fas fa-angles-right"></i>
+        </div>
         <div class="hero-body">
           <aside class="menu">
             <p class="menu-label">General</p>
-            <ul class="menu-list general-list">
-              <li><a data-target="general:settings">Settings</a></li>
-              <li><a data-target="general:about" class="is-active">About</a></li>
+            <ul class="menu-list manager-list">
+              <li><a data-target="manager:profiles">Profiles</a></li>
+              <li><a data-target="manager:settings">Settings</a></li>
+              <li><a data-target="manager:about" class="is-active">About</a></li>
             </ul>
             <p class="menu-label">Addons</p>
-            <ul class="menu-list addons-list"></ul>
+            <ul class="menu-list addon-list"></ul>
             <p class="menu-label">Scripts</p>
-            <ul class="menu-list scripts-list"></ul>
+            <ul class="menu-list script-list"></ul>
           </aside>
         </div>
       </section>
     </div>
+
     <div class="content is-fullheight">
       <iframe src="" scrolling="no"></iframe>
     </div>

@@ -32,7 +32,8 @@ const methods = {
       return false;
     }
 
-    return await api_client.users.getFollowFromUserToBroadcaster(userIdCheck, user.id);
+    const { data: [follow] } = await api_client.channels.getChannelFollowers(user.id, userIdCheck);
+    return follow;
   },
   getAccounts: async () => {
     return { broadcaster: channel, bot: bot_channel };
@@ -467,7 +468,7 @@ async function connect(clientId, accessToken, botAccessToken, callback) {
   });
 
   // Subscribes to events that represent a user following a channel.
-  ws_listeners.ChannelFollow = await ws_listener.onChannelFollow(channel.id, async e => {
+  ws_listeners.ChannelFollow = await ws_listener.onChannelFollow(channel.id, channel.id, async e => {
     callback(await get('Follow', null, null, null, {
       user: {
         id: e.userId,
@@ -1227,7 +1228,7 @@ async function get(type, msg, message, user, merge) {
         moderator: msg.userInfo.isMod,
         subscriber: msg.userInfo.isSubscriber,
         vip: msg.userInfo.isVip,
-        follower: ((msg.userInfo && msg.userInfo.userId) ? !!(await methods.checkFollow(false, msg.userId)) : false)
+        follower: (msg.userInfo && msg.userInfo.userId) ? !!(await methods.checkFollow(false, msg.userInfo.userId)) : false
       }
       : null,
     user: { // type: mod, global_mod, admin, staff
@@ -1237,7 +1238,7 @@ async function get(type, msg, message, user, merge) {
       display: msg.userInfo ? msg.userInfo.displayName : (msg.userDisplayName ? msg.userDisplayName : null)
     },
     color: msg.userInfo ? msg.userInfo.color : null,
-    message: is_command ? message.substr(1) : message,
+    message: is_command ? message.substring(1) : message,
     isCheer: msg.isCheer,
     isHighlight: msg.isHighlight,
     isRedemption: msg.isRedemption,
@@ -1251,7 +1252,7 @@ async function get(type, msg, message, user, merge) {
       prompt: msg.rewardPrompt,
       cost: msg.rewardCost,
       queued: msg.rewardIsQueued,
-      images: (msg.rewardImage || msg.defaultImage),
+      images: msg.rewardImage || msg.defaultImage,
     }
   }, (merge || {}));
 }
